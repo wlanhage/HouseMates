@@ -36,6 +36,13 @@ function open(): Database.Database {
   if ((fresh || !hasUsers) && existsSync(schemaPath)) {
     database.exec(readFileSync(schemaPath, 'utf8'));
   }
+
+  // Runtime-migrering: todos.start_date (period-uppgifter, "gör inom X–Y").
+  // schema.sql är normativ och lämnas orörd; kolumnen läggs till vid öppning.
+  const todoCols = database.prepare('PRAGMA table_info(todos)').all() as { name: string }[];
+  if (!todoCols.some((c) => c.name === 'start_date')) {
+    database.exec('ALTER TABLE todos ADD COLUMN start_date TEXT');
+  }
   return database;
 }
 

@@ -9,6 +9,8 @@
   let startY = 0;
 
   function down(e: TouchEvent) {
+    // Ytor med egna drag-gester (t.ex. Hem-splitten) opt:ar ut via data-no-ptr.
+    if (e.target instanceof Element && e.target.closest('[data-no-ptr]')) return;
     if (window.scrollY <= 0 && !refreshing) {
       startY = e.touches[0].clientY;
       active = true;

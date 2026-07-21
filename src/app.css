@@ -178,6 +178,11 @@ select {
   margin: 0 auto;
   padding: 0.75rem 1.1rem calc(var(--nav-h) + var(--safe-b) + 4.5rem);
 }
+/* Hem: splitten fyller skärmen, sidan i sig skrollar inte */
+.content-lock {
+  padding-bottom: 0;
+  overflow: hidden;
+}
 
 .page-title {
   font-size: 1.65rem;

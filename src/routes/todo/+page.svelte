@@ -3,7 +3,7 @@
   import { todosOpen, todosDone, user, me } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
   import { refreshTodos, setTodoDone, deleteTodo } from '$lib/client/data';
-  import { dueLabel } from '$lib/client/dates';
+  import { dueLabel, fmtDate } from '$lib/client/dates';
   import SwipeRow from '$lib/components/SwipeRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import type { Todo } from '$lib/types';
@@ -65,7 +65,9 @@
             {#if t.notes}<div class="todo-notes">{t.notes}</div>{/if}
           </div>
           {#if due}
-            <span class="badge badge-{due.kind}">{due.text}</span>
+            <span class="badge badge-{due.kind}">
+              {#if t.start_date}{fmtDate(t.start_date)} – {due.text === 'Idag' || due.text === 'Imorgon' ? due.text.toLowerCase() : fmtDate(t.due_date!)}{:else}{due.text}{/if}
+            </span>
           {/if}
           {#if t.assignee}
             <Avatar color={assigneeColor(t)} initial={initialOf($people, t.assignee)} size={22} />

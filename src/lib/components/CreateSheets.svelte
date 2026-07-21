@@ -11,7 +11,9 @@
   let todoTitle = $state('');
   let todoNotes = $state('');
   let todoAssignee = $state<string | null>(null);
+  let todoStart = $state('');
   let todoDue = $state('');
+  let todoError = $state('');
 
   let firstField: HTMLInputElement | undefined = $state();
 
@@ -32,7 +34,9 @@
       todoTitle = '';
       todoNotes = '';
       todoAssignee = null;
+      todoStart = '';
       todoDue = '';
+      todoError = '';
     }
     if (kind) setTimeout(() => firstField?.focus(), 30);
   });
@@ -46,11 +50,21 @@
 
   async function submitTodo(e: Event) {
     e.preventDefault();
+    todoError = '';
     if (!todoTitle.trim()) return;
+    if (todoStart && !todoDue) {
+      todoError = 'En period kräver en deadline.';
+      return;
+    }
+    if (todoStart && todoDue && todoStart > todoDue) {
+      todoError = 'Startdatum måste vara före deadline.';
+      return;
+    }
     await createTodo({
       title: todoTitle,
       notes: todoNotes,
       assignee: todoAssignee,
+      start_date: todoStart || null,
       due_date: todoDue || null
     });
     close();
@@ -109,10 +123,20 @@
               <button type="button" class:on={todoAssignee === null} onclick={() => (todoAssignee = null)}>Ingen</button>
             </div>
           </div>
-          <div class="field">
-            <label for="t-due">Deadline (valfritt)</label>
-            <input id="t-due" class="input" type="date" bind:value={todoDue} />
+          <div class="row" style="gap:0.5rem;align-items:flex-end">
+            <div class="field" style="flex:1">
+              <label for="t-start">Från (valfritt)</label>
+              <input id="t-start" class="input" type="date" bind:value={todoStart} />
+            </div>
+            <div class="field" style="flex:1">
+              <label for="t-due">Deadline (valfritt)</label>
+              <input id="t-due" class="input" type="date" bind:value={todoDue} />
+            </div>
           </div>
+          <p class="muted" style="font-size:0.78rem;margin:-0.4rem 0 0.8rem">
+            Med både från + deadline blir det en period ("gör inom") – den dyker upp på Hem på sista dagen.
+          </p>
+          {#if todoError}<p class="error-text">{todoError}</p>{/if}
           <button class="btn btn-primary btn-block" type="submit" disabled={!todoTitle.trim()}>Lägg till</button>
         </form>
       {:else if $createKind === 'event'}

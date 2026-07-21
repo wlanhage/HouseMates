@@ -45,6 +45,7 @@ export interface Todo {
   title: string;
   notes: string | null;
   assignee: string | null; // users.id | 'both' | null
+  start_date: string | null; // sätter en period start_date..due_date ("gör inom")
   due_date: string | null;
   done: boolean;
   done_by: string | null;

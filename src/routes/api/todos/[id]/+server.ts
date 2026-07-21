@@ -12,6 +12,7 @@ export const PATCH: RequestHandler = async ({ request, params, locals }) => {
       title?: string;
       notes?: string | null;
       assignee?: string | null;
+      start_date?: string | null;
       due_date?: string | null;
     }>(request);
     const result = tx((d) => todos.patch(d, locals.user!.id, params.id!, body));

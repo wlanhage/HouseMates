@@ -255,6 +255,7 @@ export async function createTodo(input: {
   title: string;
   notes?: string;
   assignee?: string | null;
+  start_date?: string | null;
   due_date?: string | null;
 }): Promise<void> {
   const title = input.title.trim();
@@ -266,6 +267,7 @@ export async function createTodo(input: {
     title,
     notes: input.notes?.trim() || null,
     assignee: input.assignee ?? null,
+    start_date: input.start_date || null,
     due_date: input.due_date || null,
     done: false,
     done_by: null,
@@ -285,6 +287,7 @@ export async function createTodo(input: {
         title,
         notes: input.notes?.trim() || undefined,
         assignee: input.assignee ?? undefined,
+        start_date: input.start_date || undefined,
         due_date: input.due_date || undefined
       },
       entity: 'todos'
@@ -329,7 +332,13 @@ export async function setTodoDone(todo: Todo, done: boolean): Promise<void> {
 
 export async function editTodo(
   todo: Todo,
-  changes: { title?: string; notes?: string | null; assignee?: string | null; due_date?: string | null }
+  changes: {
+    title?: string;
+    notes?: string | null;
+    assignee?: string | null;
+    start_date?: string | null;
+    due_date?: string | null;
+  }
 ): Promise<void> {
   todosOpen.update((l) => sortTodosOpen(l.map((t) => (t.id === todo.id ? { ...todo, ...changes } : t))));
   try {

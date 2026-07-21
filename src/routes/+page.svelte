@@ -3,39 +3,17 @@
   import { user, todosOpen, activity, events } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
   import { refreshTodos, refreshActivity, refreshEvents, setTodoDone } from '$lib/client/data';
-  import { todayStr, tomorrowStr, relativeTime, dueLabel, hhmm } from '$lib/client/dates';
+  import { todayStr, addDaysStr, dayHeading, relativeTime, dueLabel, hhmm } from '$lib/client/dates';
   import { eventSpan } from '$lib/client/agenda';
   import { groupActivity, describeGroup } from '$lib/client/activityFeed';
   import Avatar from '$lib/components/Avatar.svelte';
-  import type { Activity, CalendarEvent } from '$lib/types';
-
-  type Group = ReturnType<typeof groupActivity>[number];
-  let selectedGroup = $state<Group | null>(null);
-
-  /** Etikett för en enskild rad i popupen. */
-  function entryLabel(a: Activity): string {
-    const name = (a.payload?.name as string) ?? (a.payload?.title as string);
-    if (name) return name;
-    const count = a.payload?.count as number | undefined;
-    return count != null ? `${count} avklarade` : '—';
-  }
+  import type { Activity, CalendarEvent, Todo } from '$lib/types';
 
   onMount(() => {
     void refreshTodos();
     void refreshActivity();
     void refreshEvents();
   });
-
-  function eventsOnDay(day: string): CalendarEvent[] {
-    return $events
-      .filter((e) => {
-        const s = eventSpan(e);
-        return day >= s.first && day <= s.last;
-      })
-      .sort((a, b) =>
-        a.allDay !== b.allDay ? (a.allDay ? -1 : 1) : a.allDay ? 0 : a.start.localeCompare(b.start)
-      );
-  }
 
   function greeting(): string {
     const h = new Date().getHours();
@@ -44,115 +22,212 @@
     if (h < 18) return 'Hej';
     return 'God kväll';
   }
-
-  const today = todayStr();
-  const tomorrow = tomorrowStr();
-  const afterSix = new Date().getHours() >= 18;
-
-  // "Idag": försenade + dagens uppgifter (events tillkommer i M4).
-  const todayTodos = $derived(
-    $todosOpen
-      .filter((t) => t.due_date && t.due_date <= today)
-      .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))
-  );
-  const tomorrowTodos = $derived($todosOpen.filter((t) => t.due_date === tomorrow));
-  const todayEvents = $derived(eventsOnDay(today));
-  const tomorrowEvents = $derived(eventsOnDay(tomorrow));
-
-  const groups = $derived(groupActivity($activity));
-
   const meName = $derived($user ? $user.name.replace(/\s*\(test\)/, '') : '');
 
-  const dateLine = (() => {
-    const s = new Intl.DateTimeFormat('sv-SE', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    }).format(new Date());
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  })();
+  // ── Dagsbläddring (övre delen) ────────────────────────────
+  const MIN_OFF = -7; // matchar eventfönstret bakåt
+  const MAX_OFF = 42; // och framåt
+  let dayOffset = $state(0);
+  const today = todayStr();
+  const day = $derived(addDaysStr(today, dayOffset));
+
+  const dayEvents = $derived(
+    $events
+      .filter((e) => {
+        const s = eventSpan(e);
+        return day >= s.first && day <= s.last;
+      })
+      .sort((a, b) =>
+        a.allDay !== b.allDay ? (a.allDay ? -1 : 1) : a.allDay ? 0 : a.start.localeCompare(b.start)
+      )
+  );
+
+  // Uppgifter: deadline = dagen. På "Idag" även försenade.
+  // Perioder (start_date..due_date) syns bara på sista dagen (= due_date).
+  const dayTodos = $derived(
+    $todosOpen
+      .filter((t) => t.due_date && (t.due_date === day || (dayOffset === 0 && t.due_date < day)))
+      .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))
+  );
+
+  // Swipe höger/vänster för att byta dag
+  let dragX = $state(0);
+  let swipeAxis = $state<'none' | 'h' | 'v'>('none');
+  let sx = 0;
+  let sy = 0;
+  let swiping = false;
+
+  function dayDown(e: PointerEvent) {
+    sx = e.clientX;
+    sy = e.clientY;
+    swipeAxis = 'none';
+    swiping = true;
+  }
+  function dayMove(e: PointerEvent) {
+    if (!swiping) return;
+    const dx = e.clientX - sx;
+    const dy = e.clientY - sy;
+    if (swipeAxis === 'none') {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      swipeAxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    }
+    if (swipeAxis === 'h') dragX = dx;
+  }
+  function dayUp() {
+    if (swipeAxis === 'h') {
+      if (dragX < -55 && dayOffset < MAX_OFF) dayOffset++;
+      else if (dragX > 55 && dayOffset > MIN_OFF) dayOffset--;
+    }
+    dragX = 0;
+    swiping = false;
+    swipeAxis = 'none';
+  }
+
+  // ── Delare (dra för att ändra fördelning; 50/50 vid varje mount) ──
+  let ratio = $state(0.5);
+  let splitEl: HTMLDivElement | undefined = $state();
+  let dividerActive = $state(false);
+  let dStartY = 0;
+  let dStartRatio = 0.5;
+
+  function divDown(e: PointerEvent) {
+    dividerActive = true;
+    dStartY = e.clientY;
+    dStartRatio = ratio;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function divMove(e: PointerEvent) {
+    if (!dividerActive || !splitEl) return;
+    const h = splitEl.clientHeight;
+    ratio = Math.min(0.82, Math.max(0.18, dStartRatio + (e.clientY - dStartY) / h));
+  }
+  function divUp() {
+    dividerActive = false;
+  }
+
+  // ── Historik (undre delen): endast inköp lagt till/avbockat ──
+  const feed = $derived(
+    $activity.filter((a) => a.type === 'shopping.added' || a.type === 'shopping.checked')
+  );
+  const groups = $derived(groupActivity(feed));
+
+  type Group = ReturnType<typeof groupActivity>[number];
+  let selectedGroup = $state<Group | null>(null);
+
+  function entryLabel(a: Activity): string {
+    const name = (a.payload?.name as string) ?? (a.payload?.title as string);
+    if (name) return name;
+    const count = a.payload?.count as number | undefined;
+    return count != null ? `${count} avklarade` : '—';
+  }
+
+  function eventTime(e: CalendarEvent): string {
+    return e.allDay ? 'Heldag' : hhmm(e.start);
+  }
+  function todoBadge(t: Todo): { text: string; kind: string } {
+    const due = dueLabel(t.due_date!);
+    if (dayOffset === 0) return due;
+    return { text: t.start_date ? 'senast idag' : '', kind: due.kind };
+  }
 </script>
 
 <svelte:head><title>Hem</title></svelte:head>
 
-<header class="hero">
-  <h2>{greeting()}{meName ? `, ${meName}` : ''} 👋</h2>
-  <p>{dateLine}</p>
-</header>
+<div class="hero-mini">
+  {greeting()}{meName ? `, ${meName}` : ''} 👋
+</div>
 
-<div class="section-title">Idag</div>
-{#if todayEvents.length === 0 && todayTodos.length === 0}
-  <div class="card empty">
-    <span class="emoji">🌤️</span>
-    Inget inplanerat idag.
-  </div>
-{:else}
-  <div class="list">
-    {#each todayEvents as e (e.id)}
-      <div class="home-row">
-        <span class="mini-dot" style={`background:${colorOf($people, e.createdBy)}`}></span>
-        <span style="flex:1">{e.title}</span>
-        <span class="muted" style="font-size:0.8rem;white-space:nowrap">
-          {e.allDay ? 'Heldag' : hhmm(e.start)}
-        </span>
-      </div>
-    {/each}
-    {#each todayTodos as t (t.id)}
-      {@const due = dueLabel(t.due_date!)}
-      <div class="home-row">
-        <button class="mini-check" aria-label="Bocka av" onclick={() => void setTodoDone(t, true)}></button>
-        <span style="flex:1">{t.title}</span>
-        <span class="badge badge-{due.kind}">{due.text}</span>
-        {#if t.assignee}
-          <Avatar color={colorOf($people, t.assignee)} initial={initialOf($people, t.assignee)} size={20} />
+<div class="split" data-no-ptr bind:this={splitEl}>
+  <!-- Övre: dagen -->
+  <section class="pane" style={`height:calc((100% - 22px) * ${ratio})`}>
+    <header class="day-nav">
+      <button class="day-chev" aria-label="Föregående dag" disabled={dayOffset <= MIN_OFF} onclick={() => dayOffset--}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6" /></svg>
+      </button>
+      <div class="day-title">
+        <strong>{dayHeading(day)}</strong>
+        {#if dayOffset !== 0}
+          <button class="today-link" onclick={() => (dayOffset = 0)}>Till idag</button>
         {/if}
       </div>
-    {/each}
-  </div>
-{/if}
-
-{#if afterSix && (tomorrowEvents.length || tomorrowTodos.length)}
-  <div class="section-title">Imorgon</div>
-  <div class="list">
-    {#each tomorrowEvents as e (e.id)}
-      <div class="home-row">
-        <span class="mini-dot" style={`background:${colorOf($people, e.createdBy)}`}></span>
-        <span style="flex:1">{e.title}</span>
-        <span class="muted" style="font-size:0.8rem;white-space:nowrap">
-          {e.allDay ? 'Heldag' : hhmm(e.start)}
-        </span>
-      </div>
-    {/each}
-    {#each tomorrowTodos as t (t.id)}
-      <div class="home-row">
-        <span class="mini-dot" style={`background:${colorOf($people, t.assignee)}`}></span>
-        <span style="flex:1">{t.title}</span>
-      </div>
-    {/each}
-  </div>
-{/if}
-
-<div class="section-title">Nyligen</div>
-{#if groups.length === 0}
-  <div class="card empty">
-    <span class="emoji">✨</span>
-    Aktivitetsflödet visas här när ni börjar planera tillsammans.
-  </div>
-{:else}
-  <div class="list">
-    {#each groups as g (g.key)}
-      <button class="home-row group-btn" onclick={() => (selectedGroup = g)}>
-        <Avatar color={colorOf($people, g.actor)} initial={initialOf($people, g.actor)} size={26} />
-        <span style="flex:1;text-align:left">
-          <strong>{nameOf($people, g.actor, $user?.id)}</strong>
-          {describeGroup(g)}
-        </span>
-        <span class="muted" style="font-size:0.78rem;white-space:nowrap">{relativeTime(g.newest)}</span>
-        <svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+      <button class="day-chev" aria-label="Nästa dag" disabled={dayOffset >= MAX_OFF} onclick={() => dayOffset++}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
       </button>
-    {/each}
-  </div>
-{/if}
+    </header>
+
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="day-body"
+      style={`transform:translateX(${dragX * 0.35}px);opacity:${1 - Math.min(0.5, Math.abs(dragX) / 260)}`}
+      onpointerdown={dayDown}
+      onpointermove={dayMove}
+      onpointerup={dayUp}
+      onpointercancel={dayUp}
+    >
+      {#if dayEvents.length === 0 && dayTodos.length === 0}
+        <div class="day-empty muted">Inget planerat {dayHeading(day).toLowerCase()}.</div>
+      {:else}
+        <div class="list" style="padding:0.15rem 2px 0.75rem">
+          {#each dayEvents as e (e.id)}
+            <div class="home-row">
+              <span class="mini-dot" style={`background:${colorOf($people, e.createdBy)}`}></span>
+              <span style="flex:1">{e.title}</span>
+              <span class="muted" style="font-size:0.8rem;white-space:nowrap">{eventTime(e)}</span>
+            </div>
+          {/each}
+          {#each dayTodos as t (t.id)}
+            {@const badge = todoBadge(t)}
+            <div class="home-row">
+              <button class="mini-check" aria-label="Bocka av" onclick={() => void setTodoDone(t, true)}></button>
+              <span style="flex:1">{t.title}</span>
+              {#if badge.text}<span class="badge badge-{badge.kind}">{badge.text}</span>{/if}
+              {#if t.assignee}
+                <Avatar color={colorOf($people, t.assignee)} initial={initialOf($people, t.assignee)} size={20} />
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </section>
+
+  <!-- Delare -->
+  <button
+    class="divider"
+    class:grabbing={dividerActive}
+    aria-label="Dra för att ändra fördelning"
+    onpointerdown={divDown}
+    onpointermove={divMove}
+    onpointerup={divUp}
+    onpointercancel={divUp}
+  >
+    <span class="divider-pill"></span>
+  </button>
+
+  <!-- Undre: inköpshistorik -->
+  <section class="pane lower">
+    <div class="section-title" style="margin:0 0 0.5rem">Nyligen i inköp</div>
+    <div class="pane-scroll">
+      {#if groups.length === 0}
+        <div class="day-empty muted">Inget inköpshänt ännu.</div>
+      {:else}
+        <div class="list">
+          {#each groups as g (g.key)}
+            <button class="home-row group-btn" onclick={() => (selectedGroup = g)}>
+              <Avatar color={colorOf($people, g.actor)} initial={initialOf($people, g.actor)} size={26} />
+              <span style="flex:1;text-align:left">
+                <strong>{nameOf($people, g.actor, $user?.id)}</strong>
+                {describeGroup(g)}
+              </span>
+              <span class="muted" style="font-size:0.78rem;white-space:nowrap">{relativeTime(g.newest)}</span>
+              <svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </section>
+</div>
 
 <svelte:window
   onkeydown={(e) => {
@@ -195,19 +270,120 @@
 {/if}
 
 <style>
-  .hero {
-    margin: 0.5rem 0 1.1rem;
+  .hero-mini {
+    font-size: 1.05rem;
+    font-weight: 750;
+    margin: 0.15rem 0 0.6rem;
   }
-  .hero h2 {
-    font-size: 1.7rem;
+
+  /* Split: fyller resten av skärmen (topbar + hero + nav borträknade) */
+  .split {
+    height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - 158px - var(--nav-h) - var(--safe-b)
+    );
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .pane.lower {
+    flex: 1;
+  }
+  .pane-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(var(--nav-h) + var(--safe-b) + 30px);
+  }
+
+  /* Dagsnavigering */
+  .day-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+    flex: none;
+  }
+  .day-title {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.6rem;
+    font-size: 1rem;
+  }
+  .day-title strong {
     font-weight: 800;
-    margin: 0;
   }
-  .hero p {
-    margin: 0.15rem 0 0;
+  .today-link {
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0;
+  }
+  .day-chev {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
     color: var(--muted);
-    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
   }
+  .day-chev:disabled {
+    opacity: 0.35;
+  }
+  .day-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+  .day-empty {
+    text-align: center;
+    padding: 1.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Delare */
+  .divider {
+    flex: none;
+    height: 22px;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+  }
+  .divider.grabbing {
+    cursor: grabbing;
+  }
+  .divider-pill {
+    width: 56px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--border);
+    transition: background 0.15s, width 0.15s;
+  }
+  .divider:active .divider-pill,
+  .divider.grabbing .divider-pill {
+    background: var(--accent);
+    width: 72px;
+  }
+
   .home-row {
     display: flex;
     align-items: center;

@@ -12,6 +12,7 @@ interface Row {
   title: string;
   notes: string | null;
   assignee: string | null;
+  start_date: string | null;
   due_date: string | null;
   done: number;
   done_by: string | null;
@@ -29,6 +30,7 @@ function toTodo(r: Row): Todo {
     title: r.title,
     notes: r.notes,
     assignee: r.assignee,
+    start_date: r.start_date,
     due_date: r.due_date,
     done: r.done === 1,
     done_by: r.done_by,
@@ -48,6 +50,16 @@ function validateAssignee(db: Database, assignee: string | null | undefined): st
   const u = db.prepare('SELECT 1 FROM users WHERE id = ?').get(assignee);
   if (!u) throw new HttpError('validation', 'Ogiltig ansvarig.', 400);
   return assignee;
+}
+
+/** Period kräver deadline och start <= deadline. */
+function validatePeriod(start: string | null, due: string | null): void {
+  if (start && !due) {
+    throw new HttpError('validation', 'En period kräver en deadline.', 400);
+  }
+  if (start && due && start > due) {
+    throw new HttpError('validation', 'Startdatum måste vara före deadline.', 400);
+  }
 }
 
 /** filter=open: deadline-satta först (stigande), sedan created_at fallande. */
@@ -82,6 +94,7 @@ export function add(
     title: string;
     notes?: string | null;
     assignee?: string | null;
+    start_date?: string | null;
     due_date?: string | null;
   }
 ): Todo {
@@ -92,9 +105,18 @@ export function add(
   if (existing) return toTodo(existing);
 
   const assignee = validateAssignee(db, input.assignee);
+  validatePeriod(input.start_date ?? null, input.due_date ?? null);
   db.prepare(
-    'INSERT INTO todos (id, title, notes, assignee, due_date, created_by) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(input.id, title, input.notes ?? null, assignee, input.due_date ?? null, actor);
+    'INSERT INTO todos (id, title, notes, assignee, start_date, due_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(
+    input.id,
+    title,
+    input.notes ?? null,
+    assignee,
+    input.start_date ?? null,
+    input.due_date ?? null,
+    actor
+  );
 
   logActivity(db, {
     type: 'todo.created',
@@ -116,6 +138,7 @@ export function patch(
     title?: string;
     notes?: string | null;
     assignee?: string | null;
+    start_date?: string | null;
     due_date?: string | null;
   }
 ): Todo {
@@ -130,6 +153,7 @@ export function patch(
   let title = row.title;
   let notes = row.notes;
   let assignee = row.assignee;
+  let start = row.start_date;
   let due = row.due_date;
   let done = row.done;
   let doneBy = row.done_by;
@@ -142,7 +166,9 @@ export function patch(
   }
   if (input.notes !== undefined) notes = input.notes;
   if (input.assignee !== undefined) assignee = validateAssignee(db, input.assignee);
+  if (input.start_date !== undefined) start = input.start_date;
   if (input.due_date !== undefined) due = input.due_date;
+  validatePeriod(start, due);
   if (input.done !== undefined && input.done !== (row.done === 1)) {
     if (input.done) {
       done = 1;
@@ -159,10 +185,10 @@ export function patch(
 
   db.prepare(
     `UPDATE todos
-     SET title = ?, notes = ?, assignee = ?, due_date = ?, done = ?, done_by = ?, done_at = ?,
+     SET title = ?, notes = ?, assignee = ?, start_date = ?, due_date = ?, done = ?, done_by = ?, done_at = ?,
          updated_at = ?, version = version + 1
      WHERE id = ?`
-  ).run(title, notes, assignee, due, done, doneBy, doneAt, now(), id);
+  ).run(title, notes, assignee, start, due, done, doneBy, doneAt, now(), id);
 
   if (toggled) {
     logActivity(db, {

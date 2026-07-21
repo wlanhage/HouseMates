@@ -135,7 +135,7 @@
       </div>
     {/if}
 
-    <main class="content">
+    <main class="content" class:content-lock={$page.url.pathname === '/'}>
       <PullToRefresh onrefresh={pullRefresh}>
         {@render children()}
       </PullToRefresh>

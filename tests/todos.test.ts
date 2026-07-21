@@ -59,4 +59,52 @@ describe('att göra – API-flöden', () => {
     const t = todos.add(db, 'anna', { id: 't1', title: 'Gemensam', assignee: 'both' });
     expect(t.assignee).toBe('both');
   });
+
+  it('period (start_date + due_date) sparas', () => {
+    const db = makeDb();
+    const t = todos.add(db, 'anna', {
+      id: 't1',
+      title: 'Måla om',
+      start_date: '2026-07-20',
+      due_date: '2026-07-27'
+    });
+    expect(t.start_date).toBe('2026-07-20');
+    expect(t.due_date).toBe('2026-07-27');
+  });
+
+  it('period utan deadline → validation', () => {
+    const db = makeDb();
+    let err: HttpError | null = null;
+    try {
+      todos.add(db, 'anna', { id: 't1', title: 'X', start_date: '2026-07-20' });
+    } catch (e) {
+      err = e as HttpError;
+    }
+    expect(err?.code).toBe('validation');
+  });
+
+  it('start efter deadline → validation', () => {
+    const db = makeDb();
+    let err: HttpError | null = null;
+    try {
+      todos.add(db, 'anna', {
+        id: 't1',
+        title: 'X',
+        start_date: '2026-07-28',
+        due_date: '2026-07-27'
+      });
+    } catch (e) {
+      err = e as HttpError;
+    }
+    expect(err?.code).toBe('validation');
+  });
+
+  it('patch kan sätta och rensa period', () => {
+    const db = makeDb();
+    todos.add(db, 'anna', { id: 't1', title: 'X', due_date: '2026-07-27' });
+    const withStart = todos.patch(db, 'anna', 't1', { version: 1, start_date: '2026-07-20' });
+    expect(withStart.start_date).toBe('2026-07-20');
+    const cleared = todos.patch(db, 'anna', 't1', { version: 2, start_date: null });
+    expect(cleared.start_date).toBeNull();
+  });
 });

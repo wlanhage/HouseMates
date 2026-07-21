@@ -16,6 +16,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       title: string;
       notes?: string | null;
       assignee?: string | null;
+      start_date?: string | null;
       due_date?: string | null;
     }>(request);
     const result = tx((d) => todos.add(d, locals.user!.id, body));
