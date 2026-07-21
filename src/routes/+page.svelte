@@ -7,7 +7,18 @@
   import { eventSpan } from '$lib/client/agenda';
   import { groupActivity, describeGroup } from '$lib/client/activityFeed';
   import Avatar from '$lib/components/Avatar.svelte';
-  import type { CalendarEvent } from '$lib/types';
+  import type { Activity, CalendarEvent } from '$lib/types';
+
+  type Group = ReturnType<typeof groupActivity>[number];
+  let selectedGroup = $state<Group | null>(null);
+
+  /** Etikett för en enskild rad i popupen. */
+  function entryLabel(a: Activity): string {
+    const name = (a.payload?.name as string) ?? (a.payload?.title as string);
+    if (name) return name;
+    const count = a.payload?.count as number | undefined;
+    return count != null ? `${count} avklarade` : '—';
+  }
 
   onMount(() => {
     void refreshTodos();
@@ -130,15 +141,56 @@
 {:else}
   <div class="list">
     {#each groups as g (g.key)}
-      <div class="home-row">
+      <button class="home-row group-btn" onclick={() => (selectedGroup = g)}>
         <Avatar color={colorOf($people, g.actor)} initial={initialOf($people, g.actor)} size={26} />
-        <span style="flex:1">
+        <span style="flex:1;text-align:left">
           <strong>{nameOf($people, g.actor, $user?.id)}</strong>
           {describeGroup(g)}
         </span>
         <span class="muted" style="font-size:0.78rem;white-space:nowrap">{relativeTime(g.newest)}</span>
-      </div>
+        <svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+      </button>
     {/each}
+  </div>
+{/if}
+
+<svelte:window
+  onkeydown={(e) => {
+    if (selectedGroup && e.key === 'Escape') selectedGroup = null;
+  }}
+/>
+
+{#if selectedGroup}
+  <div class="scrim scrim-center">
+    <button class="scrim-bg" aria-label="Stäng" onclick={() => (selectedGroup = null)}></button>
+    <div class="popup" role="dialog" aria-modal="true" aria-label="Aktivitetsdetaljer">
+      <header class="pop-head">
+        <Avatar
+          color={colorOf($people, selectedGroup.actor)}
+          initial={initialOf($people, selectedGroup.actor)}
+          size={30}
+        />
+        <div style="flex:1;min-width:0">
+          <div class="pop-title">
+            <strong>{nameOf($people, selectedGroup.actor, $user?.id)}</strong>
+            {describeGroup(selectedGroup)}
+          </div>
+          <div class="muted" style="font-size:0.78rem">{relativeTime(selectedGroup.newest)}</div>
+        </div>
+        <button class="icon-btn" aria-label="Stäng" onclick={() => (selectedGroup = null)}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <ul class="pop-list">
+        {#each selectedGroup.entries as e (e.id)}
+          <li>
+            <span class="dot" style={`background:${colorOf($people, e.actor)}`}></span>
+            <span class="pop-item">{entryLabel(e)}</span>
+            <span class="muted" style="font-size:0.75rem;white-space:nowrap">{relativeTime(e.created_at)}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
   </div>
 {/if}
 
@@ -183,5 +235,57 @@
     height: 9px;
     border-radius: 999px;
     flex: none;
+  }
+  .group-btn {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.08s;
+  }
+  .group-btn:active {
+    transform: scale(0.99);
+  }
+  .chev {
+    color: var(--muted);
+    flex: none;
+    opacity: 0.7;
+  }
+  .pop-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.9rem 0.9rem 0.9rem 1.05rem;
+    border-bottom: 1px solid var(--border);
+    flex: none;
+  }
+  .pop-title {
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+  .pop-list {
+    flex: 1;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.35rem 0;
+    list-style: none;
+    overscroll-behavior: contain;
+  }
+  .pop-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 1.05rem;
+  }
+  .pop-list li + li {
+    border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  }
+  .pop-item {
+    flex: 1;
+    min-width: 0;
+    font-weight: 550;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

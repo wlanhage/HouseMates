@@ -507,6 +507,32 @@ select {
   }
 }
 
+/* Centrerad popup (t.ex. aktivitetsdetaljer) */
+.scrim-center {
+  align-items: center;
+  padding: 1rem;
+}
+.popup {
+  position: relative;
+  width: 80vw;
+  height: 50vh;
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pop-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes pop-in {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+}
+
 /* ── Banners ─────────────────────────────────────────────── */
 .banner {
   display: flex;
