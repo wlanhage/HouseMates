@@ -359,6 +359,7 @@
   /* Delare */
   .divider {
     flex: none;
+    position: relative;
     height: 22px;
     border: none;
     background: none;
@@ -368,15 +369,33 @@
     cursor: grab;
     touch-action: none;
   }
+  .divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5px;
+    background: var(--muted);
+    opacity: 0.28;
+    border-radius: 1px;
+  }
   .divider.grabbing {
     cursor: grabbing;
   }
   .divider-pill {
+    position: relative;
     width: 56px;
     height: 5px;
     border-radius: 999px;
-    background: var(--border);
-    transition: background 0.15s, width 0.15s;
+    background: var(--muted);
+    opacity: 0.55;
+    box-shadow: 0 0 0 6px var(--bg);
+    transition: background 0.15s, width 0.15s, opacity 0.15s;
+  }
+  .divider:active .divider-pill,
+  .divider.grabbing .divider-pill {
+    opacity: 1;
   }
   .divider:active .divider-pill,
   .divider.grabbing .divider-pill {
