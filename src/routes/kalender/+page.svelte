@@ -71,7 +71,7 @@
 
 <svelte:head><title>Kalender</title></svelte:head>
 
-<h2 style="font-size:1.5rem;margin-bottom:0.75rem">Kalender</h2>
+<h2 class="page-title">Kalender</h2>
 
 {#if agenda.length === 0}
   <div class="card empty">
@@ -157,13 +157,19 @@
   .ev-row {
     display: flex;
     align-items: stretch;
-    gap: 0.6rem;
+    gap: 0.65rem;
     width: 100%;
     text-align: left;
-    padding: 0.7rem 0.8rem;
+    padding: 0.75rem 0.85rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    transition: transform 0.08s;
+  }
+  .ev-row:active {
+    transform: scale(0.99);
   }
   .ev-time {
     flex: none;

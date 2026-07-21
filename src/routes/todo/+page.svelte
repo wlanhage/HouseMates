@@ -35,7 +35,7 @@
 
 <svelte:head><title>Att göra</title></svelte:head>
 
-<h2 style="font-size:1.5rem;margin-bottom:0.75rem">Att göra</h2>
+<h2 class="page-title">Att göra</h2>
 
 <div class="pills">
   <button class="pill" class:on={filter === 'alla'} onclick={() => (filter = 'alla')}>Alla</button>
@@ -118,24 +118,27 @@
     border: 1px solid var(--border);
     background: var(--surface);
     border-radius: 999px;
-    padding: 0.4rem 0.85rem;
+    padding: 0.42rem 0.9rem;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 650;
     color: var(--muted);
+    box-shadow: var(--shadow);
+    transition: background 0.15s, color 0.15s;
   }
   .pill.on {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     border-color: var(--accent);
   }
   .todo-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.85rem 0.9rem;
+    padding: 0.9rem 0.95rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
+    box-shadow: var(--shadow);
   }
   .todo-main {
     flex: 1;
@@ -169,29 +172,6 @@
     background: var(--ok);
     border-color: var(--ok);
     color: #fff;
-  }
-  .badge {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .badge-overdue {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-  .badge-today {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-  .badge-tomorrow {
-    background: #f3f4f6;
-    color: #374151;
-  }
-  .badge-future {
-    background: #f3f4f6;
-    color: #6b7280;
   }
   .done-header {
     display: flex;

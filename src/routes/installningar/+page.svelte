@@ -177,7 +177,7 @@
 
 <svelte:head><title>Inställningar</title></svelte:head>
 
-<h2 style="font-size:1.5rem;margin-bottom:1rem">Inställningar</h2>
+<h2 class="page-title">Inställningar</h2>
 
 {#if $user}
   <div class="card" style="padding:1rem;display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">

@@ -51,11 +51,23 @@
   const groups = $derived(groupActivity($activity));
 
   const meName = $derived($user ? $user.name.replace(/\s*\(test\)/, '') : '');
+
+  const dateLine = (() => {
+    const s = new Intl.DateTimeFormat('sv-SE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    }).format(new Date());
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  })();
 </script>
 
 <svelte:head><title>Hem</title></svelte:head>
 
-<h2 style="font-size:1.5rem;margin-bottom:1rem">{greeting()}{meName ? `, ${meName}` : ''} 👋</h2>
+<header class="hero">
+  <h2>{greeting()}{meName ? `, ${meName}` : ''} 👋</h2>
+  <p>{dateLine}</p>
+</header>
 
 <div class="section-title">Idag</div>
 {#if todayEvents.length === 0 && todayTodos.length === 0}
@@ -131,47 +143,45 @@
 {/if}
 
 <style>
+  .hero {
+    margin: 0.5rem 0 1.1rem;
+  }
+  .hero h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    margin: 0;
+  }
+  .hero p {
+    margin: 0.15rem 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
   .home-row {
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    padding: 0.8rem 0.9rem;
+    padding: 0.85rem 0.95rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
+    box-shadow: var(--shadow);
   }
   .mini-check {
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
+    width: 21px;
+    height: 21px;
+    border-radius: 7px;
     border: 2px solid var(--border);
     background: var(--surface);
     flex: none;
+    transition: border-color 0.15s;
+  }
+  .mini-check:active {
+    border-color: var(--ok);
   }
   .mini-dot {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border-radius: 999px;
     flex: none;
-  }
-  .badge {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .badge-overdue {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-  .badge-today {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-  .badge-tomorrow,
-  .badge-future {
-    background: #f3f4f6;
-    color: #6b7280;
   }
 </style>

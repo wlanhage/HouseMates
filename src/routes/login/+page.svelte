@@ -46,6 +46,7 @@
 
 <div class="login-wrap">
   <div class="login-logo">
+    <span class="pair" aria-hidden="true"><i></i><i></i></span>
     <h1>{appName}</h1>
     <p>Er gemensamma planering</p>
   </div>

@@ -70,7 +70,7 @@
 
 <svelte:head><title>Inköp</title></svelte:head>
 
-<h2 style="font-size:1.5rem;margin-bottom:0.75rem">Inköp</h2>
+<h2 class="page-title">Inköp</h2>
 
 <form onsubmit={submit} style="position:relative;margin-bottom:1rem">
   <div class="row" style="gap:0.5rem">
@@ -174,20 +174,26 @@
     flex: none;
     border: 1px solid var(--border);
     background: var(--surface-2);
+    color: var(--text);
     border-radius: 999px;
-    padding: 0.35rem 0.75rem;
+    padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 650;
     white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .chip:active {
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
   }
   .shop-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.85rem 0.9rem;
+    padding: 0.9rem 0.95rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
+    box-shadow: var(--shadow);
   }
   .shop-name {
     flex: 1;

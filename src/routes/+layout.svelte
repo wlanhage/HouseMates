@@ -107,9 +107,15 @@
 {#if isLogin}
   {@render children()}
 {:else}
-  <div class="app-shell" style={`--nav-active:${$user?.color ?? 'var(--accent)'}`}>
+  <div
+    class="app-shell"
+    style={`--nav-active:${$user?.color ?? 'var(--accent)'};--pair-a:${$user?.color ?? '#d4537e'};--pair-b:${$me?.partner?.color ?? '#378add'}`}
+  >
     <header class="topbar">
-      <h1>{appName}</h1>
+      <span class="brand">
+        <span class="pair" aria-hidden="true"><i></i><i></i></span>
+        <h1>{appName}</h1>
+      </span>
       <a class="icon-btn" href="/installningar" aria-label="Inställningar">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3" />
