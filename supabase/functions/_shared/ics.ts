@@ -88,6 +88,70 @@ function makeRow(
   };
 }
 
+export interface EventFields {
+  uid: string;
+  title: string;
+  allDay: boolean;
+  start: string; // ISO-ts (tidsatt) eller YYYY-MM-DD (heldag)
+  end: string; // heldag: exklusivt datum
+  location?: string | null;
+  notes?: string | null;
+}
+
+function timeFrom(value: string, allDay: boolean): any {
+  if (allDay) return ICAL.Time.fromDateString(value);
+  return ICAL.Time.fromJSDate(new Date(value), true); // true = UTC
+}
+
+/** Bygg minimal VCALENDAR för ett nytt event (spec §9.4 create). */
+export function buildVCalendar(fields: EventFields): string {
+  const vcal = new ICAL.Component(['vcalendar', [], []]);
+  vcal.updatePropertyWithValue('version', '2.0');
+  vcal.updatePropertyWithValue('prodid', '-//Planeraren//SV');
+
+  const vevent = new ICAL.Component('vevent');
+  const event = new ICAL.Event(vevent);
+  event.uid = fields.uid;
+  event.summary = fields.title;
+  event.startDate = timeFrom(fields.start, fields.allDay);
+  event.endDate = timeFrom(fields.end, fields.allDay);
+  if (fields.location) event.location = fields.location;
+  if (fields.notes) event.description = fields.notes;
+  vevent.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true));
+  vevent.updatePropertyWithValue('sequence', 0);
+
+  vcal.addSubcomponent(vevent);
+  return vcal.toString();
+}
+
+/** Uppdatera ENDAST ändrade fält; bevara okända (VALARM m.m.) (spec §9.4). */
+export function updateRawIcs(rawIcs: string, changes: Partial<Omit<EventFields, 'uid'>>): string {
+  const vcal = new ICAL.Component(ICAL.parse(rawIcs));
+  const vevents = vcal.getAllSubcomponents('vevent');
+  const master = vevents.find((v: any) => !v.hasProperty('recurrence-id')) ?? vevents[0];
+  const event = new ICAL.Event(master);
+
+  if (changes.title !== undefined) event.summary = changes.title;
+  if (changes.location !== undefined) {
+    if (changes.location) event.location = changes.location;
+    else master.removeProperty('location');
+  }
+  if (changes.notes !== undefined) {
+    if (changes.notes) event.description = changes.notes;
+    else master.removeProperty('description');
+  }
+  const allDay = changes.allDay ?? event.startDate.isDate;
+  if (changes.start !== undefined) event.startDate = timeFrom(changes.start, allDay);
+  if (changes.end !== undefined) event.endDate = timeFrom(changes.end, allDay);
+
+  master.removeProperty('dtstamp');
+  master.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true));
+  const seq = Number(master.getFirstPropertyValue('sequence') ?? 0);
+  master.updatePropertyWithValue('sequence', seq + 1);
+
+  return vcal.toString();
+}
+
 export function parseResource(ics: string, windowStart: Date, windowEnd: Date): EventRow[] {
   const vcal = new ICAL.Component(ICAL.parse(ics));
   registerTimezones(vcal);
