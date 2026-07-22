@@ -42,10 +42,13 @@ export class HttpError extends Error {
   }
 }
 
-/** Är anropet gjort med service role-nyckeln (t.ex. från cron)? */
+/** Är anropet gjort av systemet (cron/service) snarare än en användare? */
 export function isServiceCall(req: Request): boolean {
   const auth = req.headers.get('Authorization') ?? '';
-  return auth === `Bearer ${SERVICE}`;
+  if (auth === `Bearer ${SERVICE}`) return true;
+  // Egen delad hemlighet – oberoende av API-nyckelformat (legacy/ny)
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  return !!cronSecret && req.headers.get('x-cron-secret') === cronSecret;
 }
 
 /** Kräv inloggad medlem; returnerar username. */

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { PUBLIC_APP_NAME } from '$env/static/public';
   import { fetchProfiles, login } from '$lib/client/auth';
   import type { ProfileRow } from '$lib/client/supabase';
@@ -44,7 +45,7 @@
       password = '';
       return;
     }
-    await goto('/');
+    await goto(base || '/');
   }
 </script>
 

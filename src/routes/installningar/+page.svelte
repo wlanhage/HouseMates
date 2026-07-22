@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { user, me } from '$lib/client/stores';
   import { refreshEvents } from '$lib/client/data';
   import { supabase } from '$lib/client/supabase';
@@ -201,7 +202,7 @@
     busy = true;
     try {
       await authLogout();
-      await goto('/login');
+      await goto(`${base}/login`);
     } finally {
       busy = false;
     }

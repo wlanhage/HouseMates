@@ -2,7 +2,7 @@
 -- Schemaläggning (körs EN gång i Supabase SQL Editor på det
 -- riktiga projektet – ersätt platshållarna först):
 --   __PROJECT_URL__  = https://<ref>.supabase.co
---   __SERVICE_KEY__  = service_role-nyckeln (Settings → API)
+--   __CRON_SECRET__  = samma värde som secret:en CRON_SECRET
 -- Kräver tilläggen pg_cron + pg_net (aktiva som standard i Supabase).
 -- ============================================================
 
@@ -16,7 +16,7 @@ select cron.schedule(
   select net.http_post(
     url := '__PROJECT_URL__/functions/v1/caldav-sync',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer __SERVICE_KEY__',
+      'x-cron-secret', '__CRON_SECRET__',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb
@@ -31,7 +31,7 @@ select cron.schedule(
   select net.http_post(
     url := '__PROJECT_URL__/functions/v1/notify',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer __SERVICE_KEY__',
+      'x-cron-secret', '__CRON_SECRET__',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb

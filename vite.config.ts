@@ -2,6 +2,9 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
+// GitHub Pages serverar under /HouseMates – manifestet måste följa basen.
+const base = process.env.BASE_PATH || '';
+
 export default defineConfig({
   plugins: [
     sveltekit(),
@@ -18,13 +21,14 @@ export default defineConfig({
       manifest: {
         name: 'Planeraren',
         short_name: 'Planeraren',
-        start_url: '/',
+        start_url: `${base}/`,
+        scope: `${base}/`,
         display: 'standalone',
         background_color: '#f5f3ef',
         theme_color: '#f5f3ef',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+          { src: `${base}/icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${base}/icons/icon-512.png`, sizes: '512x512', type: 'image/png' }
         ]
       }
     })
