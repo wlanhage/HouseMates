@@ -1,11 +1,30 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { user, me } from '$lib/client/stores';
   import { refreshEvents } from '$lib/client/data';
-  import { apiGet, apiPost, apiPatch, ApiError } from '$lib/client/api';
+  import { supabase } from '$lib/client/supabase';
+  import { logout as authLogout, loadMe } from '$lib/client/auth';
   import { hhmm } from '$lib/client/dates';
   import type { SyncStatus, NotificationPrefs } from '$lib/types';
+
+  /** Anropa en edge function; kasta med läsbart meddelande vid fel. */
+  async function invoke<T>(name: string, body?: Record<string, unknown>): Promise<T> {
+    const { data, error } = await supabase.functions.invoke(name, { body });
+    if (error) {
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) {
+          const parsed = await ctx.json();
+          throw new Error(parsed?.error?.message ?? 'Något gick fel.');
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message !== 'Något gick fel.') throw e;
+      }
+      throw new Error('Kunde inte nå servern.');
+    }
+    return data as T;
+  }
 
   let busy = $state(false);
 
@@ -56,11 +75,10 @@
   }
 
   async function savePrefs(patch: Partial<NotificationPrefs>) {
-    try {
-      await apiPatch('/api/push/prefs', patch);
-    } catch {
-      /* offline */
-    }
+    const username = $user?.id;
+    if (!username) return;
+    await supabase.from('notification_prefs').update(patch).eq('username', username);
+    void loadMe();
   }
 
   async function subscribePush() {
@@ -81,7 +99,18 @@
         userVisibleOnly: true,
         applicationServerKey: urlB64ToUint8Array(key)
       });
-      await apiPost('/api/push/subscribe', sub.toJSON());
+      const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      const { error } = await supabase.from('push_subscriptions').upsert(
+        {
+          username: $user!.id,
+          endpoint: json.endpoint,
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+          failed_at: null
+        },
+        { onConflict: 'endpoint' }
+      );
+      if (error) throw error;
       subscribed = true;
       notifMsg = 'Notiser aktiverade på den här enheten.';
     } catch {
@@ -107,18 +136,23 @@
   onMount(loadSync);
 
   async function loadSync() {
-    try {
-      sync = await apiGet<SyncStatus>('/api/sync/status');
-    } catch {
-      /* offline */
-    }
+    const username = $user?.id;
+    if (!username) return;
+    const { data } = await supabase
+      .from('sync_state')
+      .select('last_synced_at, failing_since, last_error')
+      .eq('username', username)
+      .maybeSingle();
+    if (data) sync = data as SyncStatus;
   }
 
   async function manualSync() {
     syncing = true;
     try {
-      sync = await apiPost<SyncStatus>('/api/sync/run');
-      await refreshEvents();
+      await invoke('caldav-sync');
+      await Promise.all([loadSync(), refreshEvents()]);
+    } catch {
+      await loadSync();
     } finally {
       syncing = false;
     }
@@ -133,15 +167,15 @@
     }
     wizardBusy = true;
     try {
-      const res = await apiPost<{ calendars: { href: string; name: string }[]; targetName: string }>(
-        '/api/caldav/setup',
+      const res = await invoke<{ calendars: { href: string; name: string }[]; targetName: string }>(
+        'caldav-setup',
         { appleId, appPassword }
       );
       calendars = res.calendars;
       chosen = res.calendars.find((c) => c.name === res.targetName)?.href ?? res.calendars[0]?.href ?? '';
       step = 1;
     } catch (err) {
-      wizardError = err instanceof ApiError ? err.message : 'Något gick fel.';
+      wizardError = err instanceof Error ? err.message : 'Något gick fel.';
     } finally {
       wizardBusy = false;
     }
@@ -152,12 +186,12 @@
     if (!chosen) return;
     wizardBusy = true;
     try {
-      await apiPost('/api/caldav/select', { appleId, appPassword, href: chosen });
+      await invoke('caldav-select', { appleId, appPassword, href: chosen });
       appPassword = '';
       step = 0;
       await manualSync();
     } catch (err) {
-      wizardError = err instanceof ApiError ? err.message : 'Något gick fel.';
+      wizardError = err instanceof Error ? err.message : 'Något gick fel.';
     } finally {
       wizardBusy = false;
     }
@@ -166,8 +200,7 @@
   async function logout() {
     busy = true;
     try {
-      await apiPost('/api/auth/logout');
-      await invalidateAll();
+      await authLogout();
       await goto('/login');
     } finally {
       busy = false;

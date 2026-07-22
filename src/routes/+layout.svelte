@@ -2,75 +2,80 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { env } from '$env/dynamic/public';
+  import { goto } from '$app/navigation';
+  import { PUBLIC_APP_NAME } from '$env/static/public';
   import { pwaInfo } from 'virtual:pwa-info';
   import BottomNav from '$lib/components/BottomNav.svelte';
   import UndoToast from '$lib/components/UndoToast.svelte';
   import CreateSheets from '$lib/components/CreateSheets.svelte';
   import PullToRefresh from '$lib/components/PullToRefresh.svelte';
   import { user, me, online, trackOnline } from '$lib/client/stores';
-  import { apiGet, apiPost } from '$lib/client/api';
+  import { supabase } from '$lib/client/supabase';
+  import { loadMe } from '$lib/client/auth';
   import { refreshAll } from '$lib/client/data';
-  import { startSSE } from '$lib/client/sse';
+  import { startRealtime } from '$lib/client/realtime';
   import { hydrateFromMirror, startMirrorSync } from '$lib/client/mirror';
   import { replayOutbox } from '$lib/client/outbox';
   import { hhmm } from '$lib/client/dates';
-  import type { MeResponse } from '$lib/types';
 
-  let { data, children } = $props();
+  let { children } = $props();
 
-  const appName = env.PUBLIC_APP_NAME || 'Planeraren';
+  const appName = PUBLIC_APP_NAME || 'Planeraren';
   const webManifestLink = pwaInfo ? pwaInfo.webManifest.linkTag : '';
-
-  // Håll user-storen i synk med server-load.
-  $effect(() => {
-    user.set(data.user ?? null);
-  });
 
   const isLogin = $derived($page.url.pathname === '/login');
 
+  // true när auth-status är avgjord (undviker login-flimmer vid uppstart)
+  let authReady = $state(false);
+  let loggedIn = $state(false);
+
   onMount(() => {
-    const stop = trackOnline();
-    // Registrera service worker (PWA-installerbarhet + offline-appskal, M3).
+    const stopOnline = trackOnline();
     import('virtual:pwa-register').then(({ registerSW }) => {
       registerSW({ immediate: true });
     });
-    return stop;
+
+    // Auth-guard: reagera på sessionens livscykel.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      loggedIn = !!session;
+      authReady = true;
+      if (!session && $page.url.pathname !== '/login') void goto('/login');
+      if (session && $page.url.pathname === '/login') void goto('/');
+    });
+
+    return () => {
+      stopOnline();
+      sub.subscription.unsubscribe();
+    };
   });
 
-  // Hämta partner/prefs/syncstatus när inloggad.
+  // Offline-first-uppstart när inloggad: spegel → me → replay → refetch → realtid.
   $effect(() => {
-    if (data.user) {
-      apiGet<MeResponse>('/api/me')
-        .then((r) => me.set(r))
-        .catch(() => {});
-    } else {
+    if (!loggedIn) {
+      user.set(null);
       me.set(null);
+      return;
     }
-  });
-
-  // Offline-first: spegel → replay → refetch → realtidsström. Städar vid logout.
-  $effect(() => {
-    if (!data.user) return;
     let cancelled = false;
     let stopMirror = () => {};
-    let stopSSE = () => {};
+    let stopRealtime = () => {};
     const onOnline = () => void replayThenRefresh();
 
     (async () => {
-      await hydrateFromMirror(); // rendera ur spegeln direkt
+      await hydrateFromMirror();
       if (cancelled) return;
       stopMirror = startMirrorSync();
-      await replayThenRefresh(); // spela upp kön, hämta färskt
+      await loadMe();
+      await replayThenRefresh();
       if (cancelled) return;
-      stopSSE = startSSE();
+      stopRealtime = startRealtime();
     })();
 
     window.addEventListener('online', onOnline);
     return () => {
       cancelled = true;
       stopMirror();
-      stopSSE();
+      stopRealtime();
       window.removeEventListener('online', onOnline);
     };
   });
@@ -80,10 +85,10 @@
     await refreshAll();
   }
 
-  // Pull-to-refresh: trigga synk + hämta allt.
+  // Pull-to-refresh: trigga kalendersynk + hämta allt.
   async function pullRefresh() {
     try {
-      await apiPost('/api/sync/run');
+      await supabase.functions.invoke('caldav-sync');
     } catch {
       /* ingen kalender kopplad / offline */
     }
@@ -104,12 +109,15 @@
   {@html webManifestLink}
 </svelte:head>
 
-{#if isLogin}
+{#if !authReady}
+  <!-- kort ögonblick vid uppstart -->
+{:else if isLogin}
   {@render children()}
 {:else}
   <div
     class="app-shell"
-    style={`--nav-active:${$user?.color ?? 'var(--accent)'};--pair-a:${$user?.color ?? '#d4537e'};--pair-b:${$me?.partner?.color ?? '#378add'}`}
+    style={`--nav-active:${$user?.color ?? 'var(--accent)'};--pair-a:${$user?.color ??
+      '#d4537e'};--pair-b:${$me?.partner?.color ?? '#378add'}`}
   >
     <header class="topbar">
       <span class="brand">

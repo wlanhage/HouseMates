@@ -1,19 +1,27 @@
 /**
  * Klientens "actions" – optimistiska mutationer mot storarna, via outbox
- * (offline-kö) och med återställning vid 4xx + ångra-toast (spec §12).
+ * (offline-kö) mot Supabase, med återställning vid datafel + ångra-toast.
  *
- * Online: mutationen skickas direkt. Offline / nätverksfel: den köas och
- * spelas upp vid reconnect (idempotens via klient-uuid → inga dubbletter).
+ * Konflikthantering:
+ *  - dubblett (23505) → hämta befintlig aktiv vara → "Fanns redan"
+ *  - versionskonflikt → 0 uppdaterade rader → refetch ("server vinner")
+ *  - kalender: aldrig offline-kö; edge function svarar 409 vid CalDAV-konflikt
  */
 import { get } from 'svelte/store';
-import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from './api';
-import { sendMutation } from './outbox';
+import { supabase } from './supabase';
+import { sendOp } from './outbox';
 import { shopping, todosOpen, todosDone, activity, events, user, showToast, uuid } from './stores';
 import { ymd } from './dates';
 import type { ShoppingItem, Todo, Activity, CalendarEvent } from '$lib/types';
 
 const nowIso = () => new Date().toISOString();
-const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : 'Något gick fel.');
+
+function errMsg(e: unknown): string {
+  if (typeof e === 'object' && e && 'message' in e) return 'Något gick fel.';
+  return 'Något gick fel.';
+}
+const isDupe = (e: unknown): boolean =>
+  typeof e === 'object' && e !== null && (e as { code?: string }).code === '23505';
 
 function sortShopping(items: ShoppingItem[]): ShoppingItem[] {
   return [...items].sort(
@@ -31,35 +39,44 @@ function sortTodosOpen(items: Todo[]): Todo[] {
   });
 }
 
-// ── Refetchers (bästa förmåga; offline lämnas spegeldatan orörd) ────────────
+// ── Refetchers ──────────────────────────────────────────────────────────────
 export async function refreshShopping(): Promise<void> {
-  try {
-    shopping.set(await apiGet<ShoppingItem[]>('/api/shopping'));
-  } catch {
-    /* offline → behåll spegeln */
-  }
-}
-export async function refreshTodos(): Promise<void> {
-  try {
-    const [open, done] = await Promise.all([
-      apiGet<Todo[]>('/api/todos?filter=open'),
-      apiGet<Todo[]>('/api/todos?filter=done')
-    ]);
-    todosOpen.set(open);
-    todosDone.set(done);
-  } catch {
-    /* offline */
-  }
-}
-export async function refreshActivity(): Promise<void> {
-  try {
-    activity.set(await apiGet<Activity[]>('/api/activity?limit=30'));
-  } catch {
-    /* offline */
-  }
+  const { data, error } = await supabase
+    .from('shopping_items')
+    .select('*')
+    .is('deleted_at', null)
+    .is('archived_at', null)
+    .order('checked', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (!error && data) shopping.set(data as ShoppingItem[]);
 }
 
-// Kalenderfönster: rullande 1 vecka bakåt + ~5 veckor framåt (spec §12.2).
+export async function refreshTodos(): Promise<void> {
+  const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [open, done] = await Promise.all([
+    supabase.from('todos').select('*').eq('done', false).is('deleted_at', null),
+    supabase
+      .from('todos')
+      .select('*')
+      .eq('done', true)
+      .is('deleted_at', null)
+      .gte('done_at', cutoff)
+      .order('done_at', { ascending: false })
+  ]);
+  if (!open.error && open.data) todosOpen.set(sortTodosOpen(open.data as Todo[]));
+  if (!done.error && done.data) todosDone.set(done.data as Todo[]);
+}
+
+export async function refreshActivity(): Promise<void> {
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('*')
+    .order('id', { ascending: false })
+    .limit(30);
+  if (!error && data) activity.set(data as Activity[]);
+}
+
+// Kalenderfönster: 1 vecka bakåt + ~6 veckor framåt (utökas vid scroll).
 const DAY = 86_400_000;
 let eventFrom = '';
 let eventTo = '';
@@ -69,15 +86,47 @@ function ensureWindow(): void {
     eventTo = ymd(new Date(Date.now() + 42 * DAY));
   }
 }
+
+interface EventRowDb {
+  id: string;
+  recurrence_id: string;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  all_day: boolean;
+  start_ts: string | null;
+  end_ts: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string | null;
+}
+const toCalendarEvent = (r: EventRowDb): CalendarEvent => ({
+  id: r.id,
+  title: r.title,
+  allDay: r.all_day,
+  start: (r.all_day ? r.start_date : r.start_ts)!,
+  end: (r.all_day ? r.end_date : r.end_ts)!,
+  location: r.location,
+  notes: r.notes,
+  createdBy: r.created_by,
+  isRecurring: r.recurrence_id !== ''
+});
+
 export async function refreshEvents(): Promise<void> {
   ensureWindow();
-  try {
-    events.set(await apiGet<CalendarEvent[]>(`/api/events?from=${eventFrom}&to=${eventTo}`));
-  } catch {
-    /* offline → behåll spegeln */
-  }
+  const fromUtc = new Date(new Date(eventFrom + 'T00:00:00Z').getTime() - DAY).toISOString();
+  const toUtc = new Date(new Date(eventTo + 'T00:00:00Z').getTime() + 2 * DAY).toISOString();
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .is('deleted_at', null)
+    .or(
+      `and(all_day.eq.false,start_ts.lt.${toUtc},end_ts.gt.${fromUtc}),` +
+        `and(all_day.eq.true,start_date.lte.${eventTo},end_date.gt.${eventFrom})`
+    );
+  if (!error && data) events.set((data as EventRowDb[]).map(toCalendarEvent));
 }
-/** Utöka fönstret framåt (infinite scroll). */
+
 export async function extendEvents(): Promise<void> {
   ensureWindow();
   eventTo = ymd(new Date(new Date(eventTo + 'T00:00:00Z').getTime() + 28 * DAY));
@@ -88,10 +137,11 @@ export async function refreshAll(): Promise<void> {
   await Promise.allSettled([refreshShopping(), refreshTodos(), refreshActivity(), refreshEvents()]);
 }
 
-let activityTimer: ReturnType<typeof setTimeout> | undefined;
-function bumpActivity(): void {
-  clearTimeout(activityTimer);
-  activityTimer = setTimeout(() => void refreshActivity(), 150);
+// ── Autocomplete (inköp) ────────────────────────────────────────────────────
+export async function suggestShopping(q: string): Promise<{ name: string }[]> {
+  const { data, error } = await supabase.rpc('suggest_shopping', { q });
+  if (error || !data) return [];
+  return data as { name: string }[];
 }
 
 // ── Inköp ──────────────────────────────────────────────────────────────────
@@ -113,111 +163,96 @@ export async function createShopping(name: string, qty?: string): Promise<void> 
     version: 1
   };
   shopping.update((l) => sortShopping([...l, optimistic]));
-  try {
-    const res = await sendMutation<{ item: ShoppingItem; merged: boolean }>({
-      method: 'POST',
-      path: '/api/shopping',
-      body: { id, name, qty: qty?.trim() || undefined },
-      entity: 'shopping'
-    });
-    if (res.data) {
-      shopping.update((l) => {
-        const without = l.filter((i) => i.id !== id && i.id !== res.data!.item.id);
-        return sortShopping([...without, res.data!.item]);
-      });
-      if (res.data.merged) showToast('Fanns redan på listan');
-      bumpActivity();
-    }
-    // queued → optimistic (id = klient-uuid) står kvar tills replay
-  } catch (e) {
+
+  const res = await sendOp({ op: 'shopping.insert', row: { id, name, qty: qty?.trim() || null } });
+  if (!res.sent) return; // köad offline – optimistisk rad står kvar
+  if (res.error) {
     shopping.update((l) => l.filter((i) => i.id !== id));
-    showToast(errMsg(e));
+    if (isDupe(res.error)) showToast('Fanns redan på listan');
+    else showToast(errMsg(res.error));
+    void refreshShopping();
+    return;
   }
+  void refreshShopping();
 }
 
 export async function setChecked(item: ShoppingItem, checked: boolean): Promise<void> {
   const u = get(user);
-  const optimistic: ShoppingItem = {
-    ...item,
-    checked,
-    checked_by: checked ? (u?.id ?? null) : null,
-    checked_at: checked ? nowIso() : null
-  };
-  shopping.update((l) => sortShopping(l.map((i) => (i.id === item.id ? optimistic : i))));
-  try {
-    const res = await sendMutation<ShoppingItem>({
-      method: 'PATCH',
-      path: `/api/shopping/${item.id}`,
-      body: { version: item.version, checked },
-      entity: 'shopping'
-    });
-    if (res.data) {
-      shopping.update((l) => sortShopping(l.map((i) => (i.id === item.id ? res.data! : i))));
-      bumpActivity();
-    }
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'version_conflict' && e.extra.current) {
-      shopping.update((l) =>
-        sortShopping(l.map((i) => (i.id === item.id ? (e.extra.current as ShoppingItem) : i)))
-      );
-      showToast('Uppdaterades av någon annan');
-    } else {
-      shopping.update((l) => sortShopping(l.map((i) => (i.id === item.id ? item : i))));
-      showToast(errMsg(e));
-    }
+  shopping.update((l) =>
+    sortShopping(
+      l.map((i) =>
+        i.id === item.id
+          ? {
+              ...i,
+              checked,
+              checked_by: checked ? (u?.id ?? null) : null,
+              checked_at: checked ? nowIso() : null
+            }
+          : i
+      )
+    )
+  );
+  const res = await sendOp({
+    op: 'shopping.update',
+    id: item.id,
+    version: item.version,
+    patch: { checked }
+  });
+  if (!res.sent) return;
+  if (res.error) {
+    showToast(errMsg(res.error));
+    void refreshShopping();
+    return;
   }
+  // 0 rader (versionskonflikt) syns inte här – refetch håller oss ärliga.
+  void refreshShopping();
 }
 
 export async function editShopping(
   item: ShoppingItem,
   changes: { name?: string; qty?: string | null }
 ): Promise<void> {
-  shopping.update((l) => l.map((i) => (i.id === item.id ? { ...item, ...changes } : i)));
-  try {
-    const res = await sendMutation<ShoppingItem>({
-      method: 'PATCH',
-      path: `/api/shopping/${item.id}`,
-      body: { version: item.version, ...changes },
-      entity: 'shopping'
-    });
-    if (res.data) shopping.update((l) => sortShopping(l.map((i) => (i.id === item.id ? res.data! : i))));
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'version_conflict' && e.extra.current) {
-      shopping.update((l) => l.map((i) => (i.id === item.id ? (e.extra.current as ShoppingItem) : i)));
-      showToast('Uppdaterades av någon annan');
-    } else {
-      shopping.update((l) => l.map((i) => (i.id === item.id ? item : i)));
-      showToast(errMsg(e));
-    }
-  }
+  shopping.update((l) => l.map((i) => (i.id === item.id ? { ...i, ...changes } : i)));
+  const res = await sendOp({
+    op: 'shopping.update',
+    id: item.id,
+    version: item.version,
+    patch: changes
+  });
+  if (res.error && isDupe(res.error)) showToast('Finns redan på listan');
+  else if (res.error) showToast(errMsg(res.error));
+  if (res.sent) void refreshShopping();
 }
 
 export async function deleteShopping(item: ShoppingItem): Promise<void> {
   shopping.update((l) => l.filter((i) => i.id !== item.id));
-  try {
-    await sendMutation({ method: 'DELETE', path: `/api/shopping/${item.id}`, entity: 'shopping' });
+  const res = await sendOp({
+    op: 'shopping.update',
+    id: item.id,
+    version: item.version,
+    patch: { deleted_at: nowIso() }
+  });
+  if (!res.sent) {
     showToast(`Tog bort ${item.name}`, () => void restoreShopping(item.id));
-    bumpActivity();
-  } catch (e) {
-    shopping.update((l) => sortShopping([...l, item]));
-    showToast(errMsg(e));
+    return;
   }
+  if (res.error) {
+    shopping.update((l) => sortShopping([...l, item]));
+    showToast(errMsg(res.error));
+    return;
+  }
+  showToast(`Tog bort ${item.name}`, () => void restoreShopping(item.id));
+  void refreshShopping();
 }
 
 export async function restoreShopping(id: string): Promise<void> {
-  try {
-    const res = await sendMutation<ShoppingItem>({
-      method: 'POST',
-      path: `/api/shopping/${id}/restore`,
-      entity: 'shopping'
-    });
-    if (res.data) shopping.update((l) => sortShopping([...l.filter((i) => i.id !== res.data!.id), res.data!]));
-    bumpActivity();
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'duplicate') showToast('Finns redan på listan');
-    else showToast(errMsg(e));
-    void refreshShopping();
-  }
+  const { error } = await supabase
+    .from('shopping_items')
+    .update({ deleted_at: null, deleted_by: null })
+    .eq('id', id);
+  if (error && isDupe(error)) showToast('Finns redan på listan');
+  else if (error) showToast(errMsg(error));
+  void refreshShopping();
 }
 
 export async function archiveChecked(): Promise<void> {
@@ -225,29 +260,24 @@ export async function archiveChecked(): Promise<void> {
   const checkedItems = before.filter((i) => i.checked);
   if (checkedItems.length === 0) return;
   shopping.set(before.filter((i) => !i.checked));
-  try {
-    const res = await sendMutation<{ count: number; ids: string[] }>({
-      method: 'POST',
-      path: '/api/shopping/archive-checked',
-      entity: 'shopping'
-    });
-    const ids = res.data?.ids ?? checkedItems.map((i) => i.id);
-    const count = res.data?.count ?? checkedItems.length;
-    const label = count === 1 ? '1 vara' : `${count} varor`;
-    showToast(`Arkiverade ${label}`, () => void unarchive(ids));
-    bumpActivity();
-  } catch (e) {
+
+  const { data, error } = await supabase.rpc('archive_checked');
+  if (error) {
     shopping.set(sortShopping(before));
-    showToast(errMsg(e));
+    showToast(errMsg(error));
+    return;
   }
+  const row = Array.isArray(data) ? data[0] : data;
+  const count = Number(row?.count ?? checkedItems.length);
+  const ids: string[] = row?.ids ?? checkedItems.map((i) => i.id);
+  const label = count === 1 ? '1 vara' : `${count} varor`;
+  showToast(`Arkiverade ${label}`, () => void unarchive(ids));
+  void refreshActivity();
 }
 
 async function unarchive(ids: string[]): Promise<void> {
-  try {
-    await sendMutation({ method: 'POST', path: '/api/shopping/unarchive', body: { ids }, entity: 'shopping' });
-  } finally {
-    void refreshShopping();
-  }
+  await supabase.rpc('unarchive', { p_ids: ids });
+  void refreshShopping();
 }
 
 // ── Att göra ────────────────────────────────────────────────────────────────
@@ -278,28 +308,26 @@ export async function createTodo(input: {
     version: 1
   };
   todosOpen.update((l) => sortTodosOpen([...l, optimistic]));
-  try {
-    const res = await sendMutation<Todo>({
-      method: 'POST',
-      path: '/api/todos',
-      body: {
-        id,
-        title,
-        notes: input.notes?.trim() || undefined,
-        assignee: input.assignee ?? undefined,
-        start_date: input.start_date || undefined,
-        due_date: input.due_date || undefined
-      },
-      entity: 'todos'
-    });
-    if (res.data) {
-      todosOpen.update((l) => sortTodosOpen(l.map((t) => (t.id === id ? res.data! : t))));
-      bumpActivity();
+
+  const res = await sendOp({
+    op: 'todos.insert',
+    row: {
+      id,
+      title,
+      notes: input.notes?.trim() || null,
+      assignee: input.assignee ?? null,
+      start_date: input.start_date || null,
+      due_date: input.due_date || null
     }
-  } catch (e) {
+  });
+  if (!res.sent) return;
+  if (res.error) {
     todosOpen.update((l) => l.filter((t) => t.id !== id));
-    showToast(errMsg(e));
+    showToast(errMsg(res.error));
+    return;
   }
+  void refreshTodos();
+  void refreshActivity();
 }
 
 export async function setTodoDone(todo: Todo, done: boolean): Promise<void> {
@@ -310,24 +338,29 @@ export async function setTodoDone(todo: Todo, done: boolean): Promise<void> {
     todosDone.update((l) => l.filter((t) => t.id !== todo.id));
     todosOpen.update((l) => sortTodosOpen([...l, { ...todo, done: false, done_at: null }]));
   }
-  try {
-    const res = await sendMutation<Todo>({
-      method: 'PATCH',
-      path: `/api/todos/${todo.id}`,
-      body: { version: todo.version, done },
-      entity: 'todos'
-    });
-    if (res.data) {
-      todosOpen.update((l) => l.map((t) => (t.id === todo.id ? res.data! : t)));
-      todosDone.update((l) => l.map((t) => (t.id === todo.id ? res.data! : t)));
-      bumpActivity();
-    }
-    if (done) showToast('Klarmarkerad', () => void setTodoDone({ ...todo, version: todo.version + 1 }, false));
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'version_conflict') showToast('Uppdaterades av någon annan');
-    else showToast(errMsg(e));
-    void refreshTodos();
+  const res = await sendOp({
+    op: 'todos.update',
+    id: todo.id,
+    version: todo.version,
+    patch: { done }
+  });
+  if (!res.sent) {
+    if (done) showToast('Klarmarkerad');
+    return;
   }
+  if (res.error) {
+    showToast(errMsg(res.error));
+  } else if (done) {
+    showToast('Klarmarkerad', () => {
+      void supabase
+        .from('todos')
+        .update({ done: false })
+        .eq('id', todo.id)
+        .then(() => refreshTodos());
+    });
+  }
+  void refreshTodos();
+  void refreshActivity();
 }
 
 export async function editTodo(
@@ -340,47 +373,40 @@ export async function editTodo(
     due_date?: string | null;
   }
 ): Promise<void> {
-  todosOpen.update((l) => sortTodosOpen(l.map((t) => (t.id === todo.id ? { ...todo, ...changes } : t))));
-  try {
-    const res = await sendMutation<Todo>({
-      method: 'PATCH',
-      path: `/api/todos/${todo.id}`,
-      body: { version: todo.version, ...changes },
-      entity: 'todos'
-    });
-    if (res.data) todosOpen.update((l) => sortTodosOpen(l.map((t) => (t.id === todo.id ? res.data! : t))));
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'version_conflict') showToast('Uppdaterades av någon annan');
-    else showToast(errMsg(e));
-    void refreshTodos();
-  }
+  todosOpen.update((l) => sortTodosOpen(l.map((t) => (t.id === todo.id ? { ...t, ...changes } : t))));
+  const res = await sendOp({ op: 'todos.update', id: todo.id, version: todo.version, patch: changes });
+  if (res.error) showToast(errMsg(res.error));
+  if (res.sent) void refreshTodos();
 }
 
 export async function deleteTodo(todo: Todo): Promise<void> {
   todosOpen.update((l) => l.filter((t) => t.id !== todo.id));
   todosDone.update((l) => l.filter((t) => t.id !== todo.id));
-  try {
-    await sendMutation({ method: 'DELETE', path: `/api/todos/${todo.id}`, entity: 'todos' });
-    showToast(`Tog bort ${todo.title}`, () => void restoreTodo(todo.id));
-    bumpActivity();
-  } catch (e) {
+  const res = await sendOp({
+    op: 'todos.update',
+    id: todo.id,
+    version: todo.version,
+    patch: { deleted_at: nowIso() }
+  });
+  if (res.error) {
+    showToast(errMsg(res.error));
     void refreshTodos();
-    showToast(errMsg(e));
+    return;
+  }
+  showToast(`Tog bort ${todo.title}`, () => void restoreTodo(todo.id));
+  if (res.sent) {
+    void refreshTodos();
+    void refreshActivity();
   }
 }
 
 export async function restoreTodo(id: string): Promise<void> {
-  try {
-    await sendMutation({ method: 'POST', path: `/api/todos/${id}/restore`, entity: 'todos' });
-    bumpActivity();
-  } catch (e) {
-    showToast(errMsg(e));
-  } finally {
-    void refreshTodos();
-  }
+  await supabase.from('todos').update({ deleted_at: null, deleted_by: null }).eq('id', id);
+  void refreshTodos();
+  void refreshActivity();
 }
 
-// ── Kalender (aldrig via outbox – kräver nät, spec §7.5) ─────────────────────
+// ── Kalender (aldrig via outbox – kräver nät) ───────────────────────────────
 export interface EventInput {
   title: string;
   allDay: boolean;
@@ -390,64 +416,81 @@ export interface EventInput {
   notes?: string | null;
 }
 
-export async function createEventAction(input: EventInput): Promise<boolean> {
-  try {
-    const ev = await apiPost<CalendarEvent>('/api/events', input);
-    events.update((l) => [...l.filter((e) => e.id !== ev.id), ev]);
-    bumpActivity();
-    return true;
-  } catch (e) {
-    showToast(errMsg(e));
-    return false;
-  }
+interface EdgeError {
+  code?: string;
+  message?: string;
+  current?: EventRowDb;
 }
 
-/** Returnerar { ok } eller { conflict } (färsk kopia) vid caldav_conflict. */
+async function invokeEventWrite(body: Record<string, unknown>): Promise<
+  { ok: true; event?: CalendarEvent } | { ok: false; err: EdgeError }
+> {
+  const { data, error } = await supabase.functions.invoke('event-write', { body });
+  if (!error) {
+    return { ok: true, event: data?.event ? toCalendarEvent(data.event) : undefined };
+  }
+  // FunctionsHttpError bär svaret i .context
+  try {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx) {
+      const parsed = (await ctx.json()) as { error?: EdgeError };
+      return { ok: false, err: parsed.error ?? {} };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { ok: false, err: { message: 'Kunde inte nå kalendern.' } };
+}
+
+export async function createEventAction(input: EventInput): Promise<boolean> {
+  const res = await invokeEventWrite({ action: 'create', ...input });
+  if (res.ok) {
+    void refreshEvents();
+    void refreshActivity();
+    return true;
+  }
+  showToast(res.err.message ?? 'Kunde inte spara i kalendern.');
+  return false;
+}
+
 export async function updateEventAction(
   id: string,
   changes: Partial<EventInput>
 ): Promise<{ ok: boolean; conflict?: CalendarEvent }> {
-  try {
-    const ev = await apiPatch<CalendarEvent>(`/api/events/${id}`, changes);
-    events.update((l) => l.map((e) => (e.id === ev.id ? ev : e)));
-    bumpActivity();
+  const res = await invokeEventWrite({ action: 'update', id, ...changes });
+  if (res.ok) {
+    void refreshEvents();
+    void refreshActivity();
     return { ok: true };
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'caldav_conflict' && e.extra.current) {
-      const current = e.extra.current as CalendarEvent;
-      events.update((l) => l.map((e2) => (e2.id === current.id ? current : e2)));
-      return { ok: false, conflict: current };
-    }
-    showToast(errMsg(e));
-    return { ok: false };
   }
+  if (res.err.code === 'caldav_conflict' && res.err.current) {
+    const current = toCalendarEvent(res.err.current);
+    events.update((l) => l.map((e) => (e.id === current.id ? current : e)));
+    return { ok: false, conflict: current };
+  }
+  showToast(res.err.message ?? 'Kunde inte spara i kalendern.');
+  return { ok: false };
 }
 
 export async function deleteEventAction(ev: CalendarEvent): Promise<void> {
   const before = get(events);
   events.update((l) => l.filter((e) => e.id !== ev.id));
-  try {
-    await apiDelete(`/api/events/${ev.id}`);
+  const res = await invokeEventWrite({ action: 'delete', id: ev.id });
+  if (res.ok) {
     showToast(`Tog bort ${ev.title}`, () => void restoreEventAction(ev.id));
-    bumpActivity();
-  } catch (e) {
-    if (e instanceof ApiError && e.code === 'caldav_conflict') {
-      showToast('Händelsen ändrades av någon annan');
-      void refreshEvents();
-    } else {
-      events.set(before);
-      showToast(errMsg(e));
-    }
+    void refreshActivity();
+  } else if (res.err.code === 'caldav_conflict') {
+    showToast('Händelsen ändrades av någon annan');
+    void refreshEvents();
+  } else {
+    events.set(before);
+    showToast(res.err.message ?? 'Kunde inte radera i kalendern.');
   }
 }
 
 export async function restoreEventAction(id: string): Promise<void> {
-  try {
-    await apiPost(`/api/events/${id}/restore`);
-    bumpActivity();
-  } catch (e) {
-    showToast(errMsg(e));
-  } finally {
-    void refreshEvents();
-  }
+  const res = await invokeEventWrite({ action: 'restore', id });
+  if (!res.ok) showToast(res.err.message ?? 'Kunde inte återställa.');
+  void refreshEvents();
+  void refreshActivity();
 }

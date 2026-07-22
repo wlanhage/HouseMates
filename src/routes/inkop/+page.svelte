@@ -2,14 +2,20 @@
   import { onMount, tick } from 'svelte';
   import { shopping } from '$lib/client/stores';
   import { people, colorOf, initialOf } from '$lib/client/people';
-  import { apiGet } from '$lib/client/api';
-  import { refreshShopping, createShopping, setChecked, deleteShopping, archiveChecked } from '$lib/client/data';
+  import {
+    refreshShopping,
+    createShopping,
+    setChecked,
+    deleteShopping,
+    archiveChecked,
+    suggestShopping
+  } from '$lib/client/data';
   import SwipeRow from '$lib/components/SwipeRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import type { ShoppingItem } from '$lib/types';
 
   let text = $state('');
-  let suggestions = $state<{ name: string; count: number }[]>([]);
+  let suggestions = $state<{ name: string }[]>([]);
   let showSuggest = $state(false);
   let inputEl: HTMLInputElement | undefined = $state();
   let sugTimer: ReturnType<typeof setTimeout> | undefined;
@@ -24,13 +30,7 @@
   function loadSuggest(q: string) {
     clearTimeout(sugTimer);
     sugTimer = setTimeout(async () => {
-      try {
-        suggestions = await apiGet<{ name: string; count: number }[]>(
-          `/api/shopping/suggest?q=${encodeURIComponent(q)}`
-        );
-      } catch {
-        suggestions = [];
-      }
+      suggestions = await suggestShopping(q);
     }, 120);
   }
 

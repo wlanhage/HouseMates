@@ -1,17 +1,25 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import { env } from '$env/dynamic/public';
-  import { apiPost, ApiError } from '$lib/client/api';
-  import type { User } from '$lib/types';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { PUBLIC_APP_NAME } from '$env/static/public';
+  import { fetchProfiles, login } from '$lib/client/auth';
+  import type { ProfileRow } from '$lib/client/supabase';
 
-  let { data } = $props();
-  const users = $derived<User[]>(data.users);
-  const appName = env.PUBLIC_APP_NAME || 'Planeraren';
+  const appName = PUBLIC_APP_NAME || 'Planeraren';
 
-  let selected = $state<string | null>(null);
+  let users = $state<ProfileRow[]>([]);
+  let selected = $state<ProfileRow | null>(null);
   let password = $state('');
   let error = $state('');
   let busy = $state(false);
+
+  onMount(async () => {
+    try {
+      users = await fetchProfiles();
+    } catch {
+      error = 'Kunde inte hämta användare – kontrollera anslutningen.';
+    }
+  });
 
   function initials(name: string): string {
     return name.trim().charAt(0).toUpperCase();
@@ -29,16 +37,14 @@
       return;
     }
     busy = true;
-    try {
-      await apiPost('/api/auth/login', { username: selected, password });
-      await invalidateAll();
-      await goto('/');
-    } catch (err) {
-      error = err instanceof ApiError ? err.message : 'Något gick fel.';
+    const err = await login(selected.email, password);
+    busy = false;
+    if (err) {
+      error = err;
       password = '';
-    } finally {
-      busy = false;
+      return;
     }
+    await goto('/');
   }
 </script>
 
@@ -53,13 +59,13 @@
 
   <form onsubmit={submit}>
     <div class="user-picker">
-      {#each users as u (u.id)}
+      {#each users as u (u.username)}
         <button
           type="button"
           class="user-btn"
-          class:selected={selected === u.id}
+          class:selected={selected?.username === u.username}
           style={`--sel:${u.color}`}
-          onclick={() => (selected = u.id)}
+          onclick={() => (selected = u)}
         >
           <span class="avatar" style={`background:${u.color}`}>{initials(u.name)}</span>
           {u.name}

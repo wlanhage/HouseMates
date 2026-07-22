@@ -12,18 +12,13 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "db:setup": "tsx db/migrate.ts --seed",
-    "db:reset": "tsx db/migrate.ts --reset --seed"
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "@sveltejs/adapter-node": "^5.2.9",
+    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.16.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.5",
-    "@types/node-cron": "^3.0.11",
-    "@types/web-push": "^3.6.4",
     "@vite-pwa/sveltekit": "^0.6.7",
     "svelte": "^5.16.0",
     "svelte-check": "^4.1.1",
@@ -33,12 +28,8 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "argon2": "^0.41.1",
-    "better-sqlite3": "^11.8.0",
+    "@supabase/supabase-js": "^2.110.8",
     "ical.js": "^2.1.0",
-    "idb": "^8.0.1",
-    "node-cron": "^3.0.3",
-    "tsdav": "^2.1.2",
-    "web-push": "^3.6.7"
+    "idb": "^8.0.1"
   }
 }

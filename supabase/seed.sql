@@ -30,9 +30,9 @@ values
   (gen_random_uuid(), '22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222',
    '{"sub":"22222222-2222-2222-2222-222222222222","email":"erik@housemates.local"}', 'email', now(), now(), now());
 
-insert into public.profiles (id, username, name, color) values
-  ('11111111-1111-1111-1111-111111111111', 'anna', 'Anna (test)', '#D4537E'),
-  ('22222222-2222-2222-2222-222222222222', 'erik', 'Erik (test)', '#378ADD');
+insert into public.profiles (id, username, name, color, email) values
+  ('11111111-1111-1111-1111-111111111111', 'anna', 'Anna (test)', '#D4537E', 'anna@housemates.local'),
+  ('22222222-2222-2222-2222-222222222222', 'erik', 'Erik (test)', '#378ADD', 'erik@housemates.local');
 
 insert into public.notification_prefs (username) values ('anna'), ('erik');
 insert into public.sync_state (username) values ('anna'), ('erik');
