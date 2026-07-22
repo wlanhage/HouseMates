@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { crossfade, fly } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
   import { shopping } from '$lib/client/stores';
   import { people, colorOf, initialOf } from '$lib/client/people';
   import {
@@ -22,6 +25,27 @@
 
   const active = $derived($shopping.filter((i) => !i.checked));
   const checked = $derived($shopping.filter((i) => i.checked));
+
+  // ── Avbockningsanimation ──────────────────────────────────
+  // 1) bocken ritas i rutan (CSS), 2) raden flyger till sin nya
+  // plats i andra sektionen (crossfade send/receive).
+  const [send, receive] = crossfade({
+    duration: 420,
+    easing: cubicOut,
+    fallback: (node) => fly(node, { y: 40, duration: 300, easing: cubicOut })
+  });
+
+  let pending = $state(new Set<string>());
+  const DRAW_MS = 480;
+
+  function handleCheck(item: ShoppingItem) {
+    if (pending.has(item.id)) return;
+    pending = new Set(pending).add(item.id);
+    setTimeout(() => {
+      pending = new Set([...pending].filter((id) => id !== item.id));
+      void setChecked(item, true);
+    }, DRAW_MS);
+  }
 
   onMount(() => {
     void refreshShopping();
@@ -110,16 +134,25 @@
 {#if active.length}
   <div class="list">
     {#each active as item (item.id)}
-      <SwipeRow ontap={() => void setChecked(item, true)} ondelete={() => void deleteShopping(item)}>
-        <div class="shop-row">
-          <span class="checkbox"></span>
-          <span class="shop-name">
-            {item.name}
-            {#if item.qty}<span class="muted"> · {item.qty}</span>{/if}
-          </span>
-          <span class="dot" style={`background:${colorOf($people, nameChip(item))}`}></span>
-        </div>
-      </SwipeRow>
+      <div
+        class="anim-wrap"
+        in:receive={{ key: item.id }}
+        out:send={{ key: item.id }}
+        animate:flip={{ duration: 300, easing: cubicOut }}
+      >
+        <SwipeRow ontap={() => handleCheck(item)} ondelete={() => void deleteShopping(item)}>
+          <div class="shop-row" class:checking={pending.has(item.id)}>
+            <span class="checkbox" class:drawing={pending.has(item.id)}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+            </span>
+            <span class="shop-name">
+              {item.name}
+              {#if item.qty}<span class="muted"> · {item.qty}</span>{/if}
+            </span>
+            <span class="dot" style={`background:${colorOf($people, nameChip(item))}`}></span>
+          </div>
+        </SwipeRow>
+      </div>
     {/each}
   </div>
 {/if}
@@ -134,18 +167,25 @@
   </div>
   <div class="list">
     {#each checked as item (item.id)}
-      <SwipeRow ontap={() => void setChecked(item, false)} ondelete={() => void deleteShopping(item)}>
-        <div class="shop-row done">
-          <span class="checkbox on">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7" /></svg>
-          </span>
-          <span class="shop-name">
-            {item.name}
-            {#if item.qty}<span class="muted"> · {item.qty}</span>{/if}
-          </span>
-          <Avatar color={colorOf($people, nameChip(item))} initial={initialOf($people, nameChip(item))} size={22} />
-        </div>
-      </SwipeRow>
+      <div
+        class="anim-wrap"
+        in:receive={{ key: item.id }}
+        out:send={{ key: item.id }}
+        animate:flip={{ duration: 300, easing: cubicOut }}
+      >
+        <SwipeRow ontap={() => void setChecked(item, false)} ondelete={() => void deleteShopping(item)}>
+          <div class="shop-row done">
+            <span class="checkbox on">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+            </span>
+            <span class="shop-name">
+              {item.name}
+              {#if item.qty}<span class="muted"> · {item.qty}</span>{/if}
+            </span>
+            <Avatar color={colorOf($people, nameChip(item))} initial={initialOf($people, nameChip(item))} size={22} />
+          </div>
+        </SwipeRow>
+      </div>
     {/each}
   </div>
 {/if}
@@ -203,6 +243,10 @@
     text-decoration: line-through;
     color: var(--muted);
   }
+  .anim-wrap {
+    /* wrapper för crossfade/flip; deltar i .list-flexen som raden gjorde */
+    display: block;
+  }
   .checkbox {
     width: 22px;
     height: 22px;
@@ -212,10 +256,53 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    color: transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .checkbox .tick {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
   }
   .checkbox.on {
     background: var(--ok);
     border-color: var(--ok);
     color: #fff;
+  }
+  .checkbox.on .tick {
+    stroke-dashoffset: 0;
+  }
+  /* Bocken ritas + rutan studsar */
+  .checkbox.drawing {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+    animation: box-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  .checkbox.drawing .tick {
+    animation: draw-tick 0.32s ease-out 0.08s forwards;
+  }
+  @keyframes draw-tick {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes box-pop {
+    0% {
+      transform: scale(0.8);
+    }
+    45% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  /* Raden glöder svagt grönt medan bocken ritas */
+  .shop-row.checking {
+    background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+    border-color: color-mix(in srgb, var(--ok) 35%, var(--border));
+  }
+  .shop-row {
+    transition: background 0.25s, border-color 0.25s;
   }
 </style>

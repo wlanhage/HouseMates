@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
   import { user, todosOpen, activity, events } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
   import { refreshTodos, refreshActivity, refreshEvents, setTodoDone } from '$lib/client/data';
@@ -124,6 +127,17 @@
   function eventTime(e: CalendarEvent): string {
     return e.allDay ? 'Heldag' : hhmm(e.start);
   }
+
+  // Avbockningsanimation: rita bocken, låt sedan raden flyga ut.
+  let pendingDone = $state(new Set<string>());
+  function handleDayDone(t: Todo) {
+    if (pendingDone.has(t.id)) return;
+    pendingDone = new Set(pendingDone).add(t.id);
+    setTimeout(() => {
+      pendingDone = new Set([...pendingDone].filter((id) => id !== t.id));
+      void setTodoDone(t, true);
+    }, 480);
+  }
   function todoBadge(t: Todo): { text: string; kind: string } {
     const due = dueLabel(t.due_date!);
     if (dayOffset === 0) return due;
@@ -177,8 +191,20 @@
           {/each}
           {#each dayTodos as t (t.id)}
             {@const badge = todoBadge(t)}
-            <div class="home-row">
-              <button class="mini-check" aria-label="Bocka av" onclick={() => void setTodoDone(t, true)}></button>
+            <div
+              class="home-row"
+              class:checking={pendingDone.has(t.id)}
+              out:fly={{ y: 36, duration: 320, easing: cubicOut }}
+              animate:flip={{ duration: 280, easing: cubicOut }}
+            >
+              <button
+                class="mini-check"
+                class:drawing={pendingDone.has(t.id)}
+                aria-label="Bocka av"
+                onclick={() => handleDayDone(t)}
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+              </button>
               <span style="flex:1">{t.title}</span>
               {#if badge.text}<span class="badge badge-{badge.kind}">{badge.text}</span>{/if}
               {#if t.assignee}
@@ -420,10 +446,48 @@
     border: 2px solid var(--border);
     background: var(--surface);
     flex: none;
-    transition: border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    padding: 0;
+    transition: border-color 0.15s, background 0.15s;
   }
   .mini-check:active {
     border-color: var(--ok);
+  }
+  .mini-check .tick {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+  }
+  .mini-check.drawing {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+    animation: box-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  .mini-check.drawing .tick {
+    animation: draw-tick 0.32s ease-out 0.08s forwards;
+  }
+  @keyframes draw-tick {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes box-pop {
+    0% {
+      transform: scale(0.8);
+    }
+    45% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .home-row.checking {
+    background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+    border-color: color-mix(in srgb, var(--ok) 35%, var(--border));
   }
   .mini-dot {
     width: 9px;

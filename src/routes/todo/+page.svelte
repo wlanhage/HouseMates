@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { crossfade, fly } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
   import { todosOpen, todosDone, user, me } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
   import { refreshTodos, setTodoDone, deleteTodo } from '$lib/client/data';
@@ -10,6 +13,24 @@
 
   let filter = $state<'alla' | 'du' | 'partner' | 'both'>('alla');
   let showDone = $state(false);
+
+  // Avbockningsanimation: rita bocken, flyg sedan ner till "Klart".
+  const [send, receive] = crossfade({
+    duration: 420,
+    easing: cubicOut,
+    fallback: (node) => fly(node, { y: 40, duration: 300, easing: cubicOut })
+  });
+  let pending = $state(new Set<string>());
+  const DRAW_MS = 480;
+
+  function handleDone(t: Todo) {
+    if (pending.has(t.id)) return;
+    pending = new Set(pending).add(t.id);
+    setTimeout(() => {
+      pending = new Set([...pending].filter((id) => id !== t.id));
+      void setTodoDone(t, true);
+    }, DRAW_MS);
+  }
 
   onMount(() => {
     void refreshTodos();
@@ -57,23 +78,32 @@
   <div class="list">
     {#each filtered as t (t.id)}
       {@const due = t.due_date ? dueLabel(t.due_date) : null}
-      <SwipeRow ontap={() => void setTodoDone(t, true)} ondelete={() => void deleteTodo(t)}>
-        <div class="todo-row">
-          <span class="checkbox"></span>
-          <div class="todo-main">
-            <div class="todo-title">{t.title}</div>
-            {#if t.notes}<div class="todo-notes">{t.notes}</div>{/if}
-          </div>
-          {#if due}
-            <span class="badge badge-{due.kind}">
-              {#if t.start_date}{fmtDate(t.start_date)} – {due.text === 'Idag' || due.text === 'Imorgon' ? due.text.toLowerCase() : fmtDate(t.due_date!)}{:else}{due.text}{/if}
+      <div
+        class="anim-wrap"
+        in:receive={{ key: t.id }}
+        out:send={{ key: t.id }}
+        animate:flip={{ duration: 300, easing: cubicOut }}
+      >
+        <SwipeRow ontap={() => handleDone(t)} ondelete={() => void deleteTodo(t)}>
+          <div class="todo-row" class:checking={pending.has(t.id)}>
+            <span class="checkbox" class:drawing={pending.has(t.id)}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
             </span>
-          {/if}
-          {#if t.assignee}
-            <Avatar color={assigneeColor(t)} initial={initialOf($people, t.assignee)} size={22} />
-          {/if}
-        </div>
-      </SwipeRow>
+            <div class="todo-main">
+              <div class="todo-title">{t.title}</div>
+              {#if t.notes}<div class="todo-notes">{t.notes}</div>{/if}
+            </div>
+            {#if due}
+              <span class="badge badge-{due.kind}">
+                {#if t.start_date}{fmtDate(t.start_date)} – {due.text === 'Idag' || due.text === 'Imorgon' ? due.text.toLowerCase() : fmtDate(t.due_date!)}{:else}{due.text}{/if}
+              </span>
+            {/if}
+            {#if t.assignee}
+              <Avatar color={assigneeColor(t)} initial={initialOf($people, t.assignee)} size={22} />
+            {/if}
+          </div>
+        </SwipeRow>
+      </div>
     {/each}
   </div>
 {/if}
@@ -88,17 +118,24 @@
   {#if showDone}
     <div class="list">
       {#each $todosDone as t (t.id)}
-        <SwipeRow ontap={() => void setTodoDone(t, false)} ondelete={() => void deleteTodo(t)}>
-          <div class="todo-row done">
-            <span class="checkbox on">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7" /></svg>
-            </span>
-            <div class="todo-main"><div class="todo-title">{t.title}</div></div>
-            {#if t.done_by}
-              <Avatar color={colorOf($people, t.done_by)} initial={initialOf($people, t.done_by)} size={22} />
-            {/if}
-          </div>
-        </SwipeRow>
+        <div
+          class="anim-wrap"
+          in:receive={{ key: t.id }}
+          out:send={{ key: t.id }}
+          animate:flip={{ duration: 300, easing: cubicOut }}
+        >
+          <SwipeRow ontap={() => void setTodoDone(t, false)} ondelete={() => void deleteTodo(t)}>
+            <div class="todo-row done">
+              <span class="checkbox on">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+              </span>
+              <div class="todo-main"><div class="todo-title">{t.title}</div></div>
+              {#if t.done_by}
+                <Avatar color={colorOf($people, t.done_by)} initial={initialOf($people, t.done_by)} size={22} />
+              {/if}
+            </div>
+          </SwipeRow>
+        </div>
       {/each}
     </div>
   {/if}
@@ -160,6 +197,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .anim-wrap {
+    display: block;
+  }
   .checkbox {
     width: 22px;
     height: 22px;
@@ -169,11 +209,52 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    color: transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .checkbox .tick {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
   }
   .checkbox.on {
     background: var(--ok);
     border-color: var(--ok);
     color: #fff;
+  }
+  .checkbox.on .tick {
+    stroke-dashoffset: 0;
+  }
+  .checkbox.drawing {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+    animation: box-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  .checkbox.drawing .tick {
+    animation: draw-tick 0.32s ease-out 0.08s forwards;
+  }
+  @keyframes draw-tick {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes box-pop {
+    0% {
+      transform: scale(0.8);
+    }
+    45% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .todo-row {
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .todo-row.checking {
+    background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+    border-color: color-mix(in srgb, var(--ok) 35%, var(--border));
   }
   .done-header {
     display: flex;
