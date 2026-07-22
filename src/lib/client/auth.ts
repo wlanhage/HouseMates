@@ -26,6 +26,19 @@ export async function login(email: string, password: string): Promise<string | n
   return null;
 }
 
+/** Auth-konton följer konventionen <användarnamn>@housemates.local. */
+const LOGIN_EMAIL_DOMAIN = 'housemates.local';
+
+/** Logga in med kort användarnamn (t.ex. "william"). */
+export async function loginWithUsername(
+  username: string,
+  password: string
+): Promise<string | null> {
+  const u = username.trim().toLowerCase();
+  if (!/^[a-z0-9_-]{2,20}$/.test(u)) return 'Fel användare eller lösenord.';
+  return login(`${u}@${LOGIN_EMAIL_DOMAIN}`, password);
+}
+
 export async function logout(): Promise<void> {
   await supabase.auth.signOut();
   user.set(null);

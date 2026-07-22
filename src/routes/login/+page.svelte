@@ -1,36 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { PUBLIC_APP_NAME } from '$env/static/public';
-  import { fetchProfiles, login } from '$lib/client/auth';
-  import type { ProfileRow } from '$lib/client/supabase';
+  import { loginWithUsername } from '$lib/client/auth';
 
   const appName = PUBLIC_APP_NAME || 'Planeraren';
 
-  let users = $state<ProfileRow[]>([]);
-  let selected = $state<ProfileRow | null>(null);
+  let username = $state('');
   let password = $state('');
   let error = $state('');
   let busy = $state(false);
 
-  onMount(async () => {
-    try {
-      users = await fetchProfiles();
-    } catch {
-      error = 'Kunde inte hämta användare – kontrollera anslutningen.';
-    }
-  });
-
-  function initials(name: string): string {
-    return name.trim().charAt(0).toUpperCase();
-  }
-
   async function submit(e: Event) {
     e.preventDefault();
     error = '';
-    if (!selected) {
-      error = 'Välj vem du är.';
+    if (!username.trim()) {
+      error = 'Ange användarnamn.';
       return;
     }
     if (!password) {
@@ -38,7 +23,7 @@
       return;
     }
     busy = true;
-    const err = await login(selected.email, password);
+    const err = await loginWithUsername(username, password);
     busy = false;
     if (err) {
       error = err;
@@ -59,19 +44,18 @@
   </div>
 
   <form onsubmit={submit}>
-    <div class="user-picker">
-      {#each users as u (u.username)}
-        <button
-          type="button"
-          class="user-btn"
-          class:selected={selected?.username === u.username}
-          style={`--sel:${u.color}`}
-          onclick={() => (selected = u)}
-        >
-          <span class="avatar" style={`background:${u.color}`}>{initials(u.name)}</span>
-          {u.name}
-        </button>
-      {/each}
+    <div class="field">
+      <label for="un">Användare</label>
+      <input
+        id="un"
+        class="input"
+        type="text"
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck="false"
+        bind:value={username}
+        placeholder="användarnamn"
+      />
     </div>
 
     <div class="field">
