@@ -5,6 +5,7 @@ dev.db
 dev.db-*
 *.db
 *.db-*
-.env
 .DS_Store
 supabase/functions/.env
+.env*
+!.env.example
