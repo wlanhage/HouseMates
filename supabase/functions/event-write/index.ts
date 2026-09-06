@@ -17,7 +17,7 @@ import {
   decryptSecret,
   HttpError
 } from '../_shared/util.ts';
-import { upsertResource, getEventRow } from '../_shared/synccore.ts';
+import { upsertResource, getEventRow, validAssignee } from '../_shared/synccore.ts';
 
 interface Creds {
   appleId: string;
@@ -89,12 +89,13 @@ Deno.serve(async (req) => {
 
     if (action === 'create') {
       const { title, allDay, start, end, location, notes } = body;
+      const assignee = validAssignee(body.assignee ?? 'both', users);
       if (!title?.trim() || !start || !end) throw new HttpError('validation', 'Titel och tider krävs.', 400);
       if ((allDay && !(end > start)) || (!allDay && Date.parse(end) <= Date.parse(start))) {
         throw new HttpError('validation', 'Slut måste vara efter start.', 400);
       }
       const uid = `app-${me}-${crypto.randomUUID()}`;
-      const ics = buildVCalendar({ uid, title: title.trim(), allDay, start, end, location, notes });
+      const ics = buildVCalendar({ uid, title: title.trim(), allDay, start, end, location, notes, assignee });
       const objectUrl = joinUrl(creds.calendarHref, `${uid}.ics`);
       const res = await putCalendarObject(objectUrl, creds.appleId, creds.password, ics, null);
       if (res.status >= 300) throw new HttpError('caldav_unavailable', 'Kunde inte spara i kalendern.', 502);
@@ -121,7 +122,8 @@ Deno.serve(async (req) => {
         start: body.start,
         end: body.end,
         location: body.location,
-        notes: body.notes
+        notes: body.notes,
+        assignee: body.assignee === undefined ? undefined : validAssignee(body.assignee, users)
       });
       const res = await putCalendarObject(row.caldav_href, creds.appleId, creds.password, newIcs, row.etag);
       if (res.status === 412) {

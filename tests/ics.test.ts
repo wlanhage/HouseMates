@@ -232,3 +232,32 @@ describe('ics.ts – serialisering (spec §15)', () => {
     expect(r.start_ts).toBe('2026-07-15T12:00:00.000Z');
   });
 });
+
+describe('ics.ts – "för vem" (X-PLANERAREN-FOR)', () => {
+  it('skrivs vid create, läses vid parse, ändras/tas bort vid update', () => {
+    const ics = buildVCalendar({
+      uid: 'app-william-1',
+      title: 'Träning',
+      allDay: false,
+      start: '2026-06-01T17:00:00.000Z',
+      end: '2026-06-01T18:00:00.000Z',
+      assignee: 'william'
+    });
+    expect(ics).toContain('X-PLANERAREN-FOR:william');
+    expect(parse(ics)[0].assignee).toBe('william');
+
+    const changed = updateRawIcs(ics, { assignee: 'both' });
+    expect(parse(changed)[0].assignee).toBe('both');
+    expect(parse(changed)[0].title).toBe('Träning');
+
+    const removed = updateRawIcs(changed, { assignee: null });
+    expect(parse(removed)[0].assignee).toBeNull();
+  });
+
+  it('event utan markering (t.ex. från Apple Kalender) → null', () => {
+    const ics = vcal(
+      ['BEGIN:VEVENT', 'UID:x1', 'DTSTART;VALUE=DATE:20260601', 'DTEND;VALUE=DATE:20260602', 'SUMMARY:Bortrest', 'END:VEVENT'].join('\r\n')
+    );
+    expect(parse(ics)[0].assignee).toBeNull();
+  });
+});

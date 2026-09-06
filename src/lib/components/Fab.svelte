@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { online, createKind } from '$lib/client/stores';
+  import { online, createKind, type CreateKind } from '$lib/client/stores';
 
   let open = $state(false);
 
-  function choose(kind: 'event' | 'shopping' | 'todo') {
+  function choose(kind: CreateKind) {
     open = false;
     createKind.set(kind);
   }
@@ -40,6 +40,10 @@
       <button class="sheet-item" onclick={() => choose('todo')}>
         <span class="sheet-icon">✅</span>
         <span>Ny uppgift</span>
+      </button>
+      <button class="sheet-item" onclick={() => choose('chore')}>
+        <span class="sheet-icon">🧽</span>
+        <span>Ny städsyssla</span>
       </button>
     </div>
   </div>

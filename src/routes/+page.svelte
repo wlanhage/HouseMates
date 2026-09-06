@@ -184,7 +184,7 @@
         <div class="list" style="padding:0.15rem 2px 0.75rem">
           {#each dayEvents as e (e.id)}
             <div class="home-row">
-              <span class="mini-dot" style={`background:${colorOf($people, e.createdBy)}`}></span>
+              <span class="mini-dot" style={`background:${colorOf($people, e.assignee)}`}></span>
               <span style="flex:1">{e.title}</span>
               <span class="muted" style="font-size:0.8rem;white-space:nowrap">{eventTime(e)}</span>
             </div>

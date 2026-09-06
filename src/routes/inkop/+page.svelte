@@ -15,9 +15,11 @@
   } from '$lib/client/data';
   import SwipeRow from '$lib/components/SwipeRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import FavoritesSheet from '$lib/components/FavoritesSheet.svelte';
   import type { ShoppingItem } from '$lib/types';
 
   let text = $state('');
+  let showFavorites = $state(false);
   let suggestions = $state<{ name: string }[]>([]);
   let showSuggest = $state(false);
   let inputEl: HTMLInputElement | undefined = $state();
@@ -94,7 +96,19 @@
 
 <svelte:head><title>Inköp</title></svelte:head>
 
-<h2 class="page-title">Inköp</h2>
+<div class="title-row">
+  <h2 class="page-title" style="margin:0;flex:1">Inköp</h2>
+  <button class="icon-btn fav-btn" aria-label="Favoritmiddagar" onclick={() => (showFavorites = true)}>
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 3v6a2.5 2.5 0 0 0 5 0V3M8.5 3v18" />
+      <path d="M18 3c-2.2 2.2-3 5-3 8 0 1.4 1.2 2.5 3 2.5V21" />
+    </svg>
+  </button>
+</div>
+
+{#if showFavorites}
+  <FavoritesSheet onclose={() => (showFavorites = false)} />
+{/if}
 
 <form onsubmit={submit} style="position:relative;margin-bottom:1rem">
   <div class="row" style="gap:0.5rem">
@@ -191,6 +205,15 @@
 {/if}
 
 <style>
+  .title-row {
+    display: flex;
+    align-items: center;
+    margin: 0.35rem 0 1rem;
+  }
+  .fav-btn {
+    color: var(--accent);
+    background: var(--bg-tint);
+  }
   .chips {
     position: absolute;
     left: 0;

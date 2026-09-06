@@ -16,7 +16,9 @@ export type OutboxOp =
   | { op: 'shopping.archive' }
   | { op: 'shopping.unarchive'; ids: string[] }
   | { op: 'todos.insert'; row: Record<string, unknown> }
-  | { op: 'todos.update'; id: string; version: number; patch: Record<string, unknown> };
+  | { op: 'todos.update'; id: string; version: number; patch: Record<string, unknown> }
+  | { op: 'chores.insert'; row: Record<string, unknown> }
+  | { op: 'chores.update'; id: string; version: number; patch: Record<string, unknown> };
 
 interface QueueEntry {
   seq?: number;
@@ -70,6 +72,20 @@ export async function executeOp(op: OutboxOp): Promise<void> {
     case 'todos.update': {
       const { error } = await supabase
         .from('todos')
+        .update(op.patch)
+        .eq('id', op.id)
+        .eq('version', op.version);
+      if (error) throw error;
+      return;
+    }
+    case 'chores.insert': {
+      const { error } = await supabase.from('chores').insert(op.row);
+      if (error) throw error;
+      return;
+    }
+    case 'chores.update': {
+      const { error } = await supabase
+        .from('chores')
         .update(op.patch)
         .eq('id', op.id)
         .eq('version', op.version);

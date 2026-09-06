@@ -3,6 +3,7 @@
   import { addDaysStr, todayStr } from '$lib/client/dates';
   import type { CalendarEvent } from '$lib/types';
   import type { EventInput } from '$lib/client/data';
+  import AssigneePicker from './AssigneePicker.svelte';
 
   let {
     event = null,
@@ -35,6 +36,7 @@
   let allDay = $state(init?.allDay ?? false);
   let location = $state(init?.location ?? '');
   let notes = $state(init?.notes ?? '');
+  let assignee = $state<string | null>(init?.assignee ?? 'both');
 
   // Heldag: rena datum (slut visas inklusivt i UI, lagras exklusivt).
   let startDate = $state(init?.allDay ? init.start : todayStr());
@@ -65,7 +67,8 @@
         start: startDate,
         end: addDaysStr(endDate, 1), // exklusivt
         location: location.trim() || null,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        assignee
       };
     } else {
       const startIso = new Date(startDT).toISOString();
@@ -80,7 +83,8 @@
         start: startIso,
         end: endIso,
         location: location.trim() || null,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        assignee
       };
     }
     busy = true;
@@ -96,6 +100,11 @@
   <div class="field">
     <label for="ev-title">Titel</label>
     <input id="ev-title" class="input" bind:value={title} placeholder="Vad händer?" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <span class="label-txt">För vem?</span>
+    <AssigneePicker bind:value={assignee} />
   </div>
 
   <label class="toggle-row">

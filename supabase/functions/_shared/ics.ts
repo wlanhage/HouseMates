@@ -11,6 +11,7 @@ export interface EventRow {
   title: string;
   location: string | null;
   notes: string | null;
+  assignee: string | null; // username | 'both' | null (X-PLANERAREN-FOR)
   all_day: boolean;
   start_ts: string | null;
   end_ts: string | null;
@@ -38,6 +39,10 @@ function registerTimezones(vcal: any): void {
 const recIdOf = (t: any): string => (t.isDate ? ymd(t) : t.toJSDate().toISOString());
 const str = (v: unknown): string | null => (v == null ? null : String(v));
 
+// Egen ICS-egenskap: vem eventet är för (färgkod). Överlever iCloud-synk.
+const FOR_PROP = 'x-planeraren-for';
+const forOf = (comp: any): string | null => str(comp.getFirstPropertyValue(FOR_PROP));
+
 function makeRow(
   uid: string,
   recurrenceId: string,
@@ -45,6 +50,7 @@ function makeRow(
   title: string,
   location: string | null,
   notes: string | null,
+  assignee: string | null,
   start: any,
   end: any | null
 ): EventRow {
@@ -58,6 +64,7 @@ function makeRow(
       title,
       location,
       notes,
+      assignee,
       all_day: true,
       start_ts: null,
       end_ts: null,
@@ -79,6 +86,7 @@ function makeRow(
     title,
     location,
     notes,
+    assignee,
     all_day: false,
     start_ts,
     end_ts,
@@ -96,6 +104,7 @@ export interface EventFields {
   end: string; // heldag: exklusivt datum
   location?: string | null;
   notes?: string | null;
+  assignee?: string | null;
 }
 
 function timeFrom(value: string, allDay: boolean): any {
@@ -117,6 +126,7 @@ export function buildVCalendar(fields: EventFields): string {
   event.endDate = timeFrom(fields.end, fields.allDay);
   if (fields.location) event.location = fields.location;
   if (fields.notes) event.description = fields.notes;
+  if (fields.assignee) vevent.updatePropertyWithValue(FOR_PROP, fields.assignee);
   vevent.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true));
   vevent.updatePropertyWithValue('sequence', 0);
 
@@ -139,6 +149,10 @@ export function updateRawIcs(rawIcs: string, changes: Partial<Omit<EventFields, 
   if (changes.notes !== undefined) {
     if (changes.notes) event.description = changes.notes;
     else master.removeProperty('description');
+  }
+  if (changes.assignee !== undefined) {
+    if (changes.assignee) master.updatePropertyWithValue(FOR_PROP, changes.assignee);
+    else master.removeProperty(FOR_PROP);
   }
   const allDay = changes.allDay ?? event.startDate.isDate;
   if (changes.start !== undefined) event.startDate = timeFrom(changes.start, allDay);
@@ -186,6 +200,7 @@ export function parseResource(ics: string, windowStart: Date, windowEnd: Date): 
             item.summary ?? '',
             str(item.location),
             str(item.description),
+            forOf(item.component),
             details.startDate,
             details.endDate
           )
@@ -200,6 +215,7 @@ export function parseResource(ics: string, windowStart: Date, windowEnd: Date): 
           event.summary ?? '',
           str(event.location),
           str(event.description),
+          forOf(masterComp),
           event.startDate,
           event.endDate
         )

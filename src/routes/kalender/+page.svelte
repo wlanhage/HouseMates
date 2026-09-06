@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { events, showToast } from '$lib/client/stores';
+  import { events, user, showToast } from '$lib/client/stores';
   import { people, colorOf, nameOf } from '$lib/client/people';
   import {
     refreshEvents,
@@ -88,7 +88,7 @@
         <span class="ev-time">
           {#if entry.event.allDay}Heldag{:else}{hhmm(entry.event.start)}{/if}
         </span>
-        <span class="ev-bar" style={`background:${colorOf($people, entry.event.createdBy)}`}></span>
+        <span class="ev-bar" style={`background:${colorOf($people, entry.event.assignee)}`}></span>
         <span class="ev-main">
           <span class="ev-title">
             {entry.event.title}
@@ -125,6 +125,10 @@
           {#if selected.location}<div class="detail-row">📍 {selected.location}</div>{/if}
           {#if selected.notes}<div class="detail-row">📝 {selected.notes}</div>{/if}
           {#if selected.isRecurring}<div class="detail-row">↻ Återkommande</div>{/if}
+          <div class="detail-row">
+            <span class="for-dot" style={`background:${colorOf($people, selected.assignee)}`}></span>
+            {selected.assignee === 'both' ? 'Gemensamt' : `För ${nameOf($people, selected.assignee, $user?.id)}`}
+          </div>
           <div class="detail-row muted">
             {selected.createdBy ? `Skapad av ${nameOf($people, selected.createdBy)}` : 'Från Apple Kalender'}
           </div>
@@ -203,5 +207,13 @@
   .detail-row {
     padding: 0.3rem 0;
     font-size: 0.95rem;
+  }
+  .for-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.45rem;
+    vertical-align: middle;
   }
 </style>

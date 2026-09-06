@@ -10,6 +10,7 @@ const ev = (o: Partial<CalendarEvent>): CalendarEvent => ({
   end: '',
   location: null,
   createdBy: null,
+  assignee: 'both',
   isRecurring: false,
   ...o
 });

@@ -11,6 +11,9 @@ export const people = derived([user, me], ([$user, $me]) => {
   return map;
 });
 
+/** Färg för "gemensamt" (blå/rosa kommer från profilerna). */
+export const BOTH_COLOR = '#3f9a63';
+
 const strip = (name: string) => name.replace(/\s*\(test\)\s*/i, '').trim();
 
 export function nameOf(map: Map<string, User>, id: string | null, selfId?: string): string {
@@ -22,7 +25,8 @@ export function nameOf(map: Map<string, User>, id: string | null, selfId?: strin
 }
 
 export function colorOf(map: Map<string, User>, id: string | null): string {
-  if (!id || id === 'both') return '#6b7280';
+  if (!id) return '#6b7280';
+  if (id === 'both') return BOTH_COLOR;
   return map.get(id)?.color ?? '#6b7280';
 }
 

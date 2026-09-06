@@ -310,7 +310,8 @@ select {
   gap: 0.35rem;
   margin-bottom: 0.9rem;
 }
-.field label {
+.field label,
+.label-txt {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--muted);

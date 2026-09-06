@@ -9,6 +9,12 @@ export const EXPAND_END = () => new Date(Date.now() + 180 * DAY);
 export const QUERY_START = () => new Date(Date.now() - 60 * DAY);
 export const QUERY_END = () => new Date(Date.now() + 365 * DAY);
 
+/** Giltig 'för vem'-markering: en av användarna eller 'both'; annars null. */
+export function validAssignee(value: unknown, usernames: string[]): string | null {
+  if (value === 'both') return 'both';
+  return typeof value === 'string' && usernames.includes(value) ? value : null;
+}
+
 export function createdByFromUid(uid: string, usernames: string[]): string | null {
   for (const u of usernames) if (uid.startsWith(`app-${u}-`)) return u;
   return null;
@@ -40,6 +46,7 @@ export async function upsertResource(
     title: r.title,
     location: r.location,
     notes: r.notes,
+    assignee: validAssignee(r.assignee, usernames),
     all_day: r.all_day,
     start_ts: r.start_ts,
     end_ts: r.end_ts,

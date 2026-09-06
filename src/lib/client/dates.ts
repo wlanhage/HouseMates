@@ -54,6 +54,14 @@ export function relativeTime(iso: string): string {
   return fmtDate(ymd(new Date(iso)));
 }
 
+/** "idag" / "igår" / "N dagar sedan" – för städsysslornas "senast gjort". */
+export function daysAgoLabel(iso: string): string {
+  const days = daysBetween(ymd(new Date(iso)), ymd());
+  if (days <= 0) return 'idag';
+  if (days === 1) return 'igår';
+  return `${days} dagar sedan`;
+}
+
 /** Klockslag HH:MM i lokal tidszon för en ISO-tidsstämpel. */
 export function hhmm(iso: string): string {
   return new Intl.DateTimeFormat('sv-SE', {

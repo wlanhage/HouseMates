@@ -3,14 +3,17 @@
   import { crossfade, fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
-  import { todosOpen, todosDone, user, me } from '$lib/client/stores';
+  import { todosOpen, todosDone, chores, user, me } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
-  import { refreshTodos, setTodoDone, deleteTodo } from '$lib/client/data';
-  import { dueLabel, fmtDate } from '$lib/client/dates';
+  import { refreshTodos, refreshChores, setTodoDone, deleteTodo, tickChore, deleteChore } from '$lib/client/data';
+  import { dueLabel, fmtDate, daysAgoLabel } from '$lib/client/dates';
   import SwipeRow from '$lib/components/SwipeRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
-  import type { Todo } from '$lib/types';
+  import type { Todo, Chore } from '$lib/types';
 
+  // Två flikar: "Att göra" (engångs – försvinner vid avbockning) och
+  // "Städ" (återkommande – visar när det gjordes senast och av vem).
+  let tab = $state<'todo' | 'chore'>('todo');
   let filter = $state<'alla' | 'du' | 'partner' | 'both'>('alla');
   let showDone = $state(false);
 
@@ -32,31 +35,48 @@
     }, DRAW_MS);
   }
 
+  // Städ: bocken ritas, sedan uppdateras "senast" och raden sorteras om.
+  let pendingChore = $state(new Set<string>());
+  function handleChore(c: Chore) {
+    if (pendingChore.has(c.id)) return;
+    pendingChore = new Set(pendingChore).add(c.id);
+    setTimeout(() => {
+      pendingChore = new Set([...pendingChore].filter((id) => id !== c.id));
+      void tickChore(c);
+    }, DRAW_MS);
+  }
+
   onMount(() => {
     void refreshTodos();
+    void refreshChores();
   });
 
   const partnerId = $derived($me?.partner?.id ?? null);
   const meId = $derived($user?.id ?? null);
 
-  const filtered = $derived(
-    $todosOpen.filter((t) => {
-      if (filter === 'alla') return true;
-      if (filter === 'du') return t.assignee === meId;
-      if (filter === 'partner') return t.assignee === partnerId;
-      if (filter === 'both') return t.assignee === 'both';
-      return true;
-    })
-  );
+  function matchesFilter(assignee: string | null): boolean {
+    if (filter === 'alla') return true;
+    if (filter === 'du') return assignee === meId;
+    if (filter === 'partner') return assignee === partnerId;
+    return assignee === 'both';
+  }
+  const filtered = $derived($todosOpen.filter((t) => matchesFilter(t.assignee)));
+  const filteredChores = $derived($chores.filter((c) => matchesFilter(c.assignee)));
 
-  function assigneeColor(t: Todo): string {
-    return colorOf($people, t.assignee);
+  function lastDoneText(c: Chore): string {
+    if (!c.last_done_at) return 'Aldrig gjort ännu';
+    return `Senast ${daysAgoLabel(c.last_done_at)} · ${nameOf($people, c.last_done_by, meId ?? undefined)}`;
   }
 </script>
 
 <svelte:head><title>Att göra</title></svelte:head>
 
 <h2 class="page-title">Att göra</h2>
+
+<div class="tabs" role="tablist">
+  <button role="tab" aria-selected={tab === 'todo'} class:on={tab === 'todo'} onclick={() => (tab = 'todo')}>Att göra</button>
+  <button role="tab" aria-selected={tab === 'chore'} class:on={tab === 'chore'} onclick={() => (tab = 'chore')}>Städ</button>
+</div>
 
 <div class="pills">
   <button class="pill" class:on={filter === 'alla'} onclick={() => (filter = 'alla')}>Alla</button>
@@ -69,69 +89,38 @@
   <button class="pill" class:on={filter === 'both'} onclick={() => (filter = 'both')}>Gemensamt</button>
 </div>
 
-{#if filtered.length === 0}
-  <div class="card empty">
-    <span class="emoji">✅</span>
-    Inga öppna uppgifter här.
-  </div>
-{:else}
-  <div class="list">
-    {#each filtered as t (t.id)}
-      {@const due = t.due_date ? dueLabel(t.due_date) : null}
-      <div
-        class="anim-wrap"
-        in:receive={{ key: t.id }}
-        out:send={{ key: t.id }}
-        animate:flip={{ duration: 300, easing: cubicOut }}
-      >
-        <SwipeRow ontap={() => handleDone(t)} ondelete={() => void deleteTodo(t)}>
-          <div class="todo-row" class:checking={pending.has(t.id)}>
-            <span class="checkbox" class:drawing={pending.has(t.id)}>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
-            </span>
-            <div class="todo-main">
-              <div class="todo-title">{t.title}</div>
-              {#if t.notes}<div class="todo-notes">{t.notes}</div>{/if}
-            </div>
-            {#if due}
-              <span class="badge badge-{due.kind}">
-                {#if t.start_date}{fmtDate(t.start_date)} – {due.text === 'Idag' || due.text === 'Imorgon' ? due.text.toLowerCase() : fmtDate(t.due_date!)}{:else}{due.text}{/if}
-              </span>
-            {/if}
-            {#if t.assignee}
-              <Avatar color={assigneeColor(t)} initial={initialOf($people, t.assignee)} size={22} />
-            {/if}
-          </div>
-        </SwipeRow>
-      </div>
-    {/each}
-  </div>
-{/if}
-
-{#if $todosDone.length}
-  <button class="done-header" onclick={() => (showDone = !showDone)}>
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={`transform:rotate(${showDone ? 90 : 0}deg);transition:transform .15s`}>
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-    Klart · {$todosDone.length}
-  </button>
-  {#if showDone}
+{#if tab === 'todo'}
+  {#if filtered.length === 0}
+    <div class="card empty">
+      <span class="emoji">✅</span>
+      Inga öppna uppgifter här.
+    </div>
+  {:else}
     <div class="list">
-      {#each $todosDone as t (t.id)}
+      {#each filtered as t (t.id)}
+        {@const due = t.due_date ? dueLabel(t.due_date) : null}
         <div
           class="anim-wrap"
           in:receive={{ key: t.id }}
           out:send={{ key: t.id }}
           animate:flip={{ duration: 300, easing: cubicOut }}
         >
-          <SwipeRow ontap={() => void setTodoDone(t, false)} ondelete={() => void deleteTodo(t)}>
-            <div class="todo-row done">
-              <span class="checkbox on">
+          <SwipeRow ontap={() => handleDone(t)} ondelete={() => void deleteTodo(t)}>
+            <div class="todo-row" class:checking={pending.has(t.id)}>
+              <span class="checkbox" class:drawing={pending.has(t.id)}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
               </span>
-              <div class="todo-main"><div class="todo-title">{t.title}</div></div>
-              {#if t.done_by}
-                <Avatar color={colorOf($people, t.done_by)} initial={initialOf($people, t.done_by)} size={22} />
+              <div class="todo-main">
+                <div class="todo-title">{t.title}</div>
+                {#if t.notes}<div class="todo-notes">{t.notes}</div>{/if}
+              </div>
+              {#if due}
+                <span class="badge badge-{due.kind}">
+                  {#if t.start_date}{fmtDate(t.start_date)} – {due.text === 'Idag' || due.text === 'Imorgon' ? due.text.toLowerCase() : fmtDate(t.due_date!)}{:else}{due.text}{/if}
+                </span>
+              {/if}
+              {#if t.assignee}
+                <Avatar color={colorOf($people, t.assignee)} initial={initialOf($people, t.assignee)} size={22} />
               {/if}
             </div>
           </SwipeRow>
@@ -139,9 +128,94 @@
       {/each}
     </div>
   {/if}
+
+  {#if $todosDone.length}
+    <button class="done-header" onclick={() => (showDone = !showDone)}>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={`transform:rotate(${showDone ? 90 : 0}deg);transition:transform .15s`}>
+        <path d="m9 6 6 6-6 6" />
+      </svg>
+      Klart · {$todosDone.length}
+    </button>
+    {#if showDone}
+      <div class="list">
+        {#each $todosDone as t (t.id)}
+          <div
+            class="anim-wrap"
+            in:receive={{ key: t.id }}
+            out:send={{ key: t.id }}
+            animate:flip={{ duration: 300, easing: cubicOut }}
+          >
+            <SwipeRow ontap={() => void setTodoDone(t, false)} ondelete={() => void deleteTodo(t)}>
+              <div class="todo-row done">
+                <span class="checkbox on">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+                </span>
+                <div class="todo-main"><div class="todo-title">{t.title}</div></div>
+                {#if t.done_by}
+                  <Avatar color={colorOf($people, t.done_by)} initial={initialOf($people, t.done_by)} size={22} />
+                {/if}
+              </div>
+            </SwipeRow>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/if}
+{:else}
+  {#if filteredChores.length === 0}
+    <div class="card empty">
+      <span class="emoji">🧽</span>
+      Inga städsysslor här än. Lägg till med plus-knappen → Ny städsyssla.
+    </div>
+  {:else}
+    <div class="list">
+      {#each filteredChores as c (c.id)}
+        <div class="anim-wrap" animate:flip={{ duration: 320, easing: cubicOut }}>
+          <SwipeRow ontap={() => handleChore(c)} ondelete={() => void deleteChore(c)}>
+            <div class="todo-row" class:checking={pendingChore.has(c.id)}>
+              <span class="checkbox" class:drawing={pendingChore.has(c.id)}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
+              </span>
+              <div class="todo-main">
+                <div class="todo-title">{c.title}</div>
+                <div class="todo-notes" class:never={!c.last_done_at}>{lastDoneText(c)}</div>
+              </div>
+              {#if c.assignee}
+                <Avatar color={colorOf($people, c.assignee)} initial={initialOf($people, c.assignee)} size={22} />
+              {/if}
+            </div>
+          </SwipeRow>
+        </div>
+      {/each}
+    </div>
+    <p class="muted hint">Tryck på en syssla när den är gjord – då uppdateras "senast".</p>
+  {/if}
 {/if}
 
 <style>
+  .tabs {
+    display: flex;
+    background: var(--surface-2);
+    border-radius: 999px;
+    padding: 3px;
+    margin-bottom: 0.9rem;
+  }
+  .tabs button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 0.55rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .tabs button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
   .pills {
     display: flex;
     gap: 0.4rem;
@@ -178,6 +252,7 @@
     border-radius: var(--radius-sm);
     background: var(--surface);
     box-shadow: var(--shadow);
+    transition: background 0.25s, border-color 0.25s;
   }
   .todo-main {
     flex: 1;
@@ -196,6 +271,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .todo-notes.never {
+    font-style: italic;
+  }
+  .hint {
+    font-size: 0.78rem;
+    text-align: center;
+    margin-top: 1rem;
   }
   .anim-wrap {
     display: block;
@@ -248,9 +331,6 @@
     100% {
       transform: scale(1);
     }
-  }
-  .todo-row {
-    transition: background 0.25s, border-color 0.25s;
   }
   .todo-row.checking {
     background: color-mix(in srgb, var(--ok) 9%, var(--surface));

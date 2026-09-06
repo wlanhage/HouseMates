@@ -1,6 +1,6 @@
 /** Delade Svelte-stores (spec §3: user, shopping, todos, events, activity, online). */
 import { writable } from 'svelte/store';
-import type { User, MeResponse, ShoppingItem, Todo, Activity, CalendarEvent } from '$lib/types';
+import type { User, MeResponse, ShoppingItem, Todo, Chore, Activity, CalendarEvent } from '$lib/types';
 
 export const user = writable<User | null>(null);
 export const me = writable<MeResponse | null>(null);
@@ -9,11 +9,13 @@ export const online = writable<boolean>(true);
 export const shopping = writable<ShoppingItem[]>([]);
 export const todosOpen = writable<Todo[]>([]);
 export const todosDone = writable<Todo[]>([]);
+export const chores = writable<Chore[]>([]);
 export const activity = writable<Activity[]>([]);
 export const events = writable<CalendarEvent[]>([]);
 
 /** Global skapa-sheet (FAB) – öppnas oavsett aktiv vy (spec §12.1). */
-export const createKind = writable<'event' | 'shopping' | 'todo' | null>(null);
+export type CreateKind = 'event' | 'shopping' | 'todo' | 'chore';
+export const createKind = writable<CreateKind | null>(null);
 
 /** Ångra-toast (spec §12.1). */
 export interface ToastState {

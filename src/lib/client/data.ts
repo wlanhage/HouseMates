@@ -10,9 +10,19 @@
 import { get } from 'svelte/store';
 import { supabase } from './supabase';
 import { sendOp } from './outbox';
-import { shopping, todosOpen, todosDone, activity, events, user, showToast, uuid } from './stores';
+import {
+  shopping,
+  todosOpen,
+  todosDone,
+  chores,
+  activity,
+  events,
+  user,
+  showToast,
+  uuid
+} from './stores';
 import { ymd } from './dates';
-import type { ShoppingItem, Todo, Activity, CalendarEvent } from '$lib/types';
+import type { ShoppingItem, Todo, Chore, Favorite, Activity, CalendarEvent } from '$lib/types';
 
 const nowIso = () => new Date().toISOString();
 
@@ -36,6 +46,14 @@ function sortTodosOpen(items: Todo[]): Todo[] {
     if (a.due_date && b.due_date && a.due_date !== b.due_date)
       return a.due_date.localeCompare(b.due_date);
     return b.created_at.localeCompare(a.created_at);
+  });
+}
+
+/** Städ: aldrig gjorda överst, därefter längst sedan först. */
+function sortChores(items: Chore[]): Chore[] {
+  return [...items].sort((a, b) => {
+    if (!a.last_done_at || !b.last_done_at) return Number(!!a.last_done_at) - Number(!!b.last_done_at);
+    return a.last_done_at.localeCompare(b.last_done_at);
   });
 }
 
@@ -65,6 +83,11 @@ export async function refreshTodos(): Promise<void> {
   ]);
   if (!open.error && open.data) todosOpen.set(sortTodosOpen(open.data as Todo[]));
   if (!done.error && done.data) todosDone.set(done.data as Todo[]);
+}
+
+export async function refreshChores(): Promise<void> {
+  const { data, error } = await supabase.from('chores').select('*').is('deleted_at', null);
+  if (!error && data) chores.set(sortChores(data as Chore[]));
 }
 
 export async function refreshActivity(): Promise<void> {
@@ -99,6 +122,7 @@ interface EventRowDb {
   start_date: string | null;
   end_date: string | null;
   created_by: string | null;
+  assignee: string | null;
 }
 const toCalendarEvent = (r: EventRowDb): CalendarEvent => ({
   id: r.id,
@@ -109,6 +133,7 @@ const toCalendarEvent = (r: EventRowDb): CalendarEvent => ({
   location: r.location,
   notes: r.notes,
   createdBy: r.created_by,
+  assignee: r.assignee ?? 'both', // omarkerat (t.ex. från Apple Kalender) = gemensamt
   isRecurring: r.recurrence_id !== ''
 });
 
@@ -134,7 +159,13 @@ export async function extendEvents(): Promise<void> {
 }
 
 export async function refreshAll(): Promise<void> {
-  await Promise.allSettled([refreshShopping(), refreshTodos(), refreshActivity(), refreshEvents()]);
+  await Promise.allSettled([
+    refreshShopping(),
+    refreshTodos(),
+    refreshChores(),
+    refreshActivity(),
+    refreshEvents()
+  ]);
 }
 
 // ── Autocomplete (inköp) ────────────────────────────────────────────────────
@@ -145,9 +176,20 @@ export async function suggestShopping(q: string): Promise<{ name: string }[]> {
 }
 
 // ── Inköp ──────────────────────────────────────────────────────────────────
-export async function createShopping(name: string, qty?: string): Promise<void> {
+/** Samma regel som DB:ns unika index: aktiv (obockad) vara med samma name_norm. */
+function existsActive(name: string): boolean {
+  const norm = name.trim().toLowerCase();
+  return get(shopping).some((i) => !i.checked && i.name.trim().toLowerCase() === norm);
+}
+
+/** Returnerar false om varan redan fanns på listan. */
+export async function createShopping(name: string, qty?: string): Promise<boolean> {
   name = name.trim();
-  if (!name) return;
+  if (!name) return false;
+  if (existsActive(name)) {
+    showToast('Fanns redan på listan');
+    return false;
+  }
   const id = uuid();
   const u = get(user);
   const optimistic: ShoppingItem = {
@@ -165,15 +207,16 @@ export async function createShopping(name: string, qty?: string): Promise<void> 
   shopping.update((l) => sortShopping([...l, optimistic]));
 
   const res = await sendOp({ op: 'shopping.insert', row: { id, name, qty: qty?.trim() || null } });
-  if (!res.sent) return; // köad offline – optimistisk rad står kvar
+  if (!res.sent) return true; // köad offline – optimistisk rad står kvar
   if (res.error) {
     shopping.update((l) => l.filter((i) => i.id !== id));
     if (isDupe(res.error)) showToast('Fanns redan på listan');
     else showToast(errMsg(res.error));
     void refreshShopping();
-    return;
+    return false;
   }
   void refreshShopping();
+  return true;
 }
 
 export async function setChecked(item: ShoppingItem, checked: boolean): Promise<void> {
@@ -406,6 +449,134 @@ export async function restoreTodo(id: string): Promise<void> {
   void refreshActivity();
 }
 
+// ── Städ ────────────────────────────────────────────────────────────────────
+export async function createChore(input: { title: string; assignee?: string | null }): Promise<void> {
+  const title = input.title.trim();
+  if (!title) return;
+  const id = uuid();
+  const u = get(user);
+  const optimistic: Chore = {
+    id,
+    title,
+    assignee: input.assignee ?? null,
+    last_done_at: null,
+    last_done_by: null,
+    created_by: u?.id ?? '',
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    version: 1
+  };
+  chores.update((l) => sortChores([...l, optimistic]));
+
+  const res = await sendOp({
+    op: 'chores.insert',
+    row: { id, title, assignee: input.assignee ?? null }
+  });
+  if (!res.sent) return;
+  if (res.error) {
+    chores.update((l) => l.filter((c) => c.id !== id));
+    showToast(errMsg(res.error));
+    return;
+  }
+  void refreshChores();
+  void refreshActivity();
+}
+
+/** "Gjort nu": servern sätter last_done_by/at; ångra återställer förra värdena. */
+export async function tickChore(chore: Chore): Promise<void> {
+  const u = get(user);
+  const done = { ...chore, last_done_at: nowIso(), last_done_by: u?.id ?? null };
+  chores.update((l) => sortChores(l.map((c) => (c.id === chore.id ? done : c))));
+
+  const res = await sendOp({
+    op: 'chores.update',
+    id: chore.id,
+    version: chore.version,
+    patch: { last_done_at: done.last_done_at }
+  });
+  if (!res.sent) {
+    showToast(`Gjort: ${chore.title}`);
+    return;
+  }
+  if (res.error) {
+    showToast(errMsg(res.error));
+  } else {
+    showToast(`Gjort: ${chore.title}`, () => {
+      void supabase
+        .from('chores')
+        .update({ last_done_at: chore.last_done_at, last_done_by: chore.last_done_by })
+        .eq('id', chore.id)
+        .then(() => refreshChores());
+    });
+  }
+  void refreshChores();
+  void refreshActivity();
+}
+
+export async function deleteChore(chore: Chore): Promise<void> {
+  chores.update((l) => l.filter((c) => c.id !== chore.id));
+  const res = await sendOp({
+    op: 'chores.update',
+    id: chore.id,
+    version: chore.version,
+    patch: { deleted_at: nowIso() }
+  });
+  if (res.error) {
+    showToast(errMsg(res.error));
+    void refreshChores();
+    return;
+  }
+  showToast(`Tog bort ${chore.title}`, () => void restoreChore(chore.id));
+  if (res.sent) {
+    void refreshChores();
+    void refreshActivity();
+  }
+}
+
+export async function restoreChore(id: string): Promise<void> {
+  await supabase.from('chores').update({ deleted_at: null, deleted_by: null }).eq('id', id);
+  void refreshChores();
+  void refreshActivity();
+}
+
+// ── Favoritmiddagar (kräver nät – ingen spegel/kö) ──────────────────────────
+export async function listFavorites(): Promise<Favorite[]> {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select('*')
+    .is('deleted_at', null)
+    .order('name');
+  if (error || !data) return [];
+  return data as Favorite[];
+}
+
+export async function createFavorite(name: string, items: string[]): Promise<boolean> {
+  const u = get(user);
+  const { error } = await supabase
+    .from('favorites')
+    .insert({ id: uuid(), name: name.trim(), items, created_by: u?.id ?? '' });
+  if (error) {
+    showToast(errMsg(error));
+    return false;
+  }
+  return true;
+}
+
+export async function deleteFavorite(fav: Favorite): Promise<void> {
+  const { error } = await supabase.from('favorites').update({ deleted_at: nowIso() }).eq('id', fav.id);
+  if (error) showToast(errMsg(error));
+}
+
+/** Lägg favoritens varor på inköpslistan; det som redan finns hoppas över. */
+export async function addFavoriteToList(fav: Favorite): Promise<void> {
+  let added = 0;
+  for (const item of fav.items) if (await createShopping(item)) added++;
+  const skipped = fav.items.length - added;
+  const label = added === 1 ? '1 vara' : `${added} varor`;
+  const note = skipped > 0 ? ` · ${skipped} fanns redan` : '';
+  showToast(`La till ${label} från ${fav.name}${note}`);
+}
+
 // ── Kalender (aldrig via outbox – kräver nät) ───────────────────────────────
 export interface EventInput {
   title: string;
@@ -414,6 +585,7 @@ export interface EventInput {
   end: string;
   location?: string | null;
   notes?: string | null;
+  assignee?: string | null; // users.id | 'both'
 }
 
 interface EdgeError {

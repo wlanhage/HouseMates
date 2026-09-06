@@ -56,6 +56,28 @@ export interface Todo {
   version: number;
 }
 
+/** Städsyssla: återkommande – bockas av → "senast gjort", försvinner inte. */
+export interface Chore {
+  id: string;
+  title: string;
+  assignee: string | null; // users.id | 'both' | null
+  last_done_at: string | null;
+  last_done_by: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  version: number;
+}
+
+/** Favoritmiddag: namn + varorna som behövs. */
+export interface Favorite {
+  id: string;
+  name: string;
+  items: string[];
+  created_by: string;
+  created_at: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -65,6 +87,7 @@ export interface CalendarEvent {
   location: string | null;
   notes?: string | null;
   createdBy: string | null;
+  assignee: string; // users.id | 'both' (för vem – färgkod)
   isRecurring: boolean;
 }
 
@@ -72,7 +95,7 @@ export interface Activity {
   id: number;
   type: string;
   actor: string;
-  entity_type: 'shopping' | 'todo' | 'event';
+  entity_type: 'shopping' | 'todo' | 'event' | 'chore';
   entity_id: string;
   payload: Record<string, unknown> | null;
   created_at: string;

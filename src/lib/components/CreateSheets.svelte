@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { createKind, user, me } from '$lib/client/stores';
-  import { people, nameOf } from '$lib/client/people';
-  import { createShopping, createTodo, createEventAction, type EventInput } from '$lib/client/data';
+  import { createKind } from '$lib/client/stores';
+  import { createShopping, createTodo, createChore, createEventAction, type EventInput } from '$lib/client/data';
   import EventForm from './EventForm.svelte';
+  import AssigneePicker from './AssigneePicker.svelte';
 
   // Inköp
   let shopName = $state('');
@@ -14,11 +14,11 @@
   let todoStart = $state('');
   let todoDue = $state('');
   let todoError = $state('');
+  // Städ
+  let choreTitle = $state('');
+  let choreAssignee = $state<string | null>('both');
 
   let firstField: HTMLInputElement | undefined = $state();
-
-  const meId = $derived($user?.id ?? null);
-  const partnerId = $derived($me?.partner?.id ?? null);
 
   function close() {
     createKind.set(null);
@@ -37,6 +37,9 @@
       todoStart = '';
       todoDue = '';
       todoError = '';
+    } else if (kind === 'chore') {
+      choreTitle = '';
+      choreAssignee = 'both';
     }
     if (kind) setTimeout(() => firstField?.focus(), 30);
   });
@@ -67,6 +70,13 @@
       start_date: todoStart || null,
       due_date: todoDue || null
     });
+    close();
+  }
+
+  async function submitChore(e: Event) {
+    e.preventDefault();
+    if (!choreTitle.trim()) return;
+    await createChore({ title: choreTitle, assignee: choreAssignee });
     close();
   }
 
@@ -113,15 +123,8 @@
             <input id="t-notes" class="input" bind:value={todoNotes} placeholder="Detaljer…" autocomplete="off" />
           </div>
           <div class="field">
-            <span class="label-txt">Ansvarig</span>
-            <div class="segment">
-              <button type="button" class:on={todoAssignee === meId} onclick={() => (todoAssignee = meId)}>Du</button>
-              {#if partnerId}
-                <button type="button" class:on={todoAssignee === partnerId} onclick={() => (todoAssignee = partnerId)}>{nameOf($people, partnerId)}</button>
-              {/if}
-              <button type="button" class:on={todoAssignee === 'both'} onclick={() => (todoAssignee = 'both')}>Gemensamt</button>
-              <button type="button" class:on={todoAssignee === null} onclick={() => (todoAssignee = null)}>Ingen</button>
-            </div>
+            <span class="label-txt">Vem gör det?</span>
+            <AssigneePicker bind:value={todoAssignee} allowNone />
           </div>
           <div class="row" style="gap:0.5rem;align-items:flex-end">
             <div class="field" style="flex:1">
@@ -139,6 +142,22 @@
           {#if todoError}<p class="error-text">{todoError}</p>{/if}
           <button class="btn btn-primary btn-block" type="submit" disabled={!todoTitle.trim()}>Lägg till</button>
         </form>
+      {:else if $createKind === 'chore'}
+        <h3 style="padding:0 0.5rem 0.5rem">Ny städsyssla</h3>
+        <form onsubmit={submitChore} style="padding:0 0.5rem">
+          <div class="field">
+            <label for="ch-title">Syssla</label>
+            <input id="ch-title" bind:this={firstField} class="input" bind:value={choreTitle} placeholder="t.ex. Byta sängkläder" autocomplete="off" />
+          </div>
+          <div class="field">
+            <span class="label-txt">Vem gör det?</span>
+            <AssigneePicker bind:value={choreAssignee} allowNone />
+          </div>
+          <p class="muted" style="font-size:0.78rem;margin:-0.4rem 0 0.8rem">
+            Bockas av gång på gång – listan visar när det gjordes senast och av vem.
+          </p>
+          <button class="btn btn-primary btn-block" type="submit" disabled={!choreTitle.trim()}>Lägg till</button>
+        </form>
       {:else if $createKind === 'event'}
         <h3 style="padding:0 0.5rem 0.5rem">Nytt event</h3>
         <EventForm submitLabel="Skapa" onsubmit={submitEvent} />
@@ -146,32 +165,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  .label-txt {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .segment {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-  }
-  .segment button {
-    flex: 1;
-    min-width: 60px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    border-radius: var(--radius-sm);
-    padding: 0.5rem 0.4rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-  .segment button.on {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
-</style>

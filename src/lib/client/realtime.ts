@@ -7,6 +7,7 @@ import { supabase } from './supabase';
 import {
   refreshShopping,
   refreshTodos,
+  refreshChores,
   refreshActivity,
   refreshEvents,
   refreshAll
@@ -25,6 +26,10 @@ export function startRealtime(): () => void {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => {
       void refreshTodos();
+      void refreshActivity();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chores' }, () => {
+      void refreshChores();
       void refreshActivity();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
