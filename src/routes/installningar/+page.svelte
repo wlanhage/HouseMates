@@ -5,6 +5,7 @@
   import { user, me } from '$lib/client/stores';
   import { refreshEvents } from '$lib/client/data';
   import { supabase } from '$lib/client/supabase';
+  import { PUBLIC_SUPABASE_URL } from '$env/static/public';
   import { logout as authLogout, loadMe } from '$lib/client/auth';
   import { hhmm } from '$lib/client/dates';
   import type { SyncStatus, NotificationPrefs } from '$lib/types';
@@ -198,6 +199,40 @@
     }
   }
 
+  // ── Receptimport via iPhone-genväg (nyckel i headern x-import-token) ──
+  const importUrl = `${PUBLIC_SUPABASE_URL}/functions/v1/recipe-import`;
+  let importToken = $state<string | null>(null);
+  let tokenMsg = $state('');
+
+  onMount(loadImportToken);
+
+  async function loadImportToken() {
+    const username = $user?.id;
+    if (!username) return;
+    const { data } = await supabase.from('import_tokens').select('token').eq('username', username).maybeSingle();
+    importToken = data?.token ?? null;
+  }
+
+  async function newImportToken() {
+    const username = $user?.id;
+    if (!username) return;
+    const token = crypto.randomUUID().replace(/-/g, '');
+    const { error } = await supabase
+      .from('import_tokens')
+      .upsert({ username, token }, { onConflict: 'username' });
+    tokenMsg = error ? 'Kunde inte spara nyckeln.' : '';
+    if (!error) importToken = token;
+  }
+
+  async function copyText(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      tokenMsg = `${label} kopierad.`;
+    } catch {
+      tokenMsg = 'Kunde inte kopiera – markera och kopiera manuellt.';
+    }
+  }
+
   async function logout() {
     busy = true;
     try {
@@ -320,6 +355,36 @@
   {/if}
 </div>
 
+<div class="section-title">Recept från Safari</div>
+<div class="card" style="padding:1rem;margin-bottom:1rem">
+  <div class="muted" style="font-size:0.9rem;margin-bottom:0.75rem">
+    En iPhone-genväg ("Spara till HouseMates" under Dela) sparar recept som favoriter. Den behöver
+    adressen och din nyckel nedan – bygget beskrivs i <strong>RECEPT-GENVAG.md</strong>.
+  </div>
+  <div class="field">
+    <span class="label-txt">Adress</span>
+    <div class="token-row">
+      <code class="token">{importUrl}</code>
+      <button class="btn" onclick={() => copyText(importUrl, 'Adressen')}>Kopiera</button>
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:0.5rem">
+    <span class="label-txt">Din nyckel</span>
+    {#if importToken}
+      <div class="token-row">
+        <code class="token">{importToken}</code>
+        <button class="btn" onclick={() => copyText(importToken!, 'Nyckeln')}>Kopiera</button>
+      </div>
+    {:else}
+      <button class="btn btn-block" onclick={newImportToken}>Skapa nyckel</button>
+    {/if}
+  </div>
+  {#if importToken}
+    <button class="btn" style="padding:0.35rem 0.7rem;font-size:0.85rem" onclick={newImportToken}>Byt nyckel</button>
+  {/if}
+  {#if tokenMsg}<p class="muted" style="font-size:0.85rem;margin:0.5rem 0 0">{tokenMsg}</p>{/if}
+</div>
+
 <div class="section-title">Installera på iPhone</div>
 <div class="card" style="padding:1rem;margin-bottom:1.5rem">
   <div class="muted">
@@ -332,6 +397,21 @@
 </button>
 
 <style>
+  .token-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .token {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.78rem;
+    padding: 0.5rem 0.6rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
+    user-select: all;
+  }
   .notif-toggle {
     display: flex;
     align-items: center;

@@ -22,7 +22,16 @@ import {
   uuid
 } from './stores';
 import { ymd } from './dates';
-import type { ShoppingItem, Todo, Chore, Favorite, Activity, CalendarEvent } from '$lib/types';
+import type {
+  ShoppingItem,
+  Todo,
+  Chore,
+  Favorite,
+  ImportedRecipe,
+  Activity,
+  CalendarEvent
+} from '$lib/types';
+import { splitIngredient } from './ingredients';
 
 const nowIso = () => new Date().toISOString();
 
@@ -550,11 +559,21 @@ export async function listFavorites(): Promise<Favorite[]> {
   return data as Favorite[];
 }
 
-export async function createFavorite(name: string, items: string[]): Promise<boolean> {
+export async function createFavorite(input: {
+  name: string;
+  items: string[];
+  image_url?: string | null;
+  source_url?: string | null;
+}): Promise<boolean> {
   const u = get(user);
-  const { error } = await supabase
-    .from('favorites')
-    .insert({ id: uuid(), name: name.trim(), items, created_by: u?.id ?? '' });
+  const { error } = await supabase.from('favorites').insert({
+    id: uuid(),
+    name: input.name.trim(),
+    items: input.items,
+    image_url: input.image_url ?? null,
+    source_url: input.source_url ?? null,
+    created_by: u?.id ?? ''
+  });
   if (error) {
     showToast(errMsg(error));
     return false;
@@ -567,10 +586,31 @@ export async function deleteFavorite(fav: Favorite): Promise<void> {
   if (error) showToast(errMsg(error));
 }
 
+/** En ingrediensrad → inköpslistan (mängd blir antal-fältet). */
+export function addIngredientToList(line: string): Promise<boolean> {
+  const { name, qty } = splitIngredient(line);
+  return createShopping(name, qty ?? undefined);
+}
+
+/** Hämta namn/bild/ingredienser från en receptsida (sparar inte). */
+export async function importRecipe(url: string): Promise<ImportedRecipe | null> {
+  const { data, error } = await supabase.functions.invoke('recipe-import', { body: { url } });
+  if (!error) return (data?.recipe as ImportedRecipe) ?? null;
+  let message = 'Kunde inte hämta receptet.';
+  try {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx) message = (await ctx.json())?.error?.message ?? message;
+  } catch {
+    /* behåll standardtexten */
+  }
+  showToast(message);
+  return null;
+}
+
 /** Lägg favoritens varor på inköpslistan; det som redan finns hoppas över. */
 export async function addFavoriteToList(fav: Favorite): Promise<void> {
   let added = 0;
-  for (const item of fav.items) if (await createShopping(item)) added++;
+  for (const item of fav.items) if (await addIngredientToList(item)) added++;
   const skipped = fav.items.length - added;
   const label = added === 1 ? '1 vara' : `${added} varor`;
   const note = skipped > 0 ? ` · ${skipped} fanns redan` : '';

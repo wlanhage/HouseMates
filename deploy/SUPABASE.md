@@ -19,7 +19,7 @@ Realtime, Edge Functions, pg_cron). Ingen egen server.
 export SUPABASE_ACCESS_TOKEN=<token>
 supabase link --project-ref <ref>          # <ref> från projektets URL
 supabase db push                           # migrationer (schema/RLS/triggers)
-supabase functions deploy caldav-sync caldav-setup caldav-select event-write notify
+supabase functions deploy caldav-sync caldav-setup caldav-select event-write notify recipe-import
 
 # Hemligheter
 node deploy/gen-vapid.mjs                  # ger raderna nedan

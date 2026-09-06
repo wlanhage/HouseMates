@@ -69,13 +69,23 @@ export interface Chore {
   version: number;
 }
 
-/** Favoritmiddag: namn + varorna som behövs. */
+/** Favoritmiddag: namn + varorna som behövs (rader som "500 g köttfärs" om importerad). */
 export interface Favorite {
   id: string;
   name: string;
   items: string[];
+  image_url: string | null;
+  source_url: string | null;
   created_by: string;
   created_at: string;
+}
+
+/** Resultat av receptimport (innan det sparats som favorit). */
+export interface ImportedRecipe {
+  name: string;
+  items: string[];
+  image_url: string | null;
+  source_url: string;
 }
 
 export interface CalendarEvent {
