@@ -16,12 +16,16 @@
   let mode = $state<'none' | 'h' | 'v'>('none');
   let moved = false;
   let longPress: ReturnType<typeof setTimeout> | undefined;
+  // Tryck räknas bara på bockens yta ([data-tap]) när raden har en; annars hela raden.
+  let tapAllowed = false;
 
   function down(e: PointerEvent) {
     startX = e.clientX;
     startY = e.clientY;
     mode = 'none';
     moved = false;
+    const row = e.currentTarget as HTMLElement;
+    tapAllowed = !row.querySelector('[data-tap]') || !!(e.target as Element).closest('[data-tap]');
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
@@ -52,16 +56,17 @@
     dx = Math.max(-OPEN, Math.min(0, base + ddx));
   }
 
-  function up() {
+  function up(e: PointerEvent) {
     clearTimeout(longPress);
     if (mode === 'h') {
       open = dx < -OPEN / 2;
       dx = open ? -OPEN : 0;
-    } else if (!moved) {
+    } else if (mode === 'none' && e.type === 'pointerup') {
+      // Ett riktigt tryck: ingen rörelse, och inte en skroll som iOS avbröt (pointercancel).
       if (open) {
         open = false;
         dx = 0;
-      } else {
+      } else if (tapAllowed) {
         ontap?.();
       }
     }

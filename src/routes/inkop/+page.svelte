@@ -151,7 +151,7 @@
       >
         <SwipeRow ontap={() => handleCheck(item)} ondelete={() => void deleteShopping(item)}>
           <div class="shop-row" class:checking={pending.has(item.id)}>
-            <span class="checkbox" class:drawing={pending.has(item.id)}>
+            <span class="checkbox" data-tap class:drawing={pending.has(item.id)}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
             </span>
             <span class="shop-name">
@@ -184,7 +184,7 @@
       >
         <SwipeRow ontap={() => void setChecked(item, false)} ondelete={() => void deleteShopping(item)}>
           <div class="shop-row done">
-            <span class="checkbox on">
+            <span class="checkbox on" data-tap>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
             </span>
             <span class="shop-name">

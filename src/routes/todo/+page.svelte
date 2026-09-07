@@ -107,7 +107,7 @@
         >
           <SwipeRow ontap={() => handleDone(t)} ondelete={() => void deleteTodo(t)}>
             <div class="todo-row" class:checking={pending.has(t.id)}>
-              <span class="checkbox" class:drawing={pending.has(t.id)}>
+              <span class="checkbox" data-tap class:drawing={pending.has(t.id)}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
               </span>
               <div class="todo-main">
@@ -147,7 +147,7 @@
           >
             <SwipeRow ontap={() => void setTodoDone(t, false)} ondelete={() => void deleteTodo(t)}>
               <div class="todo-row done">
-                <span class="checkbox on">
+                <span class="checkbox on" data-tap>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
                 </span>
                 <div class="todo-main"><div class="todo-title">{t.title}</div></div>
@@ -173,7 +173,7 @@
         <div class="anim-wrap" animate:flip={{ duration: 320, easing: cubicOut }}>
           <SwipeRow ontap={() => handleChore(c)} ondelete={() => void deleteChore(c)}>
             <div class="todo-row" class:checking={pendingChore.has(c.id)}>
-              <span class="checkbox" class:drawing={pendingChore.has(c.id)}>
+              <span class="checkbox" data-tap class:drawing={pendingChore.has(c.id)}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
               </span>
               <div class="todo-main">
