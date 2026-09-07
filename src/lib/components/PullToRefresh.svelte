@@ -50,7 +50,9 @@
       {refreshing ? 'Uppdaterar…' : pull > 45 ? 'Släpp för att uppdatera' : 'Dra för att uppdatera'}
     </div>
   {/if}
-  <div style={`transform:translateY(${pull}px);transition:${active ? 'none' : 'transform 0.2s'}`}>
+  <!-- transform bara under dragning: en permanent transform gör position:fixed
+       i sidorna (sheets, dialoger) relativ till omslaget istället för skärmen -->
+  <div style={pull || refreshing ? `transform:translateY(${pull}px);transition:${active ? 'none' : 'transform 0.2s'}` : ''}>
     {@render children()}
   </div>
 </div>

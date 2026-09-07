@@ -7,10 +7,12 @@
   import { refreshFavorites, refreshShopping, addIngredientsToList, deleteFavorite } from '$lib/client/data';
   import { splitIngredient } from '$lib/client/ingredients';
   import { hostOf, itemCountLabel } from '$lib/client/text';
+  import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
   const fav = $derived($favorites.find((f) => f.id === $page.params.id) ?? null);
   let loaded = $state(false);
   let busy = $state(false);
+  let confirmDelete = $state(false);
 
   // Varor som redan ligger obockade på listan – förmarkeras inte.
   const onList = $derived(
@@ -61,6 +63,7 @@
   async function remove() {
     if (!fav) return;
     const f = fav;
+    confirmDelete = false;
     await goto(`${base}/inkop/middagar`);
     await deleteFavorite(f);
   }
@@ -124,8 +127,17 @@
       </div>
     {/if}
 
-    <button class="danger-link" onclick={remove}>Ta bort från Våra middagar</button>
+    <button class="danger-link" onclick={() => (confirmDelete = true)}>Ta bort från Våra middagar</button>
   </div>
+
+  {#if confirmDelete}
+    <ConfirmSheet
+      title={`Ta bort ${fav.name}?`}
+      text="Middagen försvinner från Våra middagar. Du kan ångra i några sekunder efteråt."
+      onconfirm={remove}
+      oncancel={() => (confirmDelete = false)}
+    />
+  {/if}
 {:else if loaded}
   <div class="card empty">
     <span class="emoji">🤷</span>
