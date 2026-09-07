@@ -4,14 +4,11 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
-    },
-    {
-      "name": "repro",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4177", "--directory", "/private/tmp/claude-501/-Users-williamlanhage-HouseMates/1d554acf-c9ad-4582-8529-4e43882f640d/scratchpad"],
-      "port": 4177
     }
   ]
 }
