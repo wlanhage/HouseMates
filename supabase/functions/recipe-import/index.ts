@@ -4,15 +4,16 @@
  * Två anropare:
  *  - Appen (inloggad medlem): { url } → { recipe } utan att spara; användaren
  *    granskar och sparar i formuläret.
- *  - iPhone-genvägen (header x-import-token): { url, save: true } → sparar
- *    favoriten direkt. Svarar ALLTID 200 med ett "message"-fält, även vid
- *    fel, så genvägen kan visa en notis istället för ett felfönster.
+ *  - iPhone-genvägen (header x-import-token): { url } → sparar favoriten
+ *    direkt och svarar ALLTID 200 med ren text ("Sparad: …"), även vid fel,
+ *    så genvägen kan visa svaret rakt av i en notis utan extra steg.
  */
 import {
   serviceClient,
   jsonResponse,
   handleOptions,
   requireMember,
+  corsHeaders,
   HttpError
 } from '../_shared/util.ts';
 import { parseRecipeHtml } from '../_shared/recipe.ts';
@@ -60,6 +61,14 @@ async function fetchPage(url: string): Promise<string> {
   }
 }
 
+/** Genvägens svar: ren text som visas direkt i notisen. */
+function textResponse(message: string): Response {
+  return new Response(message, {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+}
+
 async function userFromToken(
   svc: ReturnType<typeof serviceClient>,
   token: string
@@ -93,7 +102,7 @@ Deno.serve(async (req) => {
       image_url: parsed.imageUrl,
       source_url: url
     };
-    if (!body.save) return jsonResponse({ recipe });
+    if (!viaShortcut) return jsonResponse({ recipe });
 
     // Samma länk två gånger → befintlig favorit, ingen dubblett.
     const { data: existing } = await svc
@@ -102,15 +111,11 @@ Deno.serve(async (req) => {
       .eq('source_url', url)
       .is('deleted_at', null)
       .maybeSingle();
-    if (existing) {
-      return jsonResponse({ ok: true, favorite: existing, merged: true, message: `Fanns redan: ${existing.name}` });
-    }
+    if (existing) return textResponse(`Fanns redan: ${existing.name}`);
 
-    const { data: favorite, error } = await svc
+    const { error } = await svc
       .from('favorites')
-      .insert({ id: crypto.randomUUID(), ...recipe, created_by: me })
-      .select()
-      .single();
+      .insert({ id: crypto.randomUUID(), ...recipe, created_by: me });
     if (error) throw new HttpError('db', 'Kunde inte spara favoriten.', 500);
 
     const n = recipe.items.length;
@@ -118,10 +123,10 @@ Deno.serve(async (req) => {
       n > 0
         ? `Sparad: ${recipe.name} (${n === 1 ? '1 vara' : `${n} varor`})`
         : `Sparad: ${recipe.name} – inga ingredienser hittades, fyll i dem i appen`;
-    return jsonResponse({ ok: true, favorite, message });
+    return textResponse(message);
   } catch (e) {
     const err = e instanceof HttpError ? e : new HttpError('error', 'Något gick fel.', 500);
-    if (viaShortcut) return jsonResponse({ ok: false, message: err.message });
+    if (viaShortcut) return textResponse(err.message);
     return err.response();
   }
 });

@@ -22,19 +22,20 @@ favorit i HouseMates, utan att appen behöver öppnas. Byggs en gång per telefo
    Under *Typer av delning* avmarkera allt utom **URL:er** och **Safari-webbsidor**.
 3. Lägg till åtgärd **Hämta URL:er från indata** (sök på "URL:er").
    Indata ska vara **Indata från delningsblad** (sätts automatiskt).
-4. Lägg till åtgärd **Hämta innehåll i URL** (sök på "innehåll"). Ställ in:
+4. Lägg till åtgärd **Hämta innehållet från URL** (sök på "innehåll"). Ställ in:
    - **URL**: klistra in *Adressen* från Inställningar
      (slutar på `/functions/v1/recipe-import`).
-   - Fäll ut **Visa mer**:
+   - Fäll ut pilen under adressen:
      - **Metod**: `POST`
-     - **Rubriker** → lägg till: nyckel `x-import-token`, värde = *Din nyckel*.
-     - **Begärandetext**: `JSON`. Lägg till två fält:
-       - `url` (Text) = variabeln **URL:er** från steg 3
-       - `save` (Boolean) = **på**
-5. Lägg till åtgärd **Hämta värde i ordlista** (sök på "ordlista").
-   Hämta värde för **nyckel** `message` i **Innehåll i URL**.
-6. Lägg till åtgärd **Visa notis** med texten = **Ordlistevärde** från steg 5.
-7. Tryck **Klar**.
+     - **Sidhuvuden** → lägg till ett: nyckel `x-import-token`, värde = *Din nyckel*.
+     - **Text i begäran**: `JSON`. Lägg till **ett** fält:
+       - vänstra rutan (nyckel): skriv ordet `url` med små bokstäver
+       - högra rutan (värde): välj variabeln **URL:er** från steg 3
+       (skriv inte in adressen här, det är receptlänken som ska skickas)
+5. Lägg till åtgärd **Visa notis** (sök på "notis"). Som text väljer du
+   variabeln **Innehållet från URL** från steg 4. Svaret är ren text, så inget
+   mer behövs.
+6. Tryck **Klar**.
 
 ## Testa
 
