@@ -11,7 +11,7 @@
   // Todo
   let todoTitle = $state('');
   let todoNotes = $state('');
-  let todoAssignee = $state<string | null>(null);
+  let todoAssignee = $state<string | null>('both');
   let todoStart = $state('');
   let todoDue = $state('');
   let todoError = $state('');
@@ -34,7 +34,7 @@
     } else if (kind === 'todo') {
       todoTitle = '';
       todoNotes = '';
-      todoAssignee = null;
+      todoAssignee = 'both';
       todoStart = '';
       todoDue = '';
       todoError = '';

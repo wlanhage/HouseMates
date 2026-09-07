@@ -86,7 +86,7 @@
       {nameOf($people, partnerId)}
     </button>
   {/if}
-  <button class="pill" class:on={filter === 'both'} onclick={() => (filter = 'both')}>Gemensamt</button>
+  <button class="pill" class:on={filter === 'both'} onclick={() => (filter = 'both')}>Båda</button>
 </div>
 
 {#if tab === 'todo'}

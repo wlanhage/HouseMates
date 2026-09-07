@@ -2,7 +2,7 @@
   import { user, me } from '$lib/client/stores';
   import { people, nameOf, colorOf } from '$lib/client/people';
 
-  /** Väljare "för vem": du / partnern / gemensamt (+ ingen). Vald knapp får personens färg. */
+  /** Väljare "för vem": du / partnern / båda (+ ingen). Vald knapp får personens färg. */
   let {
     value = $bindable(null),
     allowNone = false
@@ -14,7 +14,7 @@
   const options = $derived<{ id: string | null; label: string }[]>([
     ...(meId ? [{ id: meId, label: 'Du' }] : []),
     ...(partnerId ? [{ id: partnerId, label: nameOf($people, partnerId) }] : []),
-    { id: 'both', label: 'Gemensamt' },
+    { id: 'both', label: 'Båda' },
     ...(allowNone ? [{ id: null, label: 'Ingen' }] : [])
   ]);
 

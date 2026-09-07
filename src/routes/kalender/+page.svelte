@@ -128,7 +128,7 @@
           {#if selected.isRecurring}<div class="detail-row">↻ Återkommande</div>{/if}
           <div class="detail-row">
             <span class="for-dot" style={`background:${colorOf($people, selected.assignee)}`}></span>
-            {selected.assignee === 'both' ? 'Gemensamt' : `För ${nameOf($people, selected.assignee, $user?.id)}`}
+            {selected.assignee === 'both' ? 'Båda' : `För ${nameOf($people, selected.assignee, $user?.id)}`}
           </div>
           <div class="detail-row muted">
             {selected.createdBy ? `Skapad av ${nameOf($people, selected.createdBy)}` : 'Från Apple Kalender'}
