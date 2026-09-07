@@ -326,6 +326,24 @@ select {
   color: var(--text);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+/* iOS Safari: datum-/tidfält har egen inbyggd bredd (ignorerar width: 100 %)
+   och kollapsar när de är tomma – stäng av systemutseendet och håll höjden. */
+input[type='date'].input,
+input[type='time'].input,
+input[type='datetime-local'].input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  min-height: 2.9rem;
+  font: inherit;
+  text-align: left;
+}
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.3em;
+}
 .input:focus {
   outline: none;
   border-color: var(--accent);
