@@ -84,10 +84,12 @@ async function fromSiteApi(url: string, html: string): Promise<ParsedRecipe | nu
   const host = new URL(url).hostname;
   if (host.endsWith('coop.se')) {
     const id = coopRecipeId(html);
+    console.log(`coop: id=${id ?? '-'}`);
     if (!id) return null;
     const res = await fetch(`${COOP_RECIPE_API}${id}?api-version=v1`, {
       headers: { 'User-Agent': UA, Accept: 'application/json' }
     });
+    console.log(`coop: api ${res.status} ${res.headers.get('content-type') ?? ''}`);
     if (!res.ok) return null;
     return parseCoopRecipe(await res.json());
   }
@@ -127,7 +129,10 @@ Deno.serve(async (req) => {
     const html = await fetchPage(url);
     let parsed = parseRecipeHtml(html);
     if (parsed.ingredients.length === 0) {
-      const fromApi = await fromSiteApi(url, html).catch(() => null);
+      const fromApi = await fromSiteApi(url, html).catch((e) => {
+        console.log(`sajtadapter fel: ${String(e).slice(0, 200)}`);
+        return null;
+      });
       if (fromApi) parsed = { ...parsed, ...fromApi, name: fromApi.name ?? parsed.name };
     }
     const recipe = {
