@@ -61,8 +61,9 @@ async function fetchPage(url: string): Promise<string> {
   }
 }
 
-/** Genvägens svar: ren text som visas direkt i notisen. */
-function textResponse(message: string): Response {
+/** Genvägens svar: ren text som visas direkt i notisen. Loggas för felsökning (aldrig nyckeln). */
+function textResponse(message: string, url = ''): Response {
+  console.log(`genväg: ${url ? new URL(url).hostname : '-'} → ${message}`);
   return new Response(message, {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' }
@@ -82,6 +83,7 @@ Deno.serve(async (req) => {
   if (opt) return opt;
   const token = req.headers.get('x-import-token');
   const viaShortcut = !!token;
+  let body: { url?: unknown } = {};
   try {
     const svc = serviceClient();
     let me: string;
@@ -93,7 +95,7 @@ Deno.serve(async (req) => {
       me = await requireMember(req);
     }
 
-    const body = await req.json().catch(() => ({}));
+    body = await req.json().catch(() => ({}));
     const url = validUrl(body.url);
     const parsed = parseRecipeHtml(await fetchPage(url));
     const recipe = {
@@ -111,7 +113,7 @@ Deno.serve(async (req) => {
       .eq('source_url', url)
       .is('deleted_at', null)
       .maybeSingle();
-    if (existing) return textResponse(`Fanns redan: ${existing.name}`);
+    if (existing) return textResponse(`Fanns redan: ${existing.name}`, url);
 
     const { error } = await svc
       .from('favorites')
@@ -123,10 +125,10 @@ Deno.serve(async (req) => {
       n > 0
         ? `Sparad: ${recipe.name} (${n === 1 ? '1 vara' : `${n} varor`})`
         : `Sparad: ${recipe.name} – inga ingredienser hittades, fyll i dem i appen`;
-    return textResponse(message);
+    return textResponse(message, url);
   } catch (e) {
     const err = e instanceof HttpError ? e : new HttpError('error', 'Något gick fel.', 500);
-    if (viaShortcut) return textResponse(err.message);
+    if (viaShortcut) return textResponse(err.message, typeof body?.url === 'string' && /^https?:\/\//.test(body.url) ? body.url : '');
     return err.response();
   }
 });
