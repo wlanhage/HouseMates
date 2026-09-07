@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sheetDrag } from '$lib/client/sheetDrag';
   /** Bekräftelse för oåterkalleliga val, i samma bottensheet-stil som skapa-formulären. */
   let {
     title,
@@ -23,7 +24,7 @@
 
 <div class="scrim">
   <button class="scrim-bg" aria-label="Avbryt" onclick={oncancel}></button>
-  <div class="sheet" role="alertdialog" aria-modal="true" aria-label={title}>
+  <div class="sheet" role="alertdialog" aria-modal="true" aria-label={title} use:sheetDrag={oncancel}>
     <div class="sheet-handle"></div>
     <div class="body">
       <h3>{title}</h3>

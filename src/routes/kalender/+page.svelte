@@ -12,6 +12,7 @@
   import { buildAgenda } from '$lib/client/agenda';
   import { ymd, addDaysStr, dayHeading, hhmm } from '$lib/client/dates';
   import EventForm from '$lib/components/EventForm.svelte';
+  import { sheetDrag } from '$lib/client/sheetDrag';
   import type { CalendarEvent } from '$lib/types';
 
   const DAY = 86_400_000;
@@ -111,7 +112,7 @@
 {#if selected}
   <div class="scrim">
     <button class="scrim-bg" aria-label="Stäng" onclick={closeSheet}></button>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="Händelse">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Händelse" use:sheetDrag={closeSheet}>
       <div class="sheet-handle"></div>
       {#if editing}
         <h3 style="padding:0 0.5rem 0.5rem">Redigera händelse</h3>

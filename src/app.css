@@ -481,12 +481,24 @@ input[type='time']::-webkit-date-and-time-value {
   box-shadow: var(--shadow-lg);
   animation: sheet-up 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
+/* Dragyta för dra-för-att-stänga (sheetDrag) – strecket ritas i mitten */
 .sheet-handle {
+  position: relative;
+  height: 34px;
+  margin: -0.45rem 0 0.35rem;
+  touch-action: none;
+  cursor: grab;
+}
+.sheet-handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 42px;
   height: 4.5px;
   border-radius: 999px;
   background: var(--border);
-  margin: 0.3rem auto 0.9rem;
+  transform: translate(-50%, -50%);
 }
 .sheet-item {
   display: flex;

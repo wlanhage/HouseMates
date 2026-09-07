@@ -3,6 +3,7 @@
   import { createShopping, createTodo, createChore, createEventAction, type EventInput } from '$lib/client/data';
   import EventForm from './EventForm.svelte';
   import AssigneePicker from './AssigneePicker.svelte';
+  import { sheetDrag } from '$lib/client/sheetDrag';
 
   // Inköp
   let shopName = $state('');
@@ -95,7 +96,7 @@
 {#if $createKind}
   <div class="scrim">
     <button class="scrim-bg" aria-label="Stäng" onclick={close}></button>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="Skapa nytt">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Skapa nytt" use:sheetDrag={close}>
       <div class="sheet-handle"></div>
 
       {#if $createKind === 'menu'}
