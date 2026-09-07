@@ -23,8 +23,8 @@ export const favorites = writable<Favorite[]>([]);
 export const activity = writable<Activity[]>([]);
 export const events = writable<CalendarEvent[]>([]);
 
-/** Global skapa-sheet (FAB) – öppnas oavsett aktiv vy (spec §12.1). */
-export type CreateKind = 'event' | 'shopping' | 'todo' | 'chore';
+/** Global skapa-sheet (FAB) – öppnas oavsett aktiv vy (spec §12.1). 'menu' = valet av vad som ska skapas. */
+export type CreateKind = 'menu' | 'event' | 'shopping' | 'todo' | 'chore';
 export const createKind = writable<CreateKind | null>(null);
 
 /** Ångra-toast (spec §12.1). */

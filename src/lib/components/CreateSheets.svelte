@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createKind } from '$lib/client/stores';
+  import { createKind, online } from '$lib/client/stores';
   import { createShopping, createTodo, createChore, createEventAction, type EventInput } from '$lib/client/data';
   import EventForm from './EventForm.svelte';
   import AssigneePicker from './AssigneePicker.svelte';
@@ -98,7 +98,27 @@
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Skapa nytt">
       <div class="sheet-handle"></div>
 
-      {#if $createKind === 'shopping'}
+      {#if $createKind === 'menu'}
+        <button class="sheet-item" disabled={!$online} onclick={() => createKind.set('event')}>
+          <span class="sheet-icon">📅</span>
+          <span>
+            Nytt event
+            {#if !$online}<span class="muted" style="font-weight:400"> · kräver anslutning</span>{/if}
+          </span>
+        </button>
+        <button class="sheet-item" onclick={() => createKind.set('shopping')}>
+          <span class="sheet-icon">🛒</span>
+          <span>Ny vara</span>
+        </button>
+        <button class="sheet-item" onclick={() => createKind.set('todo')}>
+          <span class="sheet-icon">✅</span>
+          <span>Ny uppgift</span>
+        </button>
+        <button class="sheet-item" onclick={() => createKind.set('chore')}>
+          <span class="sheet-icon">🧽</span>
+          <span>Ny städsyssla</span>
+        </button>
+      {:else if $createKind === 'shopping'}
         <h3 style="padding:0 0.5rem 0.5rem">Ny vara</h3>
         <form onsubmit={submitShopping} style="padding:0 0.5rem">
           <div class="field">
