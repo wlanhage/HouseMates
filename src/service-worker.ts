@@ -5,7 +5,7 @@
  * Egen service worker (injectManifest, spec §12.3 + §11):
  *  - precachar appskalet
  *  - NetworkFirst för navigeringar (online → SSR/auth; offline → cache)
- *  - push-notiser + notisklick öppnar Hem
+ *  - push-notiser + notisklick öppnar rätt flik (url i payloaden)
  */
 import { precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
@@ -31,8 +31,11 @@ registerRoute(
   new NetworkFirst({ cacheName: 'sveltekit-data', networkTimeoutSeconds: 3 })
 );
 
+// Appens bas (t.ex. https://…/HouseMates/) – ikoner och länkar måste utgå från den.
+const scope = sw.registration.scope;
+
 sw.addEventListener('push', (event) => {
-  let data: { title: string; body: string } = { title: 'Planeraren', body: '' };
+  let data: { title: string; body: string; url?: string } = { title: 'Planeraren', body: '' };
   try {
     if (event.data) data = { ...data, ...(event.data.json() as Partial<typeof data>) };
   } catch {
@@ -41,9 +44,9 @@ sw.addEventListener('push', (event) => {
   event.waitUntil(
     sw.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: { url: '/' }
+      icon: `${scope}icons/icon-192.png`,
+      badge: `${scope}icons/icon-192.png`,
+      data: { url: scope + (data.url ?? '').replace(/^\//, '') }
     })
   );
 });
@@ -52,12 +55,15 @@ sw.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
     (async () => {
+      const target: string = event.notification.data?.url ?? scope;
       const all = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of all) {
-        await (client as WindowClient).focus();
+        const win = client as WindowClient;
+        await win.navigate(target).catch(() => undefined);
+        await win.focus();
         return;
       }
-      await sw.clients.openWindow('/');
+      await sw.clients.openWindow(target);
     })()
   );
 });

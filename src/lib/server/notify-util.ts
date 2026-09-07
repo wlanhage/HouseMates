@@ -1,6 +1,6 @@
 /**
  * Rena hjälpare för notis-workern (spec §11) – ingen DB/$env, testbara (§15):
- * tysta timmar-beräkning + digestgruppering.
+ * tysta timmar-beräkning. Digesten ligger i digest.ts.
  */
 const DEFAULT_TZ = 'Europe/Stockholm';
 
@@ -17,60 +17,6 @@ export function inQuietWindow(hhmm: string, from: string, to: string): boolean {
   if (f === e) return false;
   if (f < e) return t >= f && t < e;
   return t >= f || t < e;
-}
-
-const VERB: Record<string, string> = {
-  'shopping.added': 'la till',
-  'shopping.checked': 'bockade av',
-  'shopping.unchecked': 'avmarkerade',
-  'shopping.deleted': 'tog bort',
-  'shopping.restored': 'återställde',
-  'shopping.archived': 'tömde avklarade',
-  'todo.created': 'skapade',
-  'todo.done': 'bockade av',
-  'todo.undone': 'återöppnade',
-  'todo.deleted': 'tog bort',
-  'todo.restored': 'återställde',
-  'chore.created': 'la till städsysslan',
-  'chore.done': 'gjorde',
-  'chore.deleted': 'tog bort städsysslan',
-  'chore.restored': 'återställde',
-  'event.created': 'skapade',
-  'event.updated': 'ändrade',
-  'event.deleted': 'tog bort',
-  'event.restored': 'återställde'
-};
-
-export interface DigestActivity {
-  type: string;
-  payload: Record<string, unknown> | null;
-}
-
-/** Gruppera per handling; max 3 exempel + räknare; slå ihop med " · " (§11). */
-export function summarizeActivities(acts: DigestActivity[]): string {
-  const groups = new Map<string, string[]>();
-  const order: string[] = [];
-  for (const a of acts) {
-    if (!groups.has(a.type)) {
-      groups.set(a.type, []);
-      order.push(a.type);
-    }
-    const label = (a.payload?.name as string) ?? (a.payload?.title as string) ?? '';
-    if (label) groups.get(a.type)!.push(label);
-  }
-  const parts: string[] = [];
-  for (const type of order) {
-    const verb = VERB[type] ?? 'ändrade';
-    const labels = groups.get(type)!;
-    if (labels.length === 0) {
-      parts.push(verb);
-      continue;
-    }
-    const shown = labels.slice(0, 3);
-    const extra = labels.length - shown.length;
-    parts.push(verb + ' ' + shown.join(', ') + (extra > 0 ? ` + ${extra} till` : ''));
-  }
-  return parts.join(' · ');
 }
 
 /** HH:MM i lokal tidszon för en tidpunkt. */

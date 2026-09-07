@@ -13,6 +13,7 @@ import {
   requireMember,
   HttpError
 } from '../_shared/util.ts';
+import { buildDigest } from '../_shared/digest.ts';
 
 const TZ = Deno.env.get('TZ_DEFAULT') ?? 'Europe/Stockholm';
 
@@ -29,59 +30,6 @@ export function inQuietWindow(hhmm: string, from: string, to: string): boolean {
   if (f === e) return false;
   if (f < e) return t >= f && t < e;
   return t >= f || t < e;
-}
-
-const VERB: Record<string, string> = {
-  'shopping.added': 'la till',
-  'shopping.checked': 'bockade av',
-  'shopping.unchecked': 'avmarkerade',
-  'shopping.deleted': 'tog bort',
-  'shopping.restored': 'återställde',
-  'shopping.archived': 'tömde avklarade',
-  'todo.created': 'skapade',
-  'todo.done': 'bockade av',
-  'todo.undone': 'återöppnade',
-  'todo.deleted': 'tog bort',
-  'todo.restored': 'återställde',
-  'chore.created': 'la till städsysslan',
-  'chore.done': 'gjorde',
-  'chore.deleted': 'tog bort städsysslan',
-  'chore.restored': 'återställde',
-  'event.created': 'skapade',
-  'event.updated': 'ändrade',
-  'event.deleted': 'tog bort',
-  'event.restored': 'återställde'
-};
-
-interface DigestActivity {
-  type: string;
-  payload: Record<string, unknown> | null;
-}
-
-export function summarizeActivities(acts: DigestActivity[]): string {
-  const groups = new Map<string, string[]>();
-  const order: string[] = [];
-  for (const a of acts) {
-    if (!groups.has(a.type)) {
-      groups.set(a.type, []);
-      order.push(a.type);
-    }
-    const label = (a.payload?.name as string) ?? (a.payload?.title as string) ?? '';
-    if (label) groups.get(a.type)!.push(label);
-  }
-  const parts: string[] = [];
-  for (const type of order) {
-    const verb = VERB[type] ?? 'ändrade';
-    const labels = groups.get(type)!;
-    if (labels.length === 0) {
-      parts.push(verb);
-      continue;
-    }
-    const shown = labels.slice(0, 3);
-    const extra = labels.length - shown.length;
-    parts.push(verb + ' ' + shown.join(', ') + (extra > 0 ? ` + ${extra} till` : ''));
-  }
-  return parts.join(' · ');
 }
 
 function localHHMM(date: Date): string {
@@ -163,7 +111,7 @@ Deno.serve(async (req) => {
 
     const { data: rows } = await svc
       .from('notification_queue')
-      .select('id, recipient, send_after, activity:activity_log(type, actor, payload, created_at)')
+      .select('id, recipient, send_after, activity:activity_log(type, actor, entity_id, payload, created_at)')
       .is('sent_at', null)
       .lte('send_after', now.toISOString())
       .order('id');
@@ -210,16 +158,26 @@ Deno.serve(async (req) => {
 
       const acts = group.map((g) => {
         const a = Array.isArray(g.activity) ? g.activity[0] : g.activity;
-        return { type: a.type as string, payload: a.payload as Record<string, unknown> | null, actor: a.actor as string };
+        return {
+          type: a.type as string,
+          entity_id: String(a.entity_id ?? ''),
+          payload: a.payload as Record<string, unknown> | null,
+          actor: a.actor as string
+        };
       });
       const { data: actorProfile } = await svc
         .from('profiles')
         .select('name')
         .eq('username', acts[0].actor)
         .maybeSingle();
-      const title = (actorProfile?.name ?? 'Någon').replace(/\s*\(test\)/, '');
-      const body = summarizeActivities(acts);
-      const payload = JSON.stringify({ title, body });
+      const actorName = (actorProfile?.name ?? 'Någon').replace(/\s*\(test\)/, '');
+      const digest = buildDigest(actorName, acts);
+      if (!digest) {
+        // Allt nettades bort (t.ex. bockat och avbockat) – inget att berätta.
+        await svc.from('notification_queue').update({ sent_at: now.toISOString() }).in('id', ids);
+        continue;
+      }
+      const payload = JSON.stringify(digest);
 
       for (const sub of subs) {
         try {
