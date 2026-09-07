@@ -349,7 +349,7 @@
       </div>
     </div>
     <div class="field" style="margin-top:0.75rem">
-      <label for="dm">Samla notiser i (minuter)</label>
+      <label for="dm">Skicka när det varit tyst i (minuter)</label>
       <input id="dm" class="input" type="number" min="0" max="120" bind:value={digestMinutes} onchange={() => savePrefs({ digest_minutes: digestMinutes })} />
     </div>
   {/if}
