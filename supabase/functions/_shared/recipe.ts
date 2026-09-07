@@ -141,6 +141,63 @@ function titleTag(html: string): string | null {
   return m ? clean(m[1]) || null : null;
 }
 
+/** Sajtsuffix i fallback-titlar: "Getostsallad | Recept - Coop" → "Getostsallad". */
+export function stripSiteSuffix(title: string): string {
+  return title
+    .split(/\s+\|\s+/)[0]
+    .replace(/\s+[-–]\s+(?:recept|coop|ica|arla|köket|tasteline|zeta)\b.*$/i, '')
+    .trim();
+}
+
+// ── Coop (coop.se) ─────────────────────────────────────────────
+// Sidan renderas i klienten; HTML:en har bara ett recept-id i dataLayer och
+// ingredienserna hämtas från Coops öppna recept-API.
+export const COOP_RECIPE_API = 'https://proxy.api.coop.se/external/recipe/recipes/';
+
+export function coopRecipeId(html: string): string | null {
+  return /"recipeId"\s*:\s*"(\d+)"/.exec(html)?.[1] ?? null;
+}
+
+interface CoopIngredient {
+  name?: string;
+  quantity?: string | number | null;
+  unit?: string | null;
+  prePreparation?: string | null;
+  postPreparation?: string | null;
+}
+interface CoopRecipe {
+  name?: string;
+  imageUrl?: string | null;
+  recipePart?: { ingredients?: CoopIngredient[] }[];
+}
+
+/** "300.0" → "300", "0.5" → "0,5" (svenskt decimalkomma). */
+function coopQuantity(q: string | number | null | undefined): string {
+  const n = Number(q);
+  if (!q || !Number.isFinite(n) || n <= 0) return '';
+  return String(Math.round(n * 100) / 100).replace('.', ',');
+}
+
+/** Coop-API:ts svar → samma form som JSON-LD-parsningen. */
+export function parseCoopRecipe(json: unknown): ParsedRecipe {
+  const d = (json ?? {}) as CoopRecipe;
+  const lines: string[] = [];
+  for (const part of d.recipePart ?? []) {
+    for (const ing of part.ingredients ?? []) {
+      const line = [coopQuantity(ing.quantity), ing.unit, ing.prePreparation, ing.name, ing.postPreparation]
+        .map((s) => (s ?? '').toString().trim())
+        .filter(Boolean)
+        .join(' ');
+      if (line) lines.push(line);
+    }
+  }
+  return {
+    name: d.name ? clean(d.name) : null,
+    imageUrl: d.imageUrl ? d.imageUrl.replace(/^http:\/\//, 'https://') : null,
+    ingredients: ingredientsOf(lines)
+  };
+}
+
 export function parseRecipeHtml(html: string): ParsedRecipe {
   for (const block of jsonLdBlocks(html)) {
     let data: unknown;
@@ -158,8 +215,9 @@ export function parseRecipeHtml(html: string): ParsedRecipe {
       ingredients: ingredientsOf(recipe.recipeIngredient)
     };
   }
+  const fallbackTitle = meta(html, 'og:title') ?? titleTag(html);
   return {
-    name: meta(html, 'og:title') ?? titleTag(html),
+    name: fallbackTitle ? stripSiteSuffix(fallbackTitle) || null : null,
     imageUrl: meta(html, 'og:image'),
     ingredients: looseIngredients(html)
   };

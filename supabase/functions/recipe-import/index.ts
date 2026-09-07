@@ -16,7 +16,13 @@ import {
   corsHeaders,
   HttpError
 } from '../_shared/util.ts';
-import { parseRecipeHtml } from '../_shared/recipe.ts';
+import {
+  parseRecipeHtml,
+  parseCoopRecipe,
+  coopRecipeId,
+  COOP_RECIPE_API,
+  type ParsedRecipe
+} from '../_shared/recipe.ts';
 
 const MAX_BYTES = 2_000_000;
 const TIMEOUT_MS = 10_000;
@@ -70,6 +76,24 @@ function textResponse(message: string, url = ''): Response {
   });
 }
 
+/**
+ * Sajter som renderar receptet i klienten: hämta datan från deras API när
+ * HTML:en inte gav några ingredienser.
+ */
+async function fromSiteApi(url: string, html: string): Promise<ParsedRecipe | null> {
+  const host = new URL(url).hostname;
+  if (host.endsWith('coop.se')) {
+    const id = coopRecipeId(html);
+    if (!id) return null;
+    const res = await fetch(`${COOP_RECIPE_API}${id}?api-version=v1`, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' }
+    });
+    if (!res.ok) return null;
+    return parseCoopRecipe(await res.json());
+  }
+  return null;
+}
+
 async function userFromToken(
   svc: ReturnType<typeof serviceClient>,
   token: string
@@ -100,23 +124,36 @@ Deno.serve(async (req) => {
 
     body = req.method === 'GET' ? { url: query.get('url') } : await req.json().catch(() => ({}));
     const url = validUrl(body.url);
-    const parsed = parseRecipeHtml(await fetchPage(url));
+    const html = await fetchPage(url);
+    let parsed = parseRecipeHtml(html);
+    if (parsed.ingredients.length === 0) {
+      const fromApi = await fromSiteApi(url, html).catch(() => null);
+      if (fromApi) parsed = { ...parsed, ...fromApi, name: fromApi.name ?? parsed.name };
+    }
     const recipe = {
       name: parsed.name ?? new URL(url).hostname,
       items: parsed.ingredients,
-      image_url: parsed.imageUrl,
+      // http-bilder blockeras i appen (https-sida) – uppgradera
+      image_url: parsed.imageUrl?.replace(/^http:\/\//, 'https://') ?? null,
       source_url: url
     };
     if (!viaShortcut) return jsonResponse({ recipe });
 
-    // Samma länk två gånger → befintlig favorit, ingen dubblett.
+    // Samma länk två gånger → befintlig favorit, ingen dubblett. Sparades den
+    // utan ingredienser (sajten stöddes inte då) fylls den på istället.
     const { data: existing } = await svc
       .from('favorites')
       .select('id, name, items')
       .eq('source_url', url)
       .is('deleted_at', null)
       .maybeSingle();
-    if (existing) return textResponse(`Fanns redan: ${existing.name}`, url);
+    if (existing) {
+      if ((existing.items as string[]).length > 0 || recipe.items.length === 0) {
+        return textResponse(`Fanns redan: ${existing.name}`, url);
+      }
+      await svc.from('favorites').update(recipe).eq('id', existing.id);
+      return textResponse(`Uppdaterad: ${recipe.name} (${recipe.items.length} varor)`, url);
+    }
 
     const { error } = await svc
       .from('favorites')

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseRecipeHtml, decodeEntities } from '../src/lib/server/recipe-parse';
+import {
+  parseRecipeHtml,
+  decodeEntities,
+  stripSiteSuffix,
+  coopRecipeId,
+  parseCoopRecipe
+} from '../src/lib/server/recipe-parse';
 
 const page = (jsonLd: string, extraHead = '') =>
   `<!doctype html><html><head><title>Sidtitel | Sajten</title>${extraHead}
@@ -84,7 +90,54 @@ describe('recipe-parse – schema.org/Recipe', () => {
     });
   });
 
+  it('fallback-titel rensas från sajtsuffix', () => {
+    expect(stripSiteSuffix('Getostsallad med körsbär | Recept - Coop')).toBe('Getostsallad med körsbär');
+    expect(stripSiteSuffix('Pannkakor - Recept - Arla')).toBe('Pannkakor');
+    expect(stripSiteSuffix('Pasta – snabb variant')).toBe('Pasta – snabb variant');
+    const html = '<html><head><title>Getostsallad med k&#xF6;rsb&#xE4;r | Recept - Coop</title></head></html>';
+    expect(parseRecipeHtml(html).name).toBe('Getostsallad med körsbär');
+  });
+
   it('decodeEntities hanterar namngivna och numeriska entiteter', () => {
     expect(decodeEntities('Fisk &amp; skaldjur &#8211; gr&#xE4;dde&nbsp;')).toBe('Fisk & skaldjur – grädde ');
+  });
+});
+
+describe('recipe-parse – Coop (klientrenderad sida + öppet API)', () => {
+  it('hittar recept-id i dataLayer', () => {
+    const html = '<script>window.dataLayer.push({"recipeName":"Getostsallad","recipeId":"5400883","page_type":"Receptsida"});</script>';
+    expect(coopRecipeId(html)).toBe('5400883');
+    expect(coopRecipeId('<html></html>')).toBeNull();
+  });
+
+  it('bygger ingrediensrader med svenskt decimalkomma och https-bild', () => {
+    const r = parseCoopRecipe({
+      name: 'Getostsallad med körsbär',
+      imageUrl: 'http://res.cloudinary.com/coopsverige/image/upload/281377.jpg',
+      recipePart: [
+        {
+          ingredients: [
+            { name: 'körsbär', quantity: '300.0', unit: 'g', prePreparation: '', postPreparation: '' },
+            { name: 'gurka', quantity: '0.5', unit: '', prePreparation: '', postPreparation: '' },
+            { name: 'gul lök', quantity: '1.0', unit: '', prePreparation: 'finhackad', postPreparation: '' }
+          ]
+        },
+        {
+          ingredients: [
+            { name: 'torkad timjan', quantity: '0.5', unit: 'tsk', prePreparation: '', postPreparation: '/rosmarin' },
+            { name: 'salt', quantity: null, unit: '', prePreparation: '', postPreparation: '' }
+          ]
+        }
+      ]
+    });
+    expect(r.name).toBe('Getostsallad med körsbär');
+    expect(r.imageUrl).toBe('https://res.cloudinary.com/coopsverige/image/upload/281377.jpg');
+    expect(r.ingredients).toEqual([
+      '300 g körsbär',
+      '0,5 gurka',
+      '1 finhackad gul lök',
+      '0,5 tsk torkad timjan /rosmarin',
+      'salt'
+    ]);
   });
 });
