@@ -9,6 +9,8 @@
   import { logout as authLogout, loadMe } from '$lib/client/auth';
   import { hhmm } from '$lib/client/dates';
   import type { SyncStatus, NotificationPrefs } from '$lib/types';
+  import { people, nameOf } from '$lib/client/people';
+  import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
   /** Anropa en edge function; kasta med läsbart meddelande vid fel. */
   async function invoke<T>(name: string, body?: Record<string, unknown>): Promise<T> {
@@ -120,9 +122,13 @@
     }
   }
 
-  // Synkstatus
+  // Synkstatus – kalendern kopplas via ETT Apple-ID i hushållet
   let sync = $state<SyncStatus | null>(null);
   let syncing = $state(false);
+  let linkedBy = $state<string | null>(null);
+  let confirmUnlink = $state(false);
+  const linkedByMe = $derived(!!linkedBy && linkedBy === $user?.id);
+  const linkedByPartner = $derived(!!linkedBy && linkedBy !== $user?.id);
 
   // CalDAV-wizard
   let step = $state<0 | 1>(0);
@@ -133,19 +139,31 @@
   let wizardBusy = $state(false);
   let wizardError = $state('');
 
-  const connected = $derived(!!sync?.last_synced_at);
+  const connected = $derived(!!linkedBy);
 
   onMount(loadSync);
 
   async function loadSync() {
-    const username = $user?.id;
-    if (!username) return;
+    const { data: owner } = await supabase.rpc('caldav_linked_by');
+    linkedBy = (owner as string | null) ?? null;
+    if (!linkedBy) {
+      sync = null;
+      return;
+    }
     const { data } = await supabase
       .from('sync_state')
       .select('last_synced_at, failing_since, last_error')
-      .eq('username', username)
+      .eq('username', linkedBy)
       .maybeSingle();
-    if (data) sync = data as SyncStatus;
+    sync = (data as SyncStatus | null) ?? null;
+  }
+
+  async function unlink() {
+    confirmUnlink = false;
+    const { error } = await supabase.rpc('caldav_unlink');
+    if (error) return;
+    step = 0;
+    await Promise.all([loadSync(), refreshEvents()]);
   }
 
   async function manualSync() {
@@ -262,20 +280,34 @@
 
 <div class="section-title">Kalendersynk</div>
 <div class="card" style="padding:1rem;margin-bottom:1rem">
-  {#if connected && sync?.last_synced_at}
-    <div class="row" style="justify-content:space-between">
+  {#if connected}
+    <div class="row" style="justify-content:space-between;gap:0.75rem">
       <div>
-        <div style="font-weight:600">Senast synkad {hhmm(sync.last_synced_at)}</div>
-        {#if sync.failing_since}
+        <div style="font-weight:600">
+          {#if linkedByPartner}Kopplad via {nameOf($people, linkedBy)}{:else}Kopplad via ditt Apple-ID{/if}
+        </div>
+        <div class="muted" style="font-size:0.85rem">
+          {sync?.last_synced_at ? `Senast synkad ${hhmm(sync.last_synced_at)}` : 'Väntar på första synken'}
+        </div>
+        {#if sync?.failing_since}
           <div style="color:var(--danger);font-size:0.85rem">Synken har problem – kontrollera lösenordet.</div>
         {/if}
       </div>
       <button class="btn" onclick={manualSync} disabled={syncing}>{syncing ? 'Synkar…' : 'Synka nu'}</button>
     </div>
+    {#if linkedByMe}
+      <button class="btn" style="margin-top:0.75rem;padding:0.35rem 0.7rem;font-size:0.85rem" onclick={() => (confirmUnlink = true)}>
+        Koppla från
+      </button>
+    {:else}
+      <p class="muted" style="font-size:0.85rem;margin:0.75rem 0 0">
+        Ni delar en koppling – dina händelser sparas via samma kalender. Vill ni byta konto kopplar {nameOf($people, linkedBy)} från först.
+      </p>
+    {/if}
   {:else}
     <p class="muted" style="margin-top:0">
-      Koppla er delade iCloud-kalender. Skapa ett app-specifikt lösenord på
-      account.apple.com → Logga in och säkerhet.
+      En av er kopplar er delade iCloud-kalender med sitt Apple-ID, den andra behöver inte göra något.
+      Skapa ett app-specifikt lösenord på account.apple.com → Logga in och säkerhet.
     </p>
 
     {#if step === 0}
@@ -312,6 +344,16 @@
     {/if}
   {/if}
 </div>
+
+{#if confirmUnlink}
+  <ConfirmSheet
+    title="Koppla från kalendern?"
+    text="Appens kalendervy töms tills någon av er kopplar en kalender igen. Inget raderas i iCloud."
+    confirmLabel="Koppla från"
+    onconfirm={unlink}
+    oncancel={() => (confirmUnlink = false)}
+  />
+{/if}
 
 <div class="section-title">Notiser</div>
 <div class="card" style="padding:1rem;margin-bottom:1rem">

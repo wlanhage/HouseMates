@@ -25,8 +25,10 @@ interface Creds {
   calendarHref: string;
 }
 
+/** Mitt konto, annars hushållets (kalendern kopplas via ETT Apple-ID). */
 async function credsFor(svc: ReturnType<typeof serviceClient>, username: string): Promise<Creds> {
-  const { data } = await svc.from('caldav_accounts').select('*').eq('username', username).maybeSingle();
+  const { data: own } = await svc.from('caldav_accounts').select('*').eq('username', username).maybeSingle();
+  const data = own ?? (await svc.from('caldav_accounts').select('*').order('updated_at').limit(1).maybeSingle()).data;
   if (!data) throw new HttpError('caldav_unavailable', 'Ingen kalender kopplad.', 502);
   return {
     appleId: data.apple_id,

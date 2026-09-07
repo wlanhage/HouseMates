@@ -1,6 +1,7 @@
 /**
  * Steg 2 i CalDAV-guiden: verifiera vald kalender + spara krypterade
  * uppgifter på medlemmen (spec §7.6/§9.1). Lösenordet AES-krypteras i vila.
+ * Ett kopplat konto per hushåll: partnern använder samma koppling.
  */
 import { discoverCalendars } from '../_shared/caldav.ts';
 import {
@@ -34,6 +35,19 @@ Deno.serve(async (req) => {
     }
 
     const svc = serviceClient();
+    const { data: other } = await svc
+      .from('caldav_accounts')
+      .select('username, profiles(name)')
+      .neq('username', username)
+      .maybeSingle();
+    if (other) {
+      const name = ((other as { profiles?: { name?: string } }).profiles?.name ?? other.username).replace(/\s*\(test\)/, '');
+      throw new HttpError(
+        'already_linked',
+        `Kalendern är redan kopplad via ${name}. Koppla från där först om ni vill byta konto.`,
+        409
+      );
+    }
     const { error } = await svc.from('caldav_accounts').upsert({
       username,
       apple_id: appleId,
