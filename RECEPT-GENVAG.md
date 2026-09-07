@@ -37,6 +37,21 @@ favorit i HouseMates, utan att appen behöver öppnas. Byggs en gång per telefo
    mer behövs.
 6. Tryck **Klar**.
 
+## Enklare variant (utan JSON och sidhuvuden)
+
+Krånglar JSON-fältet eller sidhuvudet går det lika bra att skicka allt i
+adressen. Bygg genvägen så här istället:
+
+1. **Hämta URL:er från** Genvägsinmatning (som ovan).
+2. Lägg till åtgärd **URL-koda** (sök på "koda"). Indata: variabeln **URL:er**.
+3. Lägg till åtgärd **Hämta innehållet från URL**. I adressfältet skriver du
+   *Adressen* från Inställningar, direkt följt av `?key=` + *Din nyckel* +
+   `&url=` och sist variabeln **URL-kodad text** från steg 2. Allt i samma
+   fält, till exempel:
+   `https://…/recipe-import?key=3f54ff…&url=` **URL-kodad text**
+   Metod lämnas som **GET**. Inga sidhuvuden, ingen text i begäran.
+4. **Visa notis** med variabeln **Innehållet från URL**.
+
 ## Testa
 
 Öppna ett recept i Safari → **Dela** → **Spara till HouseMates**. Efter någon

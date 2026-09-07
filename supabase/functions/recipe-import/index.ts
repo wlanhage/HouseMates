@@ -81,7 +81,10 @@ async function userFromToken(
 Deno.serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
-  const token = req.headers.get('x-import-token');
+  // Genvägen kan skicka nyckel + länk som query (GET …?key=…&url=…) istället
+  // för header + JSON – färre steg att konfigurera i Genvägar.
+  const query = new URL(req.url).searchParams;
+  const token = req.headers.get('x-import-token') ?? query.get('key');
   const viaShortcut = !!token;
   let body: { url?: unknown } = {};
   try {
@@ -95,7 +98,7 @@ Deno.serve(async (req) => {
       me = await requireMember(req);
     }
 
-    body = await req.json().catch(() => ({}));
+    body = req.method === 'GET' ? { url: query.get('url') } : await req.json().catch(() => ({}));
     const url = validUrl(body.url);
     const parsed = parseRecipeHtml(await fetchPage(url));
     const recipe = {
