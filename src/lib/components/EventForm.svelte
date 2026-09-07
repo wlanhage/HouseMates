@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { addDaysStr, todayStr } from '$lib/client/dates';
+  import { todayStr, dayHeading } from '$lib/client/dates';
+  import { eventInputFrom, fieldsFrom, emptyFields } from '$lib/client/eventForm';
   import type { CalendarEvent } from '$lib/types';
   import type { EventInput } from '$lib/client/data';
   import AssigneePicker from './AssigneePicker.svelte';
@@ -15,81 +16,36 @@
     onsubmit: (input: EventInput) => Promise<void>;
   } = $props();
 
-  function pad(n: number) {
-    return String(n).padStart(2, '0');
-  }
-  function toLocalInput(iso: string): string {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-  function defaultTimed(offsetH: number): string {
-    const d = new Date();
-    d.setMinutes(0, 0, 0);
-    d.setHours(d.getHours() + offsetH);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
   // Läs prop:en en gång (komponenten remountas via {#key} vid konflikt).
   const init = untrack(() => event);
-
-  let title = $state(init?.title ?? '');
-  let allDay = $state(init?.allDay ?? false);
-  let location = $state(init?.location ?? '');
-  let notes = $state(init?.notes ?? '');
-  let assignee = $state<string | null>(init?.assignee ?? 'both');
-
-  // Heldag: rena datum (slut visas inklusivt i UI, lagras exklusivt).
-  let startDate = $state(init?.allDay ? init.start : todayStr());
-  let endDate = $state(init?.allDay ? addDaysStr(init.end, -1) : todayStr());
-  // Tidsatt: datetime-local (lokal tid).
-  let startDT = $state(init && !init.allDay ? toLocalInput(init.start) : defaultTimed(1));
-  let endDT = $state(init && !init.allDay ? toLocalInput(init.end) : defaultTimed(2));
-
+  let f = $state(init ? fieldsFrom(init) : emptyFields(todayStr()));
   let busy = $state(false);
   let error = $state('');
+
+  const timed = $derived(!!f.startTime);
+
+  // Förhandsvisning av vad som sparas: "ons 16 sep · 10:00–11:00"
+  const preview = $derived.by(() => {
+    const r = eventInputFrom({ ...f, title: f.title || 'x' });
+    if (!r.ok) return '';
+    const days = f.endDate && f.endDate !== f.date ? `${dayHeading(f.date)} till ${dayHeading(f.endDate)}` : dayHeading(f.date);
+    if (r.input.allDay) return `${days} · hela dagen`;
+    const end = new Date(r.input.end);
+    const hh = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+    return `${days} · ${f.startTime}–${hh}`;
+  });
 
   async function submit(e: Event) {
     e.preventDefault();
     error = '';
-    if (!title.trim()) {
-      error = 'Ange en titel.';
+    const r = eventInputFrom(f);
+    if (!r.ok) {
+      error = r.error;
       return;
-    }
-    let input: EventInput;
-    if (allDay) {
-      if (endDate < startDate) {
-        error = 'Slutdatum måste vara samma eller efter start.';
-        return;
-      }
-      input = {
-        title: title.trim(),
-        allDay: true,
-        start: startDate,
-        end: addDaysStr(endDate, 1), // exklusivt
-        location: location.trim() || null,
-        notes: notes.trim() || null,
-        assignee
-      };
-    } else {
-      const startIso = new Date(startDT).toISOString();
-      const endIso = new Date(endDT).toISOString();
-      if (new Date(endIso) <= new Date(startIso)) {
-        error = 'Sluttid måste vara efter starttid.';
-        return;
-      }
-      input = {
-        title: title.trim(),
-        allDay: false,
-        start: startIso,
-        end: endIso,
-        location: location.trim() || null,
-        notes: notes.trim() || null,
-        assignee
-      };
     }
     busy = true;
     try {
-      await onsubmit(input);
+      await onsubmit(r.input);
     } finally {
       busy = false;
     }
@@ -98,47 +54,66 @@
 
 <form onsubmit={submit} style="padding:0 0.5rem">
   <div class="field">
-    <label for="ev-title">Titel</label>
-    <input id="ev-title" class="input" bind:value={title} placeholder="Vad händer?" autocomplete="off" />
+    <label for="ev-title">Vad?</label>
+    <input id="ev-title" class="input" bind:value={f.title} placeholder="t.ex. Gym, Middag hos mamma, Bortrest" autocomplete="off" />
   </div>
 
   <div class="field">
     <span class="label-txt">För vem?</span>
-    <AssigneePicker bind:value={assignee} />
+    <AssigneePicker bind:value={f.assignee} />
   </div>
 
-  <label class="toggle-row">
-    <span>Heldag</span>
-    <input type="checkbox" bind:checked={allDay} />
-  </label>
+  <div class="row" style="gap:0.5rem">
+    <div class="field" style="flex:1">
+      <label for="ev-date">Datum</label>
+      <input id="ev-date" class="input" type="date" bind:value={f.date} />
+    </div>
+    <div class="field" style="flex:1">
+      <label for="ev-end-date">Till <span class="opt">valfritt</span></label>
+      <div class="clearable">
+        <input id="ev-end-date" class="input" type="date" min={f.date} bind:value={f.endDate} />
+        {#if f.endDate}
+          <button type="button" class="clear" aria-label="Rensa slutdatum" onclick={() => (f.endDate = '')}>×</button>
+        {/if}
+      </div>
+    </div>
+  </div>
 
-  {#if allDay}
-    <div class="field">
-      <label for="ev-sd">Från</label>
-      <input id="ev-sd" class="input" type="date" bind:value={startDate} />
+  <div class="row" style="gap:0.5rem">
+    <div class="field" style="flex:1">
+      <label for="ev-start">Tid <span class="opt">valfritt</span></label>
+      <div class="clearable">
+        <input id="ev-start" class="input" type="time" bind:value={f.startTime} />
+        {#if f.startTime}
+          <button type="button" class="clear" aria-label="Rensa tid" onclick={() => { f.startTime = ''; f.endTime = ''; }}>×</button>
+        {/if}
+      </div>
     </div>
-    <div class="field">
-      <label for="ev-ed">Till (inklusive)</label>
-      <input id="ev-ed" class="input" type="date" bind:value={endDate} />
+    <div class="field" style="flex:1">
+      <label for="ev-end">Slut <span class="opt">valfritt</span></label>
+      <div class="clearable">
+        <input id="ev-end" class="input" type="time" bind:value={f.endTime} disabled={!timed} />
+        {#if f.endTime}
+          <button type="button" class="clear" aria-label="Rensa sluttid" onclick={() => (f.endTime = '')}>×</button>
+        {/if}
+      </div>
     </div>
-  {:else}
-    <div class="field">
-      <label for="ev-sdt">Start</label>
-      <input id="ev-sdt" class="input" type="datetime-local" bind:value={startDT} />
-    </div>
-    <div class="field">
-      <label for="ev-edt">Slut</label>
-      <input id="ev-edt" class="input" type="datetime-local" bind:value={endDT} />
-    </div>
-  {/if}
+  </div>
+
+  <p class="summary">
+    {#if preview}<strong>{preview}</strong><br />{/if}
+    <span class="muted">
+      {#if !timed}Utan tid markeras bara dagen, som "Gym" eller "Bortrest".{:else if !f.endTime}Utan sluttid blir det en timme.{:else}&nbsp;{/if}
+    </span>
+  </p>
 
   <div class="field">
-    <label for="ev-loc">Plats (valfritt)</label>
-    <input id="ev-loc" class="input" bind:value={location} placeholder="t.ex. Hemma" autocomplete="off" />
+    <label for="ev-loc">Plats <span class="opt">valfritt</span></label>
+    <input id="ev-loc" class="input" bind:value={f.location} placeholder="t.ex. Hemma" autocomplete="off" />
   </div>
   <div class="field">
-    <label for="ev-notes">Anteckningar (valfritt)</label>
-    <input id="ev-notes" class="input" bind:value={notes} placeholder="Detaljer…" autocomplete="off" />
+    <label for="ev-notes">Anteckningar <span class="opt">valfritt</span></label>
+    <input id="ev-notes" class="input" bind:value={f.notes} placeholder="Detaljer…" autocomplete="off" />
   </div>
 
   {#if error}<p class="error-text">{error}</p>{/if}
@@ -148,16 +123,50 @@
 </form>
 
 <style>
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.6rem 0.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+  /* Datum-/tidfält har inbyggd minsta bredd – låt dem krympa i tvåkolumnsraderna */
+  .row > .field {
+    min-width: 0;
   }
-  .toggle-row input {
-    width: 20px;
-    height: 20px;
+  .row .input {
+    min-width: 0;
+    width: 100%;
+  }
+  .opt {
+    font-weight: 500;
+    color: var(--muted);
+    opacity: 0.8;
+  }
+  .clearable {
+    position: relative;
+  }
+  .clearable .input {
+    padding-right: 2.2rem;
+  }
+  .clear {
+    position: absolute;
+    right: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: none;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .summary {
+    margin: -0.2rem 0 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    min-height: 2.5rem;
+  }
+  .summary strong {
+    color: var(--accent);
+  }
+  input[type='time']:disabled,
+  input[type='date']:disabled {
+    opacity: 0.45;
   }
 </style>
