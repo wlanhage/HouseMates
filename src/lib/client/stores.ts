@@ -1,6 +1,15 @@
 /** Delade Svelte-stores (spec §3: user, shopping, todos, events, activity, online). */
 import { writable } from 'svelte/store';
-import type { User, MeResponse, ShoppingItem, Todo, Chore, Activity, CalendarEvent } from '$lib/types';
+import type {
+  User,
+  MeResponse,
+  ShoppingItem,
+  Todo,
+  Chore,
+  Favorite,
+  Activity,
+  CalendarEvent
+} from '$lib/types';
 
 export const user = writable<User | null>(null);
 export const me = writable<MeResponse | null>(null);
@@ -10,6 +19,7 @@ export const shopping = writable<ShoppingItem[]>([]);
 export const todosOpen = writable<Todo[]>([]);
 export const todosDone = writable<Todo[]>([]);
 export const chores = writable<Chore[]>([]);
+export const favorites = writable<Favorite[]>([]);
 export const activity = writable<Activity[]>([]);
 export const events = writable<CalendarEvent[]>([]);
 

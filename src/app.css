@@ -234,7 +234,8 @@ select {
   line-height: 1.5;
 }
 .empty .emoji {
-  display: inline-flex;
+  display: flex;
+  margin: 0 auto 0.8rem;
   align-items: center;
   justify-content: center;
   width: 62px;

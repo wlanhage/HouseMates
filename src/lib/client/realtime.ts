@@ -8,6 +8,7 @@ import {
   refreshShopping,
   refreshTodos,
   refreshChores,
+  refreshFavorites,
   refreshActivity,
   refreshEvents,
   refreshAll
@@ -31,6 +32,9 @@ export function startRealtime(): () => void {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chores' }, () => {
       void refreshChores();
       void refreshActivity();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'favorites' }, () => {
+      void refreshFavorites();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
       void refreshEvents();

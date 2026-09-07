@@ -15,6 +15,7 @@ import {
   todosOpen,
   todosDone,
   chores,
+  favorites,
   activity,
   events,
   user,
@@ -172,6 +173,7 @@ export async function refreshAll(): Promise<void> {
     refreshShopping(),
     refreshTodos(),
     refreshChores(),
+    refreshFavorites(),
     refreshActivity(),
     refreshEvents()
   ]);
@@ -548,26 +550,27 @@ export async function restoreChore(id: string): Promise<void> {
   void refreshActivity();
 }
 
-// ── Favoritmiddagar (kräver nät – ingen spegel/kö) ──────────────────────────
-export async function listFavorites(): Promise<Favorite[]> {
+// ── Favoritmiddagar ─────────────────────────────────────────────────────────
+export async function refreshFavorites(): Promise<void> {
   const { data, error } = await supabase
     .from('favorites')
     .select('*')
     .is('deleted_at', null)
     .order('name');
-  if (error || !data) return [];
-  return data as Favorite[];
+  if (!error && data) favorites.set(data as Favorite[]);
 }
 
+/** Skapar favoriten och returnerar dess id (null vid fel). */
 export async function createFavorite(input: {
   name: string;
   items: string[];
   image_url?: string | null;
   source_url?: string | null;
-}): Promise<boolean> {
+}): Promise<string | null> {
+  const id = uuid();
   const u = get(user);
   const { error } = await supabase.from('favorites').insert({
-    id: uuid(),
+    id,
     name: input.name.trim(),
     items: input.items,
     image_url: input.image_url ?? null,
@@ -576,20 +579,26 @@ export async function createFavorite(input: {
   });
   if (error) {
     showToast(errMsg(error));
-    return false;
+    return null;
   }
-  return true;
+  await refreshFavorites();
+  return id;
 }
 
 export async function deleteFavorite(fav: Favorite): Promise<void> {
+  favorites.update((l) => l.filter((f) => f.id !== fav.id));
   const { error } = await supabase.from('favorites').update({ deleted_at: nowIso() }).eq('id', fav.id);
-  if (error) showToast(errMsg(error));
+  if (error) {
+    showToast(errMsg(error));
+    void refreshFavorites();
+    return;
+  }
+  showToast(`Tog bort ${fav.name}`, () => void restoreFavorite(fav.id));
 }
 
-/** En ingrediensrad → inköpslistan (mängd blir antal-fältet). */
-export function addIngredientToList(line: string): Promise<boolean> {
-  const { name, qty } = splitIngredient(line);
-  return createShopping(name, qty ?? undefined);
+export async function restoreFavorite(id: string): Promise<void> {
+  await supabase.from('favorites').update({ deleted_at: null }).eq('id', id);
+  void refreshFavorites();
 }
 
 /** Hämta namn/bild/ingredienser från en receptsida (sparar inte). */
@@ -607,14 +616,14 @@ export async function importRecipe(url: string): Promise<ImportedRecipe | null> 
   return null;
 }
 
-/** Lägg favoritens varor på inköpslistan; det som redan finns hoppas över. */
-export async function addFavoriteToList(fav: Favorite): Promise<void> {
+/** Ingrediensrader → inköpslistan (mängden blir antal-fältet). Returnerar antal tillagda. */
+export async function addIngredientsToList(lines: string[]): Promise<number> {
   let added = 0;
-  for (const item of fav.items) if (await addIngredientToList(item)) added++;
-  const skipped = fav.items.length - added;
-  const label = added === 1 ? '1 vara' : `${added} varor`;
-  const note = skipped > 0 ? ` · ${skipped} fanns redan` : '';
-  showToast(`La till ${label} från ${fav.name}${note}`);
+  for (const line of lines) {
+    const { name, qty } = splitIngredient(line);
+    if (await createShopping(name, qty ?? undefined)) added++;
+  }
+  return added;
 }
 
 // ── Kalender (aldrig via outbox – kräver nät) ───────────────────────────────

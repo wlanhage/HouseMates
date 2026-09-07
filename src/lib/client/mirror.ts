@@ -5,10 +5,10 @@
  * så appen visar rätt läge även om den öppnas offline igen.
  */
 import { getDB } from './idb';
-import { shopping, todosOpen, todosDone, chores, activity, events } from './stores';
-import type { ShoppingItem, Todo, Chore, Activity, CalendarEvent } from '$lib/types';
+import { shopping, todosOpen, todosDone, chores, favorites, activity, events } from './stores';
+import type { ShoppingItem, Todo, Chore, Favorite, Activity, CalendarEvent } from '$lib/types';
 
-type MirrorKey = 'shopping' | 'todosOpen' | 'todosDone' | 'chores' | 'activity' | 'events';
+type MirrorKey = 'shopping' | 'todosOpen' | 'todosDone' | 'chores' | 'favorites' | 'activity' | 'events';
 
 async function put(key: MirrorKey, value: unknown): Promise<void> {
   try {
@@ -30,11 +30,12 @@ async function read<T>(key: MirrorKey): Promise<T | undefined> {
 
 /** Fyll storarna ur spegeln direkt vid start (innan nätverket svarar). */
 export async function hydrateFromMirror(): Promise<void> {
-  const [s, to, td, ch, a, ev] = await Promise.all([
+  const [s, to, td, ch, fa, a, ev] = await Promise.all([
     read<ShoppingItem[]>('shopping'),
     read<Todo[]>('todosOpen'),
     read<Todo[]>('todosDone'),
     read<Chore[]>('chores'),
+    read<Favorite[]>('favorites'),
     read<Activity[]>('activity'),
     read<CalendarEvent[]>('events')
   ]);
@@ -42,6 +43,7 @@ export async function hydrateFromMirror(): Promise<void> {
   if (to) todosOpen.set(to);
   if (td) todosDone.set(td);
   if (ch) chores.set(ch);
+  if (fa) favorites.set(fa);
   if (a) activity.set(a);
   if (ev) events.set(ev);
 }
@@ -62,6 +64,7 @@ export function startMirrorSync(): () => void {
     todosOpen.subscribe((v) => saveDebounced('todosOpen', v)),
     todosDone.subscribe((v) => saveDebounced('todosDone', v)),
     chores.subscribe((v) => saveDebounced('chores', v)),
+    favorites.subscribe((v) => saveDebounced('favorites', v)),
     activity.subscribe((v) => saveDebounced('activity', v)),
     events.subscribe((v) => saveDebounced('events', v))
   ];
