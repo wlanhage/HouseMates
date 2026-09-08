@@ -168,6 +168,14 @@ export async function extendEvents(): Promise<void> {
   await refreshEvents();
 }
 
+/** Se till att fönstret täcker t.o.m. ett datum (rutnätsvyn laddar hela månader). */
+export async function ensureEventsUntil(dateStr: string): Promise<void> {
+  ensureWindow();
+  if (dateStr <= eventTo) return;
+  eventTo = dateStr;
+  await refreshEvents();
+}
+
 export async function refreshAll(): Promise<void> {
   await Promise.allSettled([
     refreshShopping(),
