@@ -176,6 +176,14 @@ export async function ensureEventsUntil(dateStr: string): Promise<void> {
   await refreshEvents();
 }
 
+/** Se till att fönstret börjar senast ett datum (tidigare månader i rutnätsvyn). */
+export async function ensureEventsFrom(dateStr: string): Promise<void> {
+  ensureWindow();
+  if (dateStr >= eventFrom) return;
+  eventFrom = dateStr;
+  await refreshEvents();
+}
+
 export async function refreshAll(): Promise<void> {
   await Promise.allSettled([
     refreshShopping(),

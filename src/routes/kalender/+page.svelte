@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { events, user, showToast } from '$lib/client/stores';
   import { people, colorOf, nameOf } from '$lib/client/people';
   import {
     refreshEvents,
     extendEvents,
     ensureEventsUntil,
+    ensureEventsFrom,
     deleteEventAction,
     updateEventAction,
     type EventInput
@@ -40,7 +41,8 @@
 
   const DAY = 86_400_000;
   const today = todayStr();
-  const fromDay = ymd(new Date(Date.now() - 7 * DAY));
+  // Listan börjar idag – bakåt ser man bara i rutnätsvyn.
+  const fromDay = today;
   let toDay = $state(ymd(new Date(Date.now() + 42 * DAY)));
   let selected = $state<CalendarEvent | null>(null);
   let editing = $state(false);
@@ -51,15 +53,25 @@
   // ── Lista ──
   const agenda = $derived(buildAgenda($events, fromDay, toDay));
 
-  // ── Rutnät: innevarande månad + två framåt, fler vid skroll ──
+  // ── Rutnät: innevarande månad + två framåt, fler vid skroll; bakåt via knapp ──
   const start = monthOf(today);
   let monthCount = $state(3);
+  let monthsBack = $state(0);
   const months = $derived(
-    Array.from({ length: monthCount }, (_, i) => {
-      const { year, month } = addMonths(start.year, start.month, i);
+    Array.from({ length: monthsBack + monthCount }, (_, i) => {
+      const { year, month } = addMonths(start.year, start.month, i - monthsBack);
       return buildMonth(year, month);
     })
   );
+
+  /** Lägg till föregående månad överst utan att sidan hoppar (iOS saknar scroll anchoring). */
+  async function loadEarlier() {
+    const heightBefore = document.documentElement.scrollHeight;
+    monthsBack += 1;
+    await tick();
+    window.scrollBy(0, document.documentElement.scrollHeight - heightBefore);
+    await ensureEventsFrom(months[0].first);
+  }
   const gridAgenda = $derived(buildAgenda($events, months[0].first, months[months.length - 1].last));
   const byDay = $derived(new Map(gridAgenda.map((d) => [d.date, d.entries])));
   let dayOpen = $state<string | null>(null);
@@ -195,6 +207,7 @@
   <div bind:this={sentinel} style="height:1px"></div>
   {#if loadingMore}<div class="muted" style="text-align:center;padding:1rem">Laddar…</div>{/if}
 {:else}
+  <button class="btn earlier" onclick={loadEarlier}>Visa tidigare månad</button>
   {#each months as m (m.first)}
     <section class="month">
       <h3 class="month-head">{m.label}</h3>
@@ -382,6 +395,12 @@
   }
 
   /* ── Rutnät ── */
+  .earlier {
+    display: flex;
+    margin: 0 auto 1rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+  }
   .month {
     margin-bottom: 1.4rem;
   }
