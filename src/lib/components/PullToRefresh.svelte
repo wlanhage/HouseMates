@@ -47,6 +47,7 @@
 <div ontouchstart={down} ontouchmove={move} ontouchend={up}>
   {#if pull > 0 || refreshing}
     <div class="ptr" style={`height:${refreshing ? 40 : pull}px`}>
+      <span class="spinner" class:spin={refreshing} style={refreshing ? '' : `transform:rotate(${pull * 4}deg)`}></span>
       {refreshing ? 'Uppdaterar…' : pull > 45 ? 'Släpp för att uppdatera' : 'Dra för att uppdatera'}
     </div>
   {/if}
@@ -62,8 +63,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
     font-size: 0.8rem;
     color: var(--muted);
     overflow: hidden;
+  }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    flex: none;
+  }
+  .spinner.spin {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>
