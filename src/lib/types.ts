@@ -63,6 +63,7 @@ export interface Chore {
   assignee: string | null; // users.id | 'both' | null
   last_done_at: string | null;
   last_done_by: string | null;
+  interval_days: number | null; // null = inget intervall
   created_by: string;
   created_at: string;
   updated_at: string;

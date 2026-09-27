@@ -5,10 +5,13 @@
   import { cubicOut } from 'svelte/easing';
   import { todosOpen, todosDone, chores, user, me } from '$lib/client/stores';
   import { people, colorOf, initialOf, nameOf } from '$lib/client/people';
-  import { refreshTodos, refreshChores, setTodoDone, deleteTodo, tickChore, deleteChore } from '$lib/client/data';
+  import { refreshTodos, refreshChores, setTodoDone, deleteTodo, tickChore, deleteChore, editChore } from '$lib/client/data';
+  import { choreDueDate, intervalLabel, type ChoreInput } from '$lib/client/chores';
+  import { sheetDrag } from '$lib/client/sheetDrag';
   import { dueLabel, fmtDate, daysAgoLabel } from '$lib/client/dates';
   import SwipeRow from '$lib/components/SwipeRow.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import ChoreForm from '$lib/components/ChoreForm.svelte';
   import type { Todo, Chore } from '$lib/types';
 
   // Två flikar: "Att göra" (engångs – försvinner vid avbockning) och
@@ -64,8 +67,26 @@
   const filteredChores = $derived($chores.filter((c) => matchesFilter(c.assignee)));
 
   function lastDoneText(c: Chore): string {
-    if (!c.last_done_at) return 'Aldrig gjort ännu';
-    return `Senast ${daysAgoLabel(c.last_done_at)} · ${nameOf($people, c.last_done_by, meId ?? undefined)}`;
+    const done = c.last_done_at
+      ? `Senast ${daysAgoLabel(c.last_done_at)} · ${nameOf($people, c.last_done_by, meId ?? undefined)}`
+      : 'Aldrig gjort ännu';
+    return c.interval_days ? `${done} · ${intervalLabel(c.interval_days)}` : done;
+  }
+
+  // Håll inne på en syssla för att redigera den.
+  let editingChore = $state<Chore | null>(null);
+
+  async function saveChore(input: ChoreInput) {
+    if (!editingChore) return;
+    await editChore(editingChore, input);
+    editingChore = null;
+  }
+
+  function removeEditingChore() {
+    if (!editingChore) return;
+    const c = editingChore;
+    editingChore = null;
+    void deleteChore(c);
   }
 </script>
 
@@ -170,16 +191,19 @@
   {:else}
     <div class="list">
       {#each filteredChores as c (c.id)}
+        {@const due = choreDueDate(c)}
+        {@const dueBadge = due ? dueLabel(due) : null}
         <div class="anim-wrap" animate:flip={{ duration: 320, easing: cubicOut }}>
-          <SwipeRow ontap={() => handleChore(c)} ondelete={() => void deleteChore(c)}>
+          <SwipeRow ontap={() => handleChore(c)} ondelete={() => void deleteChore(c)} onlongpress={() => (editingChore = c)}>
             <div class="todo-row" class:checking={pendingChore.has(c.id)}>
               <span class="checkbox" data-tap class:drawing={pendingChore.has(c.id)}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
               </span>
               <div class="todo-main">
                 <div class="todo-title">{c.title}</div>
-                <div class="todo-notes" class:never={!c.last_done_at}>{lastDoneText(c)}</div>
+                <div class="todo-notes wrap" class:never={!c.last_done_at}>{lastDoneText(c)}</div>
               </div>
+              {#if dueBadge}<span class="badge badge-{dueBadge.kind}">{dueBadge.text}</span>{/if}
               {#if c.assignee}
                 <Avatar color={colorOf($people, c.assignee)} initial={initialOf($people, c.assignee)} size={22} />
               {/if}
@@ -188,8 +212,20 @@
         </div>
       {/each}
     </div>
-    <p class="muted hint">Tryck på en syssla när den är gjord – då uppdateras "senast".</p>
+    <p class="muted hint">Tryck på bocken när sysslan är gjord. Håll inne på en syssla för att redigera den.</p>
   {/if}
+{/if}
+
+{#if editingChore}
+  <div class="scrim">
+    <button class="scrim-bg" aria-label="Stäng" onclick={() => (editingChore = null)}></button>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Redigera städsyssla" use:sheetDrag={() => (editingChore = null)}>
+      <div class="sheet-handle"></div>
+      <h3 style="padding:0 0.5rem 0.5rem">Redigera städsyssla</h3>
+      <ChoreForm chore={editingChore} submitLabel="Spara" onsubmit={saveChore} />
+      <button class="danger-link" onclick={removeEditingChore}>Ta bort städsyssla</button>
+    </div>
+  </div>
 {/if}
 
 <style>
@@ -272,8 +308,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .todo-notes.wrap {
+    white-space: normal;
+  }
   .todo-notes.never {
     font-style: italic;
+  }
+  .danger-link {
+    display: block;
+    margin: 1rem auto 0.25rem;
+    border: none;
+    background: none;
+    color: var(--danger);
+    font-weight: 600;
+    font-size: 0.9rem;
   }
   .hint {
     font-size: 0.78rem;

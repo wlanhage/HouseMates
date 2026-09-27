@@ -3,6 +3,8 @@
   import { createShopping, createTodo, createChore, createEventAction, type EventInput } from '$lib/client/data';
   import EventForm from './EventForm.svelte';
   import AssigneePicker from './AssigneePicker.svelte';
+  import ChoreForm from './ChoreForm.svelte';
+  import type { ChoreInput } from '$lib/client/chores';
   import { sheetDrag } from '$lib/client/sheetDrag';
 
   // Inköp
@@ -15,9 +17,6 @@
   let todoStart = $state('');
   let todoDue = $state('');
   let todoError = $state('');
-  // Städ
-  let choreTitle = $state('');
-  let choreAssignee = $state<string | null>('both');
 
   let firstField: HTMLInputElement | undefined = $state();
 
@@ -38,9 +37,6 @@
       todoStart = '';
       todoDue = '';
       todoError = '';
-    } else if (kind === 'chore') {
-      choreTitle = '';
-      choreAssignee = 'both';
     }
     if (kind) setTimeout(() => firstField?.focus(), 30);
   });
@@ -74,10 +70,8 @@
     close();
   }
 
-  async function submitChore(e: Event) {
-    e.preventDefault();
-    if (!choreTitle.trim()) return;
-    await createChore({ title: choreTitle, assignee: choreAssignee });
+  async function submitChore(input: ChoreInput) {
+    await createChore(input);
     close();
   }
 
@@ -165,20 +159,7 @@
         </form>
       {:else if $createKind === 'chore'}
         <h3 style="padding:0 0.5rem 0.5rem">Ny städsyssla</h3>
-        <form onsubmit={submitChore} style="padding:0 0.5rem">
-          <div class="field">
-            <label for="ch-title">Syssla</label>
-            <input id="ch-title" bind:this={firstField} class="input" bind:value={choreTitle} placeholder="t.ex. Byta sängkläder" autocomplete="off" />
-          </div>
-          <div class="field">
-            <span class="label-txt">Vem gör det?</span>
-            <AssigneePicker bind:value={choreAssignee} allowNone />
-          </div>
-          <p class="muted" style="font-size:0.78rem;margin:-0.4rem 0 0.8rem">
-            Bockas av gång på gång – listan visar när det gjordes senast och av vem.
-          </p>
-          <button class="btn btn-primary btn-block" type="submit" disabled={!choreTitle.trim()}>Lägg till</button>
-        </form>
+        <ChoreForm onsubmit={submitChore} />
       {:else if $createKind === 'event'}
         <h3 style="padding:0 0.5rem 0.5rem">Nytt event</h3>
         <EventForm submitLabel="Skapa" onsubmit={submitEvent} />

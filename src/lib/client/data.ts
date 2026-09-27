@@ -33,6 +33,7 @@ import type {
   CalendarEvent
 } from '$lib/types';
 import { splitIngredient } from './ingredients';
+import { choreDueDate, type ChoreInput } from './chores';
 
 const nowIso = () => new Date().toISOString();
 
@@ -59,9 +60,16 @@ function sortTodosOpen(items: Todo[]): Todo[] {
   });
 }
 
-/** Städ: aldrig gjorda överst, därefter längst sedan först. */
+/** Städ: sysslor med intervall först efter sista dag, sedan aldrig gjorda, sedan längst sedan. */
 function sortChores(items: Chore[]): Chore[] {
   return [...items].sort((a, b) => {
+    const dueA = choreDueDate(a);
+    const dueB = choreDueDate(b);
+    if (dueA || dueB) {
+      if (!dueA) return 1;
+      if (!dueB) return -1;
+      return dueA.localeCompare(dueB);
+    }
     if (!a.last_done_at || !b.last_done_at) return Number(!!a.last_done_at) - Number(!!b.last_done_at);
     return a.last_done_at.localeCompare(b.last_done_at);
   });
@@ -477,7 +485,7 @@ export async function restoreTodo(id: string): Promise<void> {
 }
 
 // ── Städ ────────────────────────────────────────────────────────────────────
-export async function createChore(input: { title: string; assignee?: string | null }): Promise<void> {
+export async function createChore(input: ChoreInput): Promise<void> {
   const title = input.title.trim();
   if (!title) return;
   const id = uuid();
@@ -485,9 +493,10 @@ export async function createChore(input: { title: string; assignee?: string | nu
   const optimistic: Chore = {
     id,
     title,
-    assignee: input.assignee ?? null,
+    assignee: input.assignee,
     last_done_at: null,
     last_done_by: null,
+    interval_days: input.interval_days,
     created_by: u?.id ?? '',
     created_at: nowIso(),
     updated_at: nowIso(),
@@ -497,7 +506,7 @@ export async function createChore(input: { title: string; assignee?: string | nu
 
   const res = await sendOp({
     op: 'chores.insert',
-    row: { id, title, assignee: input.assignee ?? null }
+    row: { id, title, assignee: input.assignee, interval_days: input.interval_days }
   });
   if (!res.sent) return;
   if (res.error) {
@@ -507,6 +516,16 @@ export async function createChore(input: { title: string; assignee?: string | nu
   }
   void refreshChores();
   void refreshActivity();
+}
+
+export async function editChore(chore: Chore, input: ChoreInput): Promise<void> {
+  const title = input.title.trim();
+  if (!title) return;
+  const patch = { title, assignee: input.assignee, interval_days: input.interval_days };
+  chores.update((l) => sortChores(l.map((c) => (c.id === chore.id ? { ...c, ...patch } : c))));
+  const res = await sendOp({ op: 'chores.update', id: chore.id, version: chore.version, patch });
+  if (res.error) showToast(errMsg(res.error));
+  if (res.sent) void refreshChores();
 }
 
 /** "Gjort nu": servern sätter last_done_by/at; ångra återställer förra värdena. */

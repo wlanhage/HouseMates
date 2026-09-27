@@ -4,8 +4,9 @@
   let {
     ontap,
     ondelete,
+    onlongpress,
     children
-  }: { ontap?: () => void; ondelete?: () => void; children: Snippet } = $props();
+  }: { ontap?: () => void; ondelete?: () => void; onlongpress?: () => void; children: Snippet } = $props();
 
   const OPEN = 72; // px avslöjad radera-knapp
   let dx = $state(0);
@@ -16,6 +17,7 @@
   let mode = $state<'none' | 'h' | 'v'>('none');
   let moved = false;
   let longPress: ReturnType<typeof setTimeout> | undefined;
+  let longPressed = false;
   // Tryck räknas bara på bockens yta ([data-tap]) när raden har en; annars hela raden.
   let tapAllowed = false;
 
@@ -31,10 +33,16 @@
     } catch {
       /* ignore */
     }
-    // Långtryck avslöjar radera-knappen (spec §12.2: swipe ELLER långtryck).
+    // Långtryck: egen åtgärd om raden har en, annars avslöjas radera-knappen (spec §12.2).
+    longPressed = false;
     clearTimeout(longPress);
     longPress = setTimeout(() => {
-      if (mode === 'none' && !moved) {
+      if (mode !== 'none' || moved) return;
+      longPressed = true;
+      if (onlongpress) {
+        navigator.vibrate?.(10);
+        onlongpress();
+      } else {
         open = true;
         dx = -OPEN;
       }
@@ -58,6 +66,10 @@
 
   function up(e: PointerEvent) {
     clearTimeout(longPress);
+    if (longPressed) {
+      mode = 'none';
+      return;
+    }
     if (mode === 'h') {
       open = dx < -OPEN / 2;
       dx = open ? -OPEN : 0;
@@ -132,6 +144,7 @@
     background: var(--surface);
     -webkit-user-select: none;
     user-select: none;
+    -webkit-touch-callout: none;
   }
   .swipe-fg.animate {
     transition: transform 0.18s ease;

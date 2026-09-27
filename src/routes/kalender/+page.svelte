@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { events, user, showToast } from '$lib/client/stores';
+  import { events, chores, user, showToast } from '$lib/client/stores';
   import { people, colorOf, nameOf } from '$lib/client/people';
   import {
     refreshEvents,
+    refreshChores,
+    tickChore,
     extendEvents,
     ensureEventsUntil,
     ensureEventsFrom,
@@ -12,11 +14,12 @@
     type EventInput
   } from '$lib/client/data';
   import { buildAgenda, type AgendaEntry } from '$lib/client/agenda';
-  import { ymd, todayStr, addDaysStr, dayHeading, hhmm } from '$lib/client/dates';
+  import { ymd, todayStr, addDaysStr, dayHeading, hhmm, daysAgoLabel } from '$lib/client/dates';
+  import { choreDueDate, intervalLabel } from '$lib/client/chores';
   import { buildMonth, addMonths, monthOf, WEEKDAYS } from '$lib/client/monthGrid';
   import EventForm from '$lib/components/EventForm.svelte';
   import { sheetDrag } from '$lib/client/sheetDrag';
-  import type { CalendarEvent } from '$lib/types';
+  import type { CalendarEvent, Chore } from '$lib/types';
 
   // ── Vy: lista eller månadsrutnät, senaste valet sparas ──
   type View = 'list' | 'grid';
@@ -50,8 +53,35 @@
   let sentinel: HTMLDivElement | undefined = $state();
   let loadingMore = $state(false);
 
-  // ── Lista ──
+  // ── Städsysslor med intervall syns på sin sista dag ──
+  const dueChores = $derived(
+    $chores.flatMap((chore) => {
+      const due = choreDueDate(chore);
+      return due ? [{ chore, due }] : [];
+    })
+  );
+  const choresByDay = $derived.by(() => {
+    const map = new Map<string, Chore[]>();
+    for (const { chore, due } of dueChores) map.set(due, [...(map.get(due) ?? []), chore]);
+    return map;
+  });
+
+  // ── Lista: händelser + städsysslor; försenade sysslor visas på idag ──
   const agenda = $derived(buildAgenda($events, fromDay, toDay));
+  const listDays = $derived.by(() => {
+    const days = new Map<string, { entries: AgendaEntry[]; chores: Chore[] }>();
+    for (const d of agenda) days.set(d.date, { entries: d.entries, chores: [] });
+    for (const { chore, due } of dueChores) {
+      const date = due < today ? today : due;
+      if (date > toDay) continue;
+      const day = days.get(date) ?? { entries: [], chores: [] };
+      day.chores.push(chore);
+      days.set(date, day);
+    }
+    return [...days.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, day]) => ({ date, ...day }));
+  });
 
   // ── Rutnät: innevarande månad + två framåt, fler vid skroll; bakåt via knapp ──
   const start = monthOf(today);
@@ -76,6 +106,7 @@
   const byDay = $derived(new Map(gridAgenda.map((d) => [d.date, d.entries])));
   let dayOpen = $state<string | null>(null);
   const dayEntries = $derived(dayOpen ? (byDay.get(dayOpen) ?? []) : []);
+  const dayChores = $derived(dayOpen ? (choresByDay.get(dayOpen) ?? []) : []);
 
   /** Upp till tre prickar i personernas färger för en dag. */
   function dotColors(date: string): string[] {
@@ -86,6 +117,31 @@
       if (colors.length === 3) break;
     }
     return colors;
+  }
+
+  function choreColors(date: string): string[] {
+    return [...new Set((choresByDay.get(date) ?? []).map((c) => colorOf($people, c.assignee)))].slice(0, 2);
+  }
+
+  // ── Städsyssla: markera som gjord från kalendern ──
+  let selectedChore = $state<Chore | null>(null);
+
+  function openChore(c: Chore) {
+    dayOpen = null;
+    selectedChore = c;
+  }
+
+  function markChoreDone() {
+    if (!selectedChore) return;
+    const c = selectedChore;
+    selectedChore = null;
+    void tickChore(c);
+  }
+
+  function choreSub(c: Chore): string {
+    const due = choreDueDate(c);
+    if (due && due < today) return `Försenad sedan ${dayHeading(due).toLowerCase()}`;
+    return `Sista dag · ${intervalLabel(c.interval_days ?? 7)}`;
   }
 
   async function loadMore() {
@@ -104,6 +160,7 @@
 
   onMount(() => {
     void refreshEvents();
+    void refreshChores();
     if (view === 'grid') void ensureEventsUntil(months[months.length - 1].last);
   });
 
@@ -175,6 +232,17 @@
   </button>
 {/snippet}
 
+{#snippet choreRow(c: Chore)}
+  <button class="ev-row chore-row" onclick={() => openChore(c)}>
+    <span class="ev-time">🧽</span>
+    <span class="ev-bar chore-bar" style={`border-color:${colorOf($people, c.assignee)}`}></span>
+    <span class="ev-main">
+      <span class="ev-title">{c.title}</span>
+      <span class="ev-sub">{choreSub(c)}</span>
+    </span>
+  </button>
+{/snippet}
+
 <div class="title-row">
   <h2 class="page-title">Kalender</h2>
   <div class="view-toggle" role="group" aria-label="Vy">
@@ -188,18 +256,21 @@
 </div>
 
 {#if view === 'list'}
-  {#if agenda.length === 0}
+  {#if listDays.length === 0}
     <div class="card empty">
       <span class="emoji">📅</span>
       Inga händelser. Koppla er delade iCloud-kalender under Inställningar.
     </div>
   {/if}
 
-  {#each agenda as day (day.date)}
+  {#each listDays as day (day.date)}
     <div class="day-head">{dayHeading(day.date)}</div>
     <div class="list" style="margin-bottom:1rem">
       {#each day.entries as entry (entry.event.id + day.date)}
         {@render eventRow(entry)}
+      {/each}
+      {#each day.chores as c (c.id)}
+        {@render choreRow(c)}
       {/each}
     </div>
   {/each}
@@ -218,17 +289,19 @@
         {#each m.cells as c, i (m.first + i)}
           {#if c.date}
             {@const colors = dotColors(c.date)}
+            {@const rings = choreColors(c.date)}
             <button
               class="cell"
               class:today={c.date === today}
               class:past={c.date < today}
-              class:has={colors.length > 0}
-              aria-label={`${dayHeading(c.date)}${colors.length ? ', händelser' : ''}`}
+              class:has={colors.length + rings.length > 0}
+              aria-label={`${dayHeading(c.date)}${colors.length ? ', händelser' : ''}${rings.length ? ', städ' : ''}`}
               onclick={() => (dayOpen = c.date)}
             >
               <span class="num">{c.day}</span>
               <span class="dots">
                 {#each colors as col (col)}<i class="dot" style={`background:${col}`}></i>{/each}
+                {#each rings as col (col)}<i class="dot ring" style={`border-color:${col}`}></i>{/each}
               </span>
             </button>
           {:else}
@@ -249,15 +322,46 @@
     <div class="sheet" role="dialog" aria-modal="true" aria-label={dayHeading(dayOpen)} use:sheetDrag={() => (dayOpen = null)}>
       <div class="sheet-handle"></div>
       <h3 style="padding:0 0.5rem 0.6rem">{dayHeading(dayOpen)}</h3>
-      {#if dayEntries.length === 0}
+      {#if dayEntries.length === 0 && dayChores.length === 0}
         <p class="muted" style="padding:0 0.5rem 0.75rem;margin:0">Inget planerat den här dagen.</p>
       {:else}
         <div class="list" style="padding:0 0.5rem 0.5rem">
           {#each dayEntries as entry (entry.event.id)}
             {@render eventRow(entry)}
           {/each}
+          {#each dayChores as c (c.id)}
+            {@render choreRow(c)}
+          {/each}
         </div>
       {/if}
+    </div>
+  </div>
+{/if}
+
+{#if selectedChore}
+  <div class="scrim">
+    <button class="scrim-bg" aria-label="Stäng" onclick={() => (selectedChore = null)}></button>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Städsyssla" use:sheetDrag={() => (selectedChore = null)}>
+      <div class="sheet-handle"></div>
+      <div style="padding:0 0.5rem 0.5rem">
+        <h3 style="margin-bottom:0.5rem">🧽 {selectedChore.title}</h3>
+        {#if choreDueDate(selectedChore)}
+          <div class="detail-row">Sista dag: {dayHeading(choreDueDate(selectedChore)!).toLowerCase()}</div>
+        {/if}
+        {#if selectedChore.interval_days}
+          <div class="detail-row">↻ {intervalLabel(selectedChore.interval_days)}</div>
+        {/if}
+        <div class="detail-row">
+          <span class="for-dot" style={`background:${colorOf($people, selectedChore.assignee)}`}></span>
+          {selectedChore.assignee ? (selectedChore.assignee === 'both' ? 'Båda' : `För ${nameOf($people, selectedChore.assignee, $user?.id)}`) : 'Ingen ansvarig'}
+        </div>
+        <div class="detail-row muted">
+          {selectedChore.last_done_at
+            ? `Senast gjord ${daysAgoLabel(selectedChore.last_done_at)} · ${nameOf($people, selectedChore.last_done_by, $user?.id)}`
+            : 'Aldrig gjord ännu'}
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:1rem" onclick={markChoreDone}>Markera som gjord</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -476,6 +580,14 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
+  }
+  .dot.ring {
+    background: transparent;
+    border: 1.5px solid;
+  }
+  .chore-bar {
+    background: transparent;
+    border-left: 4px dotted;
   }
 
   /* ── Detalj ── */
