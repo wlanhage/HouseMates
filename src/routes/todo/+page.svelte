@@ -67,10 +67,8 @@
   const filteredChores = $derived($chores.filter((c) => matchesFilter(c.assignee)));
 
   function lastDoneText(c: Chore): string {
-    const done = c.last_done_at
-      ? `Senast ${daysAgoLabel(c.last_done_at)} · ${nameOf($people, c.last_done_by, meId ?? undefined)}`
-      : 'Aldrig gjort ännu';
-    return c.interval_days ? `${done} · ${intervalLabel(c.interval_days)}` : done;
+    if (!c.last_done_at) return 'Aldrig gjord';
+    return `✓ ${nameOf($people, c.last_done_by, meId ?? undefined)}, ${daysAgoLabel(c.last_done_at)}`;
   }
 
   // Håll inne på en syssla för att redigera den.
@@ -194,25 +192,36 @@
         {@const due = choreDueDate(c)}
         {@const dueBadge = due ? dueLabel(due) : null}
         <div class="anim-wrap" animate:flip={{ duration: 320, easing: cubicOut }}>
-          <SwipeRow ontap={() => handleChore(c)} ondelete={() => void deleteChore(c)} onlongpress={() => (editingChore = c)}>
-            <div class="todo-row" class:checking={pendingChore.has(c.id)}>
+          <SwipeRow
+            ontap={() => handleChore(c)}
+            ondelete={() => void deleteChore(c)}
+            onbodytap={() => (editingChore = c)}
+            onlongpress={() => (editingChore = c)}
+          >
+            <div
+              class="todo-row chore"
+              class:checking={pendingChore.has(c.id)}
+              style={c.assignee ? `--who:${colorOf($people, c.assignee)}` : ''}
+            >
               <span class="checkbox" data-tap class:drawing={pendingChore.has(c.id)}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="tick" d="m5 12 5 5L20 7" /></svg>
               </span>
               <div class="todo-main">
-                <div class="todo-title">{c.title}</div>
-                <div class="todo-notes wrap" class:never={!c.last_done_at}>{lastDoneText(c)}</div>
+                <div class="chore-top">
+                  <span class="todo-title">{c.title}</span>
+                  {#if dueBadge}<span class="badge badge-{dueBadge.kind}">{dueBadge.text}</span>{/if}
+                </div>
+                <div class="chore-meta">
+                  {#if c.interval_days}<span>↻ {intervalLabel(c.interval_days)}</span>{/if}
+                  <span class:never={!c.last_done_at}>{lastDoneText(c)}</span>
+                </div>
               </div>
-              {#if dueBadge}<span class="badge badge-{dueBadge.kind}">{dueBadge.text}</span>{/if}
-              {#if c.assignee}
-                <Avatar color={colorOf($people, c.assignee)} initial={initialOf($people, c.assignee)} size={22} />
-              {/if}
             </div>
           </SwipeRow>
         </div>
       {/each}
     </div>
-    <p class="muted hint">Tryck på bocken när sysslan är gjord. Håll inne på en syssla för att redigera den.</p>
+    <p class="muted hint">Tryck på bocken när sysslan är gjord. Tryck på namnet för att redigera.</p>
   {/if}
 {/if}
 
@@ -289,6 +298,32 @@
     background: var(--surface);
     box-shadow: var(--shadow);
     transition: background 0.25s, border-color 0.25s;
+  }
+  .todo-row.chore {
+    box-shadow: inset 4px 0 0 var(--who, transparent), var(--shadow);
+  }
+  .chore-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .chore-top .todo-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .chore-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 0.75rem;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .chore-meta span {
+    white-space: nowrap;
+  }
+  .chore-meta .never {
+    font-style: italic;
   }
   .todo-main {
     flex: 1;

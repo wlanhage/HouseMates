@@ -5,8 +5,15 @@
     ontap,
     ondelete,
     onlongpress,
+    onbodytap,
     children
-  }: { ontap?: () => void; ondelete?: () => void; onlongpress?: () => void; children: Snippet } = $props();
+  }: {
+    ontap?: () => void;
+    ondelete?: () => void;
+    onlongpress?: () => void;
+    onbodytap?: () => void;
+    children: Snippet;
+  } = $props();
 
   const OPEN = 72; // px avslöjad radera-knapp
   let dx = $state(0);
@@ -46,7 +53,7 @@
         open = true;
         dx = -OPEN;
       }
-    }, 500);
+    }, 400); // före iOS egen långtrycksgest (~500 ms), som annars avbryter pekaren
   }
 
   function move(e: PointerEvent) {
@@ -80,6 +87,8 @@
         dx = 0;
       } else if (tapAllowed) {
         ontap?.();
+      } else {
+        onbodytap?.();
       }
     }
     mode = 'none';
