@@ -67,9 +67,12 @@ lösenord eller krångel?
 - **Uppmätt:** cirka 10 tryck plus lösenkod och en omväg via Inställningar. Två
   varningar om "Ej signerad" visas. Steg: Tillåt → Stäng → öppna Inställningar → Profil
   hämtad → Installera → Installera → Installera → Klar.
-- **App Review, riktlinje 5.5:** "Apps offering configuration profiles must also adhere to
-  these requirements" (MDM-reglerna). Det ger hög risk för avslag. Ett manuellt CalDAV-konto
-  kräver i stället sex skärmar och att man skriver in server, användare och lösenord.
+- **App Review, riktlinje 5.5 (läst ordagrant 2026-10-03):** MDM-appar "may only be offered
+  by commercial enterprises, educational institutions, or government agencies" och "Apps
+  offering configuration profiles must also adhere to these requirements". En
+  konsumentapp som erbjuder en CalDAV-profil faller alltså utanför. Ett manuellt
+  CalDAV-konto kräver i stället sex skärmar och att man skriver in server, användare och
+  lösenord.
 - **Tekniskt fullt möjligt:** lokalt släpper Supabase-gatewayen igenom OPTIONS, PROPFIND,
   REPORT, MKCALENDAR, PROPPATCH, PUT och DELETE, Basic-auth och `Depth` till en edge
   function. Det är onboardingen som fäller vägen.
