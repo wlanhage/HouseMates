@@ -56,7 +56,10 @@ lösenord eller krångel?
     fanns i telefonen 09:40:06, när Kalender öppnades.
   - Ny hämtning sker tidigast efter några minuter: två öppningar inom 25–75 s gav ingen
     ny hämtning.
-  - Passiv bakgrundshämtning: se "Öppna frågor".
+  - Passiv bakgrundshämtning, utan att någon öppnade Kalender: en händelse som lades till
+    09:42:21 fanns i telefonen 10:16:35. Det var cirka 36 minuter efter föregående hämtning.
+    Simulatorn kör på en Mac med ström och wifi. En iPhone på batteri kan vara långsammare,
+    eftersom "Automatiskt" enligt Apple bara hämtar vid laddning och wifi.
   - Enligt research ignorerar iOS `X-PUBLISHED-TTL`.
 - **Servern:** en edge function som renderar ICS per hushåll med en hemlig token, cirka
   50 rader. CalDAV-synken försvinner även här.
@@ -129,8 +132,8 @@ kalender rörs inte.
 
 ## Öppna frågor
 
-- Hur ofta iOS hämtar ett prenumererat flöde i bakgrunden utan att Kalender-appen öppnas.
-  Simulatorn hämtade inte flödet passivt under mättiden; se slutrapporten i chatten.
+- Hur ofta en riktig iPhone på batteri hämtar ett prenumererat flöde. Simulatorn hämtade
+  det ungefär var 36:e minut.
 - Om Family Sharing fortfarande skapar en delad "Familj"-kalender på iOS 26. I så fall är
   det noll delningssteg för par i samma familjegrupp, och kalendern hittas med samma
   kopplingshändelse.
