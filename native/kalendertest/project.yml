@@ -1,0 +1,26 @@
+name: KalenderTest
+options:
+  bundleIdPrefix: se.housemates
+  developmentLanguage: sv
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  KalenderTest:
+    type: application
+    platform: iOS
+    sources: [KalenderTest]
+    info:
+      path: KalenderTest/Info.plist
+      properties:
+        CFBundleDisplayName: KalenderTest
+        UILaunchScreen: {}
+        NSCalendarsFullAccessUsageDescription: HouseMates visar och skapar händelser i den kalender ni väljer att dela. Andra kalendrar används inte.
+        CFBundleURLTypes:
+          - CFBundleURLName: se.housemates.kalendertest
+            CFBundleURLSchemes: [kalendertest]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: se.housemates.kalendertest
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

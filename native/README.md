@@ -11,27 +11,56 @@ lösenord eller krångel?
   delad. Apple har ingen öppen OAuth för iCloud-kalender. Det finns inte heller någon
   dokumenterad djuplänk till Kalender-appens delningsvy.
 - **Smidigt nog: ja, på två sätt.**
-  - **A: iCloud-delning med guide.** Delningen görs en gång, i Apples egen vy.
+  - **A: iCloud-delning.** Ni väljer en kalender ni redan delar, eller skapar en ny och
+    delar bara den, en gång, i Apples egen vy.
   - **B: egen kalender + prenumeration.** Delningen sker via en inbjudningslänk i appen.
 - **C (egen CalDAV-server via profil) är avfärdad**, och **D (spegling via tyst push) är
   för skör** som första steg.
 
 ## Vägarna
 
-### A · iCloud-delning med guide (EventKit)
+### A · iCloud-delning: välj er delade kalender eller skapa en ny (EventKit)
 
-- **Per person:** ett tryck på "Tillåt fullständig åtkomst".
-- **Om appen:** den skapar kalendern "HouseMates" i iCloud via EventKit.
-- **Ägaren** delar en gång i Kalender-appen: Kalendrar → ⓘ → Lägg till person → välj
-  partnern → Lägg till. Det blir cirka 6 tryck plus att välja kontakt. Steget kan inte
-  automatiseras eller djuplänkas, så appen visar en bildguide.
-- **Partnern** öppnar inbjudan och trycker Gå med, cirka 2 tryck.
-- **Partnerns app hittar kalendern själv** via en *kopplingshändelse*: en händelse med
-  URL `housemates://koppling/<hushålls-id>`.
-  - Verifierat i simulatorn: EventKit läser `url` och UID från serverns ICS.
-  - `calendarItemExternalIdentifier` är exakt ICS-UID:t.
-- **Par som redan delar en iCloud-kalender** slipper delningssteget helt. De väljer bara
-  den befintliga kalendern.
+Bara en kalender delas med partnern, aldrig alla.
+
+- **Per person:** ett tryck på "Tillåt full åtkomst".
+  - iOS har ingen behörighet för en enskild kalender: läsning kräver full åtkomst
+    (`EKAuthorizationStatusFullAccess`, "read or modify all data"). Appen läser och skriver
+    ändå bara den valda kalendern, och det står i behörighetstexten.
+  - Dialogen i iOS 26 visar en händelse ur användarens kalender och antalet händelser
+    ("52 aktiviteter nästa år"). Förklara därför i appen innan dialogen visas.
+- **Den som sätter upp väljer** en kalender ni redan delar, eller trycker "Skapa ny
+  HouseMates-kalender". Den nya kalendern hamnar i iCloud.
+  - Om kalendern inte redan är delad visar appen en guide: Kalender → Kalendrar → ⓘ →
+    Lägg till person → välj partnern → Lägg till. Det blir cirka 6 tryck plus att välja
+    kontakt. Steget kan inte automatiseras eller djuplänkas.
+  - Appen skickar en *kopplingskod* till partnern via Meddelanden. Koden är en text med en
+    länk inuti.
+- **Kopplingskoden innehåller bara id:n:** kalenderns titel och UID för upp till fem
+  kommande händelser i den. Inget innehåll följer med.
+  - **Befintlig kalender med händelser:** inget skrivs till den. Den kan vara delad med
+    fler, till exempel familjen.
+  - **Tom eller ny kalender:** appen skriver en *kopplingshändelse* ("HouseMates är
+    kopplad"). Partnerns app raderar den automatiskt när den har hittat kalendern.
+- **Partnern** accepterar kalenderinbjudan (cirka 2 tryck) och klistrar in koden. Appen
+  slår upp varje UID med `calendarItems(withExternalIdentifier:)` och väljer kalendern
+  med flest träffar.
+  - Ingen träff betyder att inbjudan inte är accepterad ännu. Appen väntar och försöker igen
+    när man kommer tillbaka.
+  - Partnern kan också välja kalendern själv. Appen kontrollerar då UID:n och varnar om det
+    inte är samma kalender.
+- **Verifierat i simulatorn (KalenderTest):**
+  - skapa en ny kalender: kopplingshändelse, kod och delningsguide
+  - välja en befintlig kalender: "Kopplingskod från 3 befintliga händelser, inget skrevs"
+  - klistra in koden: kalendern hittas och kopplingshändelsen raderas
+  - vänteläge och manuellt val: varning vid fel kalender
+  - en kalender som synkats in från en server hittas via UID och flaggas som skrivskyddad
+  - `calendarItemExternalIdentifier` är exakt ICS-UID:t
+- **Fynd som rättats i testappen:**
+  - "Kopiera" i delningsbladet tog bara med texten och tappade en separat länk. Koden
+    skickas därför som en enda text.
+  - Systemknappar (Klistra in, Kopiera) blev engelska tills `developmentLanguage: sv` sattes.
+- **Par som redan delar en iCloud-kalender** slipper delningssteget helt.
 - **Synk:** Apples egen iCloud-push. Kalendern går att redigera överallt: Kalender-appen,
   Siri och widgets.
 - **Servern:** ingen kalenderkod alls.
@@ -103,31 +132,35 @@ lösenord eller krångel?
   att bygga om A:s delningssteg visar sig vara för krångligt i verkligheten.
 
 **Beslutet hänger på ett test som bara går att göra på riktiga telefoner:** hur lång tid
-tar A:s delning och partnerns accept i praktiken, och dyker kopplingshändelsen upp hos
-partnern?
+tar delningen och partnerns accept i praktiken, och hittar partnerns telefon kalendern via
+iCloud?
 
 ## Test på riktiga telefoner (cirka 15 min)
 
-Testet skapar en ny iCloud-kalender, "HouseMates", som kan raderas efteråt. Er riktiga
-kalender rörs inte.
+Appen läser och skriver bara den kalender ni väljer. Väljer ni "Skapa ny" skapas en
+iCloud-kalender, "HouseMates", som kan raderas efteråt.
 
-1. `cd native/spike && xcodegen generate && open KalenderSpike.xcodeproj`. Välj ditt team
-   under Signing och kör på båda telefonerna.
+1. **Bygg och installera:** `cd native/kalendertest && xcodegen generate && open
+   KalenderTest.xcodeproj`. Välj ditt team under Signing och kör på båda telefonerna.
+   Ett gratis utvecklarkonto räcker.
 2. **Telefon A:**
-   1. Ge kalenderåtkomst.
-   2. Tryck "Skapa HouseMates-kalender" och kontrollera att källan är iCloud.
-   3. Tryck "Skriv kopplingshändelse".
-3. **Telefon A i Kalender-appen:** Kalendrar → ⓘ vid HouseMates → Lägg till person →
-   partnern. Notera antal tryck och tid.
-4. **Telefon B:** acceptera inbjudan. Notera var den dök upp: notis, Inkorg eller e-post.
-5. **Telefon B:** öppna KalenderSpike → Ge åtkomst → "Hitta kalender via
-   kopplingshändelse" med tomt fält. Kalendern ska bli vald automatiskt.
-6. **Telefon A:** "Skriv testhändelse". Se hur snabbt den syns under "Senast ändrat" på
-   telefon B.
-7. **Valfritt, B på riktig telefon:** kör `BIND=0.0.0.0 server/start.sh` på Macen. Ändra
-   adressen till `webcal://<macens-ip>:8787/feed.ics` och tryck Prenumerera.
-   - Lägg till händelser med
-     `curl -X POST <mac>:8787/events -d '{"title":"Test"}'`.
+   1. Ge åtkomst.
+   2. Välj er delade kalender, eller tryck "Skapa ny HouseMates-kalender". Kontrollera
+      att källan är iCloud.
+3. **Om kalendern är ny eller inte delad:** följ guiden i appen (Kalender → Kalendrar → ⓘ
+   → Lägg till person). Notera antal tryck och tid.
+4. **Telefon A:** "Skicka kopplingskod" → Meddelanden → partnern.
+5. **Telefon B:**
+   1. Acceptera kalenderinbjudan. Notera var den dök upp: notis, Inkorg eller e-post.
+   2. Kopiera meddelandet, öppna KalenderTest, ge åtkomst och tryck "Klistra in".
+   3. Förväntat resultat: "Kopplad till …". Om inbjudan inte var accepterad ska appen
+      visa vänteläget och sedan koppla av sig själv när du kommer tillbaka från Kalender.
+6. **Synktid:** tryck "Skriv testhändelse" på ena telefonen. På den andra visar "Senast
+   ändrat" både "ändrad" och "syntes här"; skillnaden är synktiden.
+7. **Ny kalender:** kopplingshändelsen ska försvinna från båda telefonerna.
+8. **Valfritt, väg B på riktig telefon:** kör `BIND=0.0.0.0 server/start.sh` på Macen och
+   prenumerera på `webcal://<macens-ip>:8787/feed.ics` i Safari.
+   - Lägg till händelser med `curl -X POST <mac>:8787/events -d '{"title":"Test"}'`.
    - Notera när de dyker upp utan att Kalender-appen öppnas.
 
 ## Öppna frågor
@@ -135,16 +168,20 @@ kalender rörs inte.
 - Hur ofta en riktig iPhone på batteri hämtar ett prenumererat flöde. Simulatorn hämtade
   det ungefär var 36:e minut.
 - Om Family Sharing fortfarande skapar en delad "Familj"-kalender på iOS 26. I så fall är
-  det noll delningssteg för par i samma familjegrupp, och kalendern hittas med samma
-  kopplingshändelse.
+  det noll delningssteg för par i samma familjegrupp, och kalendern väljs som vilken
+  befintlig delad kalender som helst.
 
 ## Filer
 
-- `spike/` – SwiftUI-testapp (xcodegen):
-  - `CalendarLab.swift` innehåller alla EventKit-experiment.
-  - Appen kan styras från Macen med `xcrun simctl openurl <enhet> "kalenderspike://link"`
-    (även `create`, `select?title=`, `find?key=`, `test`, `open?url=`, `reload`).
-- `spike/server/` – testservrar:
+- `kalendertest/` – SwiftUI-testapp för väg A (xcodegen):
+  - `CalendarLink.swift`: välj eller skapa, kopplingskod, koppla, vänta, verifiera och
+    synktest.
+  - `LinkCode.swift`: kopplingskoden som länk eller text.
+  - En kod kan öppnas från Macen med `xcrun simctl openurl <enhet>
+    "kalendertest://koppla?titel=…&uid=…"`.
+- Den tidigare testappen för alla fyra vägar (A–D) finns i git-historiken (commit
+  `6fd51c2`, `native/spike/`).
+- `server/` – testservrar för väg B och C:
   - `spike-server.mjs` (webcal-flöde, profil, `POST /events`). Den loggar varje hämtning
     av flödet, så att man ser när iOS uppdaterar.
   - Radicale som CalDAV-server.

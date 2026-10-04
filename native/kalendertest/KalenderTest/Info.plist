@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>KalenderSpike</string>
+	<string>KalenderTest</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,21 +22,17 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>se.housemates.kalenderspike</string>
+			<string>se.housemates.kalendertest</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kalenderspike</string>
+				<string>kalendertest</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>HouseMates visar och skapar händelser i er gemensamma kalender.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
+	<string>HouseMates visar och skapar händelser i den kalender ni väljer att dela. Andra kalendrar används inte.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

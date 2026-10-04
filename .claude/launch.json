@@ -11,10 +11,10 @@
       "port": 5173
     },
     {
-      "name": "kalenderspike",
+      "name": "native-testserver",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
-        "native/spike/server/start.sh"
+        "native/server/start.sh"
       ],
       "port": 8787
     }
