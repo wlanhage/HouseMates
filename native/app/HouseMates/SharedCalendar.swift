@@ -120,7 +120,7 @@ final class SharedCalendar {
             store.calendarItems(withExternalIdentifier: uid).contains { $0.calendar?.calendarIdentifier == calendar.calendarIdentifier }
         }
         if !isSame {
-            errorMessage = "\(calendar.title) verkar inte vara samma kalender som din partners. Har du accepterat inbjudan?"
+            errorMessage = "\(calendar.title) innehåller inga av hushållets händelser och är troligen fel kalender. Har du accepterat inbjudan?"
         }
         remember(calendar, uids: uids)
         refresh()

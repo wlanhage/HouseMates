@@ -7,7 +7,8 @@ struct CalendarView: View {
     let calendar: SharedCalendar
     @State private var editing: EditRequest?
     @State private var isChoosing = false
-    @AppStorage("visa-delningsguide") private var showsShareGuide = false
+    /// Hushållet vars kalender den här telefonen just valt; guiden gäller bara den som valde.
+    @AppStorage("delningsguide-hushall") private var shareGuideHousehold = ""
 
     var body: some View {
         NavigationStack {
@@ -93,7 +94,7 @@ struct CalendarView: View {
     private var waiting: some View {
         List {
             Section("Väntar på kalendern") {
-                Text("\(partnerName) har valt kalendern \(session.household?.calendarTitle ?? ""). Öppna inbjudan (notis eller Kalender → Inkorg) och tryck Gå med. Appen hittar kalendern själv när du kommer tillbaka.")
+                Text("Hushållet använder kalendern \(session.household?.calendarTitle ?? ""). Har du fått en inbjudan till den? Öppna den (notis eller Kalender → Inkorg) och tryck Gå med. Appen hittar kalendern själv när du kommer tillbaka.")
                 Button("Försök igen") { calendar.refresh() }
             }
             Section("Eller välj kalendern själv") {
@@ -108,8 +109,8 @@ struct CalendarView: View {
 
     private var events: some View {
         List {
-            if showsShareGuide, let title = calendar.linkedCalendar?.title {
-                ShareGuide(calendarTitle: title, partnerName: partnerName) { showsShareGuide = false }
+            if shareGuideHousehold == session.household?.id.uuidString, let title = calendar.linkedCalendar?.title {
+                ShareGuide(calendarTitle: title, partnerName: partnerName) { shareGuideHousehold = "" }
             }
             if calendar.upcoming.isEmpty {
                 Text("Inga händelser de kommande 60 dagarna.").foregroundStyle(.secondary)
@@ -136,7 +137,7 @@ struct CalendarView: View {
         guard let uids = calendar.link(to: chosen) else { return }
         do {
             try await session.saveCalendarLink(title: chosen.title, eventUIDs: uids)
-            showsShareGuide = true
+            shareGuideHousehold = session.household?.id.uuidString ?? ""
             isChoosing = false
         } catch {
             calendar.errorMessage = userMessage(for: error)

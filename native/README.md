@@ -55,6 +55,9 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
   servern → ny händelse i Apples redigeringsvy → notistext "William la in Middag med Erik i
   kalendern / mån 5 okt. 15:00"
 - partnern loggar in och kopplas automatiskt till samma kalender via UID:n
+- en telefon som saknar hushållets kalender visar vänteläget; att välja fel kalender själv
+  ger en varning
+- en inloggning vars konto har raderats loggas ut i stället för att fastna
 - push: bannern visas med rätt svensk text (simulerad leverans med `simctl push`)
 
 **Inte verifierat:**
