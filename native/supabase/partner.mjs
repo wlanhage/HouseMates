@@ -2,6 +2,7 @@
 //   node native/supabase/partner.mjs join <din-epost>   – Anna går med i ditt hushåll
 //   node native/supabase/partner.mjs add Bröd           – Anna lägger till en vara
 //   node native/supabase/partner.mjs check Mjölk        – Anna bockar av en vara
+//   node native/supabase/partner.mjs leave              – Anna lämnar hushållet
 import { createClient } from '@supabase/supabase-js';
 import { apiUrl, publishableKey, secretKey } from './local.mjs';
 import { randomUUID } from 'node:crypto';
@@ -40,6 +41,9 @@ if (command === 'join') {
   const { data, error } = await anna.from('shopping_items').update({ checked: true })
     .ilike('name', argument).eq('checked', false).is('deleted_at', null).select('name');
   console.log(error ? `Fel: ${error.message}` : `Anna bockade av ${data.map((d) => d.name).join(', ') || 'inget'}`);
+} else if (command === 'leave') {
+  const { error } = await anna.rpc('leave_household');
+  console.log(error ? `Fel: ${error.message}` : 'Anna lämnade hushållet');
 } else {
-  console.log('Användning: join <epost> | add <vara> | check <vara>');
+  console.log('Användning: join <epost> | add <vara> | check <vara> | leave');
 }

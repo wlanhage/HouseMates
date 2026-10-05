@@ -114,6 +114,7 @@ struct HouseholdSetupView: View {
 
     private func run(_ action: () async throws -> Void) async {
         isWorking = true
+        errorMessage = nil
         defer { isWorking = false }
         do {
             try await action()

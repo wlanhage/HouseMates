@@ -51,6 +51,11 @@ final class AppSession {
         try? await client.auth.signOut()
     }
 
+    func leaveHousehold() async throws {
+        try await client.rpc("leave_household").execute()
+        await reload()
+    }
+
     func createHousehold() async throws {
         try await client.rpc("create_household").execute()
         await reload()

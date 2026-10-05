@@ -111,12 +111,44 @@ const { data: hidden } = await anna.client.from('device_tokens').select('token')
 assert.equal(hidden.length, 0);
 step('enhetstoken följer den som loggat in senast och är osynlig för klienter');
 
-const notLoggedIn = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
-assert.ok((await notLoggedIn.rpc('delete_account')).error);
-step('radering kräver inloggning');
-
 const count = async (table, column, value) =>
   (await service.from(table).select('*', { count: 'exact', head: true }).eq(column, value)).count;
+
+const lisa = await signUp('Lisa');
+const olle = await signUp('Olle');
+const { data: lisasHome } = await lisa.client.rpc('create_household');
+assert.ifError((await olle.client.rpc('join_household', { p_code: lisasHome.invite_code })).error);
+const coffee = randomUUID();
+assert.ifError((await lisa.client.from('shopping_items').insert({ id: coffee, name: 'Kaffe' })).error);
+assert.equal(await count('notification_queue', 'recipient', olle.id), 1);
+
+assert.ifError((await olle.client.rpc('leave_household')).error);
+assert.equal(await count('household_members', 'user_id', olle.id), 0);
+assert.equal(await count('notification_queue', 'recipient', olle.id), 0);
+assert.equal((await olle.client.from('shopping_items').select('id')).data.length, 0);
+const { data: lisasHomeAfter } = await lisa.client.from('households').select('invite_code').single();
+assert.notEqual(lisasHomeAfter.invite_code, lisasHome.invite_code);
+const { data: lisaAlone } = await lisa.client.from('profiles').select('name');
+assert.deepEqual(lisaAlone.map((p) => p.name), ['Lisa']);
+assert.equal(await count('shopping_items', 'id', coffee), 1);
+step('Olle lämnar: medlemskap och väntande notiser borta, listan kvar för Lisa, ny inbjudningskod');
+
+const oldCode = await olle.client.rpc('join_household', { p_code: lisasHome.invite_code });
+assert.match(oldCode.error?.message ?? '', /Hittade inget hushåll/);
+assert.ifError((await olle.client.rpc('join_household', { p_code: lisasHomeAfter.invite_code })).error);
+step('den gamla koden fungerar inte längre, den nya gör det');
+
+assert.ifError((await olle.client.rpc('leave_household')).error);
+assert.ifError((await lisa.client.rpc('leave_household')).error);
+assert.equal(await count('households', 'id', lisasHome.id), 0);
+assert.equal(await count('shopping_items', 'id', coffee), 0);
+assert.ifError((await lisa.client.rpc('leave_household')).error);
+step('den sista som lämnar tar hushållet och listan med sig; att lämna utan hushåll gör inget');
+
+const notLoggedIn = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
+assert.ok((await notLoggedIn.rpc('delete_account')).error);
+assert.ok((await notLoggedIn.rpc('leave_household')).error);
+step('radering och att lämna kräver inloggning');
 
 assert.ifError((await erik.client.rpc('delete_account')).error);
 assert.equal((await service.auth.admin.getUserById(erik.id)).data.user, null);

@@ -17,6 +17,14 @@ struct SettingsView: View {
                         LabeledContent("Inbjudningskod", value: code)
                         ShareLink("Bjud in din partner", item: "Gå med i vårt hushåll i HouseMates med koden \(code)")
                     }
+                    ConfirmedActionButton(
+                        title: "Lämna hushållet",
+                        question: "Lämna hushållet?",
+                        consequences: leaveConsequences,
+                        confirmLabel: "Lämna"
+                    ) {
+                        try await session.leaveHousehold()
+                    }
                 }
                 Section("Kalender") {
                     LabeledContent("Delad kalender", value: calendar.linkedCalendar?.title ?? "Inte vald")
@@ -44,5 +52,12 @@ struct SettingsView: View {
             .refreshable { await session.reload() }
             .task { await push.refreshAuthorization() }
         }
+    }
+
+    private var leaveConsequences: String {
+        guard let partner = session.partner else {
+            return "Du är ensam i hushållet, så hushållet och inköpslistan raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat."
+        }
+        return "Inköpslistan blir kvar för \(partner.name). Sedan kan du skapa ett nytt hushåll eller gå med i ett annat. Kalendern ni delar i Apple Kalender påverkas inte; sluta dela den i Kalender-appen om du vill."
     }
 }
