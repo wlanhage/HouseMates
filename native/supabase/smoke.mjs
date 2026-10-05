@@ -111,4 +111,37 @@ const { data: hidden } = await anna.client.from('device_tokens').select('token')
 assert.equal(hidden.length, 0);
 step('enhetstoken följer den som loggat in senast och är osynlig för klienter');
 
+const notLoggedIn = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
+assert.ok((await notLoggedIn.rpc('delete_account')).error);
+step('radering kräver inloggning');
+
+const count = async (table, column, value) =>
+  (await service.from(table).select('*', { count: 'exact', head: true }).eq(column, value)).count;
+
+assert.ifError((await erik.client.rpc('delete_account')).error);
+assert.equal((await service.auth.admin.getUserById(erik.id)).data.user, null);
+assert.equal(await count('profiles', 'id', erik.id), 0);
+assert.equal(await count('household_members', 'user_id', erik.id), 0);
+assert.equal(await count('device_tokens', 'user_id', erik.id), 0);
+assert.equal(await count('activity_log', 'actor', erik.id), 0);
+assert.equal(await count('notification_queue', 'recipient', erik.id), 0);
+step('Erik raderar sitt konto: inloggning, profil, medlemskap, token, aktivitet och notiser borta');
+
+const { data: breadAfter } = await anna.client.from('shopping_items').select('created_by, checked_by').eq('id', bread).single();
+assert.deepEqual(breadAfter, { created_by: null, checked_by: null });
+assert.equal(await count('households', 'id', household.id), 1);
+const { data: annaAlone } = await anna.client.from('profiles').select('name');
+assert.deepEqual(annaAlone.map((p) => p.name), ['Anna']);
+step('Annas hushåll och varan Erik la till finns kvar, utan koppling till Erik');
+
+assert.ifError((await anna.client.rpc('delete_account')).error);
+assert.equal(await count('households', 'id', household.id), 0);
+assert.equal(await count('shopping_items', 'household_id', household.id), 0);
+assert.equal(await count('activity_log', 'household_id', household.id), 0);
+step('Anna var sist kvar: hushållet, listan och historiken raderas med henne');
+
+assert.ifError((await eva.client.rpc('delete_account')).error);
+assert.equal((await service.auth.admin.getUserById(eva.id)).data.user, null);
+step('konto utan hushåll går också att radera');
+
 console.log('\nAlla kontroller gick igenom.');

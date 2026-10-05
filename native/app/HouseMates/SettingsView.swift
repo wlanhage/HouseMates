@@ -36,6 +36,9 @@ struct SettingsView: View {
                 Section {
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
                 }
+                Section {
+                    DeleteAccountButton()
+                }
             }
             .navigationTitle("Inställningar")
             .refreshable { await session.reload() }

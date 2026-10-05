@@ -42,6 +42,15 @@ final class AppSession {
         try? await client.auth.signOut()
     }
 
+    /// Raderar kontot och allt kopplat till det på servern (delete_account), sedan det appen sparat på telefonen.
+    func deleteAccount() async throws {
+        try await client.rpc("delete_account").execute()
+        if let bundleID = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+        }
+        try? await client.auth.signOut()
+    }
+
     func createHousehold() async throws {
         try await client.rpc("create_household").execute()
         await reload()

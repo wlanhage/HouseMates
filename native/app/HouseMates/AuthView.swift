@@ -104,6 +104,7 @@ struct HouseholdSetupView: View {
                 }
                 Section {
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
+                    DeleteAccountButton()
                 }
             }
             .disabled(isWorking)

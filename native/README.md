@@ -26,7 +26,7 @@ Supabase-projekt i `supabase/`. Webbappen och dess databas påverkas inte.
    `supabase/functions/.env` behöver raden `CRON_SECRET=lokal-hemlighet`. Kör sedan
    `node native/supabase/notify-check.mjs` i en annan terminal.
 
-Behörigheter, triggers och notiskö testas med `node native/supabase/smoke.mjs` (14 kontroller
+Behörigheter, triggers och notiskö testas med `node native/supabase/smoke.mjs` (19 kontroller
 mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm test`).
 
 ## Hur det hänger ihop
@@ -45,6 +45,12 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
   notis när det varit tyst i tre minuter. Det är samma digest som webbappen. Ett tryck på
   notisen öppnar rätt flik.
+- **Radera konto:** `delete_account()` tar bort inloggningen. Profil, medlemskap, push-token,
+  egen historik och väntande notiser följer med (`on delete cascade`).
+  - Den som är sist kvar i hushållet tar hushållet och listan med sig.
+  - Annars blir listan kvar för partnern, utan koppling till personen.
+  - Appen rensar sedan allt den sparat på telefonen.
+  - Kalendern i Apple Kalender rörs inte. Den ligger i iCloud och kan vara delad med partnern.
 
 ## Verifierat i simulatorn (2026-10-05)
 
@@ -58,6 +64,8 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
 - en telefon som saknar hushållets kalender visar vänteläget; att välja fel kalender själv
   ger en varning
 - en inloggning vars konto har raderats loggas ut i stället för att fastna
+- radera konto, både ensam i hushållet (hushåll och lista raderas) och med partner (listan
+  blir kvar för partnern, utan koppling till personen), och innan man har ett hushåll
 - push: bannern visas med rätt svensk text (simulerad leverans med `simctl push`)
 
 **Inte verifierat:**
@@ -77,11 +85,11 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
 2. **Hostat Supabase-projekt.**
    - Kör `supabase link` och `supabase db push`, deploya `notify` och kör `cron.sql`.
    - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel.
-3. **Radera konto i appen** (riktlinje 5.1.1(v)).
-4. **Integritetspolicy:** en länk i appen och i App Store Connect.
-5. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
+3. **Integritetspolicy:** en länk i appen och i App Store Connect. Beskriv där vad
+   "Radera konto" tar bort.
+4. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
    granskaren testar.
-6. **Senare:**
+5. **Senare:**
    - lämna hushåll
    - tysta timmar för notiser
    - flytta in er befintliga data
