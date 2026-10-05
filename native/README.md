@@ -1,4 +1,89 @@
-# Native-spike: kan två personer få en delad kalender smidigt?
+# HouseMates native
+
+MVP (2026-10-05): inloggning, hushåll för två, delad inköpslista i realtid, delad kalender via
+iPhonens egen kalender (väg A nedan) och notiser till partnern. SwiftUI-app i `app/`, eget
+Supabase-projekt i `supabase/`. Webbappen och dess databas påverkas inte.
+
+## Kom igång lokalt
+
+1. Starta den lokala databasen (portarna 553xx, krockar inte med webbappens):
+   ```bash
+   cd native && supabase start -x analytics,imgproxy,studio,vector,meta,storage
+   ```
+2. Bygg appen: `cd native/app && xcodegen generate && open HouseMates.xcodeproj` och kör på en
+   simulator. `Config/Local.xcconfig` pekar på den lokala databasen.
+3. Skapa konto i appen, tryck "Skapa hushåll" och lägg till varor.
+4. Spela partnern från terminalen, så räcker en simulator:
+   ```bash
+   node native/supabase/partner.mjs join <din-epost>
+   ```
+   `partner.mjs add <vara>` och `partner.mjs check <vara>` ändrar listan som "Anna";
+   ändringen syns direkt i appen.
+5. Se vilka notiser som skulle skickas (torrt, utan APNs-nyckel):
+   ```bash
+   (cd native && supabase functions serve --env-file supabase/functions/.env)
+   ```
+   `supabase/functions/.env` behöver raden `CRON_SECRET=lokal-hemlighet`. Kör sedan
+   `node native/supabase/notify-check.mjs` i en annan terminal.
+
+Behörigheter, triggers och notiskö testas med `node native/supabase/smoke.mjs` (14 kontroller
+mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm test`).
+
+## Hur det hänger ihop
+
+- **Inloggning:** e-post och lösenord (Supabase Auth). Namnet sparas i `profiles`.
+- **Hushåll:** den ena skapar, den andra går med med en sexteckenskod. Max två medlemmar.
+  Alla tabeller bär `household_id`, och RLS släpper bara igenom det egna hushållet.
+- **Inköp:** `shopping_items`. Appen visar ändringar direkt och skickar dem sedan. Realtid
+  hämtar om listan när partnern ändrar något. Samma vara kan bara stå en gång (unikt index).
+- **Kalender:** finns bara i telefonerna (EventKit). Den som sätter upp väljer en delad
+  kalender eller skapar en ny. Kalenderns titel och UID för några händelser sparas i
+  `households`, så partnerns app hittar samma kalender själv. Händelser skapas och ändras i
+  Apples egen redigeringsvy.
+- **Notiser:** varje ändring skriver en rad i `activity_log` i samma transaktion (trigger). För
+  kalendern rapporterar appen sina ändringar via `log_calendar_activity`. Raden köas till
+  partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
+  notis när det varit tyst i tre minuter. Det är samma digest som webbappen. Ett tryck på
+  notisen öppnar rätt flik.
+
+## Verifierat i simulatorn (2026-10-05)
+
+- skapa konto → skapa hushåll → partnern går med via koden
+- lägga till, bocka av, radera och tömma varor
+- partnerns ändringar syns i appen inom 1,5 s (realtid), och "Töm" ger ingen notis
+- kalender: förklaring med "Fortsätt" → systemdialog → välj kalender → kopplingen sparas på
+  servern → ny händelse i Apples redigeringsvy → notistext "William la in Middag med Erik i
+  kalendern / mån 5 okt. 15:00"
+- partnern loggar in och kopplas automatiskt till samma kalender via UID:n
+- push: bannern visas med rätt svensk text (simulerad leverans med `simctl push`)
+
+**Inte verifierat:**
+- att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck
+  från testverktyget)
+- riktig APNs-leverans (kräver nyckel)
+- två fysiska telefoner med iCloud-delning
+
+## Kvar före TestFlight och App Store
+
+1. **Betalt Apple Developer-konto.**
+   - Slå på Push Notifications för `se.housemates.app` och ladda ner en APNs-nyckel (.p8).
+   - Sätt secrets på det hostade projektet: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`
+     (innehållet i .p8-filen), `APNS_BUNDLE_ID=se.housemates.app` och `CRON_SECRET`.
+     Lägg till `APNS_PRODUCTION=true` för TestFlight och App Store.
+   - Lägg till `aps-environment` i appens entitlements.
+2. **Hostat Supabase-projekt.**
+   - Kör `supabase link` och `supabase db push`, deploya `notify` och kör `cron.sql`.
+   - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel.
+3. **Radera konto i appen** (riktlinje 5.1.1(v)).
+4. **Integritetspolicy:** en länk i appen och i App Store Connect.
+5. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
+   granskaren testar.
+6. **Senare:**
+   - lämna hushåll
+   - tysta timmar för notiser
+   - flytta in er befintliga data
+
+# Spike: kan två personer få en delad kalender smidigt?
 
 Branch `feat/native`, 2026-10-03. Frågan som avgör native-satsningen: går det att sätta upp
 en delad kalender mellan två personer i en App Store-app utan Apple-ID, appspecifikt

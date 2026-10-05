@@ -1,0 +1,4 @@
+// Lokal Supabase (cd native && supabase start). Nycklarna är CLI:ns publika standardvärden.
+// "$()" hindrar xcconfig från att läsa "//" i adressen som en kommentar.
+SUPABASE_URL = http:/$()/127.0.0.1:55321
+SUPABASE_KEY = sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
