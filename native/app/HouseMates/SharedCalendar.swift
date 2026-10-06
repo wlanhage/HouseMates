@@ -25,6 +25,7 @@ struct CalendarActivity: Equatable {
 final class SharedCalendar {
     enum State: Equatable {
         case needsAccess
+        case accessDenied
         case needsSetup
         case waitingForInvite
         case linked
@@ -65,8 +66,15 @@ final class SharedCalendar {
     }
 
     func refresh() {
-        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess:
+            break
+        case .notDetermined:
             state = .needsAccess
+            return
+        default:
+            // Nekad, begränsad eller "bara lägga till": iOS frågar inte igen, så det går bara att ändra i Inställningar.
+            state = .accessDenied
             return
         }
         choosableCalendars = store.calendars(for: .event)

@@ -11,6 +11,16 @@ struct ShoppingView: View {
     var body: some View {
         NavigationStack {
             List {
+                if list.isOffline {
+                    Label(
+                        list.pending.isEmpty
+                            ? "Ingen kontakt. Listan visar senast hämtade läge."
+                            : "Ingen kontakt. Dina ändringar skickas när nätet är tillbaka.",
+                        systemImage: "wifi.slash"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
                 if push.authorization == .notDetermined && !hidesNotificationCard {
                     NotificationCard(partnerName: session.partner?.name) { hidesNotificationCard = true }
                 }
@@ -30,28 +40,28 @@ struct ShoppingView: View {
                         Text("Inget att handla.").foregroundStyle(.secondary)
                     }
                     ForEach(list.open) { item in
-                        ItemRow(item: item) { Task { await list.toggle(item) } }
+                        ItemRow(item: item) { list.toggle(item) }
                     }
                     .onDelete { remove(at: $0, in: list.open) }
                 }
                 if !list.bought.isEmpty {
                     Section {
                         ForEach(list.bought) { item in
-                            ItemRow(item: item) { Task { await list.toggle(item) } }
+                            ItemRow(item: item) { list.toggle(item) }
                         }
                         .onDelete { remove(at: $0, in: list.bought) }
                     } header: {
                         HStack {
                             Text("Handlat")
                             Spacer()
-                            Button("Töm") { Task { await list.clearBought() } }
+                            Button("Töm") { list.clearBought() }
                                 .font(.subheadline)
                         }
                     }
                 }
             }
             .navigationTitle("Inköp")
-            .refreshable { await list.load() }
+            .refreshable { await list.sync() }
             .alert("Något gick fel", isPresented: errorIsShown) {
                 Button("OK") {}
             } message: {
@@ -68,12 +78,12 @@ struct ShoppingView: View {
         let name = newItem
         newItem = ""
         isAdding = true
-        Task { await list.add(name) }
+        list.add(name)
     }
 
     private func remove(at offsets: IndexSet, in items: [ShoppingItem]) {
         for item in offsets.map({ items[$0] }) {
-            Task { await list.remove(item) }
+            list.remove(item)
         }
     }
 }

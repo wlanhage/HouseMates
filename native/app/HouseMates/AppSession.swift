@@ -39,12 +39,14 @@ final class AppSession {
 
     func signOut() async {
         await Push.shared.unregisterDevice()
+        LocalFiles.removeAll()
         try? await client.auth.signOut()
     }
 
     /// Raderar kontot och allt kopplat till det på servern (delete_account), sedan det appen sparat på telefonen.
     func deleteAccount() async throws {
         try await client.rpc("delete_account").execute()
+        LocalFiles.removeAll()
         if let bundleID = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: bundleID)
         }
@@ -53,6 +55,7 @@ final class AppSession {
 
     func leaveHousehold() async throws {
         try await client.rpc("leave_household").execute()
+        LocalFiles.removeAll()
         await reload()
     }
 
@@ -87,25 +90,43 @@ final class AppSession {
             phase = .signedOut
             return
         }
+        // Senast kända läge visas direkt, så att appen går att använda även utan nät (t.ex. i butiken).
+        if phase == .loading, let saved = LocalFiles.read(SavedSession.self, from: Self.sessionFile), saved.me.id == userID {
+            show(saved)
+        }
         do {
             // RLS ger bara den egna profilen och partnerns, och bara det egna hushållet.
             let profiles: [Profile] = try await client.from("profiles").select("id, name").execute().value
-            guard profiles.contains(where: { $0.id == userID }) else {
+            guard let me = profiles.first(where: { $0.id == userID }) else {
                 // Profilen skapas tillsammans med kontot, så den saknas bara om kontot har raderats.
                 await signOut()
                 return
             }
             let households: [Household] = try await client.from("households").select().execute().value
-            me = profiles.first { $0.id == userID }
-            partner = profiles.first { $0.id != userID }
-            household = households.first
+            let session = SavedSession(me: me, partner: profiles.first { $0.id != userID }, household: households.first)
+            show(session)
+            LocalFiles.write(session, to: Self.sessionFile)
             loadError = nil
-            phase = household == nil ? .needsHousehold : .ready
             await Push.shared.uploadToken()
         } catch {
             loadError = userMessage(for: error)
         }
     }
+
+    private func show(_ session: SavedSession) {
+        me = session.me
+        partner = session.partner
+        household = session.household
+        phase = household == nil ? .needsHousehold : .ready
+    }
+
+    private static let sessionFile = "session.json"
+}
+
+private struct SavedSession: Codable {
+    let me: Profile
+    let partner: Profile?
+    let household: Household?
 }
 
 private struct SetCalendarLink: Encodable {

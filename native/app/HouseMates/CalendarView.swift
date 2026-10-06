@@ -4,6 +4,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @Environment(AppSession.self) private var session
+    @Environment(\.openURL) private var openURL
     let calendar: SharedCalendar
     @State private var editing: EditRequest?
     @State private var isChoosing = false
@@ -47,10 +48,12 @@ struct CalendarView: View {
         switch calendar.state {
         case .needsAccess:
             accessExplanation
+        case .accessDenied:
+            accessDenied
         case .needsSetup:
             chooser
         case .waitingForInvite:
-            waiting
+            if isChoosing { chooser } else { waiting }
         case .linked:
             if isChoosing { chooser } else { events }
         }
@@ -65,6 +68,19 @@ struct CalendarView: View {
         } actions: {
             Button("Fortsätt") { Task { await calendar.requestAccess() } }
                 .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var accessDenied: some View {
+        ContentUnavailableView {
+            Label("Ingen åtkomst till kalendern", systemImage: "calendar.badge.exclamationmark")
+        } description: {
+            Text("Tryck Öppna Inställningar, välj Kalendrar och sedan Fullständig åtkomst. Inköpslistan fungerar som vanligt under tiden.")
+        } actions: {
+            Button("Öppna Inställningar") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -103,6 +119,11 @@ struct CalendarView: View {
                         LabeledContent(candidate.title, value: candidate.source.title)
                     }
                 }
+            }
+            Section {
+                Button("Byt kalender för hushållet") { isChoosing = true }
+            } footer: {
+                Text("Om kalendern har raderats eller slutat delas. Kalendern du väljer används sedan av er båda.")
             }
         }
     }

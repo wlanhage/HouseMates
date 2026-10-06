@@ -51,6 +51,7 @@ private struct LoadingView: View {
 
 struct MainTabs: View {
     @Environment(AppSession.self) private var session
+    @Environment(\.scenePhase) private var scenePhase
     @State private var shopping = ShoppingList()
     @State private var calendar = SharedCalendar()
     @State private var tab: AppTab = .shopping
@@ -70,11 +71,18 @@ struct MainTabs: View {
         }
         .task(id: session.household?.id) {
             guard let householdID = session.household?.id else { return }
-            await shopping.start(householdID: householdID)
+            // Notisbehörigheten läses först, så att notiskortet inte blinkar fram medan listan synkar.
             await push.registerIfAllowed()
+            await shopping.start(householdID: householdID)
         }
         .onChange(of: session.household, initial: true) { _, household in
             calendar.update(household: household)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Realtidsanslutningen kan ha brutits medan appen låg i bakgrunden.
+            guard phase == .active else { return }
+            Task { await shopping.sync() }
+            calendar.refresh()
         }
         .onChange(of: push.openedTab) { _, opened in
             guard let opened else { return }

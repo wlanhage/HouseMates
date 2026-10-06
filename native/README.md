@@ -34,12 +34,21 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
 - **Inloggning:** e-post och lösenord (Supabase Auth). Namnet sparas i `profiles`.
 - **Hushåll:** den ena skapar, den andra går med med en sexteckenskod. Max två medlemmar.
   Alla tabeller bär `household_id`, och RLS släpper bara igenom det egna hushållet.
-- **Inköp:** `shopping_items`. Appen visar ändringar direkt och skickar dem sedan. Realtid
-  hämtar om listan när partnern ändrar något. Samma vara kan bara stå en gång (unikt index).
+- **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
+  - Ändringar visas direkt, sparas i en kö på telefonen och skickas i tur och ordning.
+  - Utan nät ligger kön kvar, även om appen stängs, och skickas när kontakten är tillbaka.
+    Appen försöker igen var tionde sekund.
+  - Listan och hushållet sparas på telefonen, så appen visar senaste läge direkt, även utan nät.
+  - Realtid hämtar om listan när partnern ändrar något. Listan hämtas också om när appen
+    kommer tillbaka från bakgrunden, ifall realtidsanslutningen brutits.
 - **Kalender:** finns bara i telefonerna (EventKit). Den som sätter upp väljer en delad
   kalender eller skapar en ny. Kalenderns titel och UID för några händelser sparas i
   `households`, så partnerns app hittar samma kalender själv. Händelser skapas och ändras i
   Apples egen redigeringsvy.
+  - Har man nekat kalenderåtkomst frågar iOS inte igen. Kalenderfliken visar då "Öppna
+    Inställningar".
+  - Har kalendern raderats eller slutat delas kan vem som helst av er välja en ny kalender
+    för hushållet från vänteläget. Partnerns telefon följer med automatiskt.
 - **Notiser:** varje ändring skriver en rad i `activity_log` i samma transaktion (trigger). För
   kalendern rapporterar appen sina ändringar via `log_calendar_activity`. Raden köas till
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
@@ -57,7 +66,7 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
   - Appen rensar sedan allt den sparat på telefonen.
   - Kalendern i Apple Kalender rörs inte. Den ligger i iCloud och kan vara delad med partnern.
 
-## Verifierat i simulatorn (2026-10-05)
+## Verifierat i simulatorn (2026-10-05–06)
 
 - skapa konto → skapa hushåll → partnern går med via koden
 - lägga till, bocka av, radera och tömma varor
@@ -74,10 +83,19 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
 - radera konto, både ensam i hushållet (hushåll och lista raderas) och med partner (listan
   blir kvar för partnern, utan koppling till personen), och innan man har ett hushåll
 - push: bannern visas med rätt svensk text (simulerad leverans med `simctl push`)
+- utan kontakt med servern: lägga till och bocka av fungerar, en rad säger att ändringarna
+  skickas senare, och kön ligger kvar när appen startas om. När servern var tillbaka nådde
+  ändringarna databasen inom 7 sekunder.
+- appen visar listan och hushållet från telefonen direkt vid start
+- partnerns ändring medan appen låg i bakgrunden syns när appen öppnas igen
+- nekad kalenderåtkomst ger "Öppna Inställningar"; vänteläget kan byta kalender för hushållet
 
 **Inte verifierat:**
 - att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck
   från testverktyget)
+- att "Öppna Inställningar" landar på appens egen sida. I simulatorn öppnades
+  Inställningars startsida, troligen eftersom appens behörighet just hade tagits bort med
+  `simctl`.
 - riktig APNs-leverans (kräver nyckel)
 - två fysiska telefoner med iCloud-delning
 
@@ -93,10 +111,15 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
    - Kör `supabase link` och `supabase db push`, deploya `notify` och kör `cron.sql`.
    - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel.
 3. **Integritetspolicy:** en länk i appen och i App Store Connect. Beskriv där vad
-   "Radera konto" tar bort.
-4. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
+   "Radera konto" tar bort. Uppgifterna i App Store Connect ska stämma med
+   `PrivacyInfo.xcprivacy`: e-post, namn, användar-id och inköpslistan, kopplade till
+   kontot, används bara för appens funktion och spårar ingen.
+4. **Riktig app-ikon.** Den nuvarande är tillfällig: ett vitt hus på grönt.
+5. **Versionsnummer:** räkna upp `CURRENT_PROJECT_VERSION` i `project.yml` inför varje
+   uppladdning. App Store Connect nekar samma byggnummer två gånger.
+6. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
    granskaren testar.
-5. **Senare:**
+7. **Senare:**
    - tysta timmar för notiser
    - flytta in er befintliga data
 

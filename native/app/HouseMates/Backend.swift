@@ -12,8 +12,19 @@ enum Backend {
         return SupabaseClient(
             supabaseURL: url,
             supabaseKey: key,
-            options: SupabaseClientOptions(auth: .init(emitLocalSessionAsInitialSession: true))
+            options: SupabaseClientOptions(
+                auth: .init(emitLocalSessionAsInitialSession: true),
+                global: .init(session: session)
+            )
         )
+    }()
+
+    /// Kortare väntan än standardens 60 s: med svag täckning ska appen snabbt gå över till att
+    /// spara ändringarna lokalt och försöka igen.
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 15
+        return URLSession(configuration: configuration)
     }()
 }
 
