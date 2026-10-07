@@ -41,9 +41,13 @@ final class IngredientTests: XCTestCase {
 }
 
 final class FavoriteTests: XCTestCase {
-    func testItemsAreOnePerLineOrCommaSeparatedWithoutDuplicates() {
+    func testItemsAreOnePerLineWithoutDuplicates() {
         XCTAssertEqual(Favorite.items(from: "500 g köttfärs\n Tortillas \n\nsalsa\nSalsa"), ["500 g köttfärs", "Tortillas", "salsa"])
-        XCTAssertEqual(Favorite.items(from: "tortillas, salsa ,ost"), ["tortillas", "salsa", "ost"])
+        XCTAssertEqual(Favorite.items(from: "Mjölk\r\nÄgg"), ["Mjölk", "Ägg"])
+    }
+
+    func testACommaDoesNotSplitAnItem() {
+        XCTAssertEqual(Favorite.items(from: "2 dl ris, gärna basmati"), ["2 dl ris, gärna basmati"])
     }
 
     func testHostLabelDropsWww() {

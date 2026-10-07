@@ -378,16 +378,13 @@ private struct FavoriteEditor: View {
     }
 
     private func save() {
-        // Databasen tar namn på högst 120 tecken och högst 100 varor.
-        let name = String(trimmedName.prefix(120))
-        let items = Array(items.prefix(100))
         if let favorite {
-            favorites.update(favorite, name: name, items: items)
+            favorites.update(favorite, name: trimmedName, items: items)
         } else if let sourceURL, favorites.contains(sourceURL: sourceURL) {
             message = "Det receptet finns redan sparat."
             return
         } else {
-            favorites.add(name: name, items: items, imageURL: imageURL, sourceURL: sourceURL)
+            favorites.add(name: trimmedName, items: items, imageURL: imageURL, sourceURL: sourceURL)
         }
         dismiss()
     }

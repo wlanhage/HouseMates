@@ -55,11 +55,13 @@ final class SyncedTable<Change: TableChange> {
         Task { await sync() }
     }
 
+    /// Efter utloggning eller att man lämnat hushållet: inget mer skickas eller sparas på telefonen.
     func stop() async {
         listening?.cancel()
         retry?.cancel()
         listening = nil
         retry = nil
+        fileName = ""
         if let channel { await client.removeChannel(channel) }
         channel = nil
     }
@@ -96,17 +98,28 @@ final class SyncedTable<Change: TableChange> {
             do {
                 try await change.send(to: client.from(Change.table))
                 isOffline = false
-            } catch is URLError {
-                isOffline = true
-                scheduleRetry()
-                return
-            } catch {
-                // Servern nekade (t.ex. varan fanns redan); ett nytt försök skulle nekas igen, så ändringen släpps.
+            } catch let error where Self.isRejected(error) {
+                // Ett nytt försök skulle nekas igen, så ändringen släpps. En dubblett är inget fel.
                 if (error as? PostgrestError)?.code != "23505" { errorMessage = userMessage(for: error) }
+            } catch {
+                waitForServer(after: error)
+                return
             }
             pending.removeFirst()
             save()
         }
+    }
+
+    /// Databasen har svarat med en felkod (t.ex. dubblett eller ogiltigt värde), eller svaret går
+    /// inte att läsa. Andra fel, som inget nät eller en server som inte svarar, går över.
+    nonisolated static func isRejected(_ error: Error) -> Bool {
+        (error as? PostgrestError)?.code != nil || error is DecodingError
+    }
+
+    /// Ändringarna ligger kvar och skickas igen om en stund.
+    private func waitForServer(after error: Error) {
+        if !(error is CancellationError) { isOffline = true }
+        scheduleRetry()
     }
 
     private func fetch() async {
@@ -120,11 +133,10 @@ final class SyncedTable<Change: TableChange> {
             records = Self.applying(pending, to: fresh)
             isOffline = false
             save()
-        } catch is URLError {
-            isOffline = true
-            scheduleRetry()
-        } catch {
+        } catch let error where Self.isRejected(error) {
             errorMessage = userMessage(for: error)
+        } catch {
+            waitForServer(after: error)
         }
     }
 

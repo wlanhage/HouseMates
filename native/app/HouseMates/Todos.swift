@@ -113,16 +113,19 @@ extension SyncedTable where Change == TodoChange {
         records.filter(\.done).sorted { ($0.doneAt ?? .distantPast) > ($1.doneAt ?? .distantPast) }
     }
 
+    /// Databasen tar titlar på högst 200 tecken.
+    private static func limited(_ title: String) -> String { String(title.prefix(200)) }
+
     func add(title: String, assignee: UUID?, startDate: String?, dueDate: String?) {
         let todo = Todo(
-            id: UUID(), title: title, assignee: assignee, startDate: startDate, dueDate: dueDate,
+            id: UUID(), title: Self.limited(title), assignee: assignee, startDate: startDate, dueDate: dueDate,
             done: false, doneAt: nil, doneBy: nil, createdAt: .now
         )
         record(.add(todo))
     }
 
     func update(_ todo: Todo, title: String, assignee: UUID?, startDate: String?, dueDate: String?) {
-        record(.update(id: todo.id, title: title, assignee: assignee, startDate: startDate, dueDate: dueDate))
+        record(.update(id: todo.id, title: Self.limited(title), assignee: assignee, startDate: startDate, dueDate: dueDate))
     }
 
     func toggle(_ todo: Todo, by me: UUID?) {

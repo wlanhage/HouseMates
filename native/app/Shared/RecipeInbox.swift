@@ -20,4 +20,8 @@ enum RecipeInbox {
     static func remove(_ link: String) {
         defaults?.set(links.filter { $0 != link }, forKey: key)
     }
+
+    static func clear() {
+        defaults?.removeObject(forKey: key)
+    }
 }

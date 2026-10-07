@@ -25,6 +25,13 @@ enum RecipeImport {
         )
         return reply.recipe
     }
+
+    /// Funktionen svarade att sidan inte går att läsa (fel länk, eller sidan svarade inte).
+    /// Andra fel, som inget nät eller en server som inte svarar, är värda ett nytt försök.
+    static func pageIsUnreadable(_ error: Error) -> Bool {
+        guard case let FunctionsError.httpError(code, data) = error else { return false }
+        return [400, 502].contains(code) && (try? JSONDecoder().decode(FunctionErrorReply.self, from: data)) != nil
+    }
 }
 
 extension SyncedTable where Change == FavoriteChange {
@@ -38,12 +45,12 @@ extension SyncedTable where Change == FavoriteChange {
                 if !contains(sourceURL: recipe.sourceURL) {
                     add(name: recipe.name, items: recipe.items, imageURL: recipe.imageURL, sourceURL: recipe.sourceURL)
                 }
-            } catch is URLError {
-                return
-            } catch {
+            } catch let error where RecipeImport.pageIsUnreadable(error) {
                 if !contains(sourceURL: link) {
                     add(name: hostLabel(link), items: [], imageURL: nil, sourceURL: link)
                 }
+            } catch {
+                return
             }
             RecipeInbox.remove(link)
         }

@@ -44,8 +44,8 @@ struct SettingsView: View {
 
     private var leaveConsequences: String {
         guard let partner = session.partner else {
-            return "Du är ensam i hushållet, så hushållet och inköpslistan raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat."
+            return "Du är ensam i hushållet, så hushållet med listor och middagar raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat."
         }
-        return "Inköpslistan blir kvar för \(partner.name). Sedan kan du skapa ett nytt hushåll eller gå med i ett annat. Kalendern ni delar i Apple Kalender påverkas inte; sluta dela den i Kalender-appen om du vill."
+        return "Listorna och middagarna blir kvar för \(partner.name). Sedan kan du skapa ett nytt hushåll eller gå med i ett annat. Kalendern ni delar i Apple Kalender påverkas inte; sluta dela den i Kalender-appen om du vill."
     }
 }

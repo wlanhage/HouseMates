@@ -182,12 +182,15 @@ enum ChoreSchedule {
 extension SyncedTable where Change == ChoreChange {
     var sorted: [Chore] { ChoreSchedule.sorted(records) }
 
+    /// Databasen tar titlar på högst 200 tecken.
+    private static func limited(_ title: String) -> String { String(title.prefix(200)) }
+
     func add(title: String, assignee: UUID?, intervalDays: Int?) {
-        record(.add(id: UUID(), title: title, assignee: assignee, intervalDays: intervalDays, createdAt: .now))
+        record(.add(id: UUID(), title: Self.limited(title), assignee: assignee, intervalDays: intervalDays, createdAt: .now))
     }
 
     func update(_ chore: Chore, title: String, assignee: UUID?, intervalDays: Int?) {
-        record(.update(id: chore.id, title: title, assignee: assignee, intervalDays: intervalDays))
+        record(.update(id: chore.id, title: Self.limited(title), assignee: assignee, intervalDays: intervalDays))
     }
 
     func markDone(_ chore: Chore, by me: UUID?) {

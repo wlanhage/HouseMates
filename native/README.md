@@ -52,7 +52,8 @@ Testerna:
 - **Listorna** (inköp, uppgifter, städ) synkas på samma sätt, av `SyncedTable`:
   - Ändringar visas direkt, sparas i en kö på telefonen och skickas i tur och ordning.
   - Utan nät ligger kön kvar, även om appen stängs, och skickas när kontakten är tillbaka.
-    Appen försöker igen var tionde sekund.
+    Appen försöker igen var tionde sekund. Samma sak när servern inte svarar (till exempel 503).
+    Bara en ändring som databasen nekat med en felkod (dubblett, ogiltigt värde) släpps.
   - Listorna och hushållet sparas på telefonen, så appen visar senaste läge direkt, även utan nät.
   - Realtid hämtar om en lista när partnern ändrar något. Listorna hämtas också om när appen
     kommer tillbaka från bakgrunden, ifall realtidsanslutningen brutits.
@@ -70,7 +71,9 @@ Testerna:
   `ingredients.ts`) först när de läggs på listan, som "Köttfärs · 500 g" (`shopping_items.qty`).
   - Allt utom det som redan står på listan är förvalt. Ett tryck lägger varorna på listan.
   - Import från en länk: edge function `recipe-import` hämtar sidan och läser schema.org/Recipe
-    med webbappens tolkning (`_shared/recipe.ts`, kopia med identitetstest).
+    med webbappens tolkning (`_shared/recipe.ts`, kopia med identitetstest). Bara medlemmar i
+    ett hushåll kan använda den. Den hämtar bara publika sajter: varje adress, också efter en
+    omdirigering, slås upp och nekas om den pekar på det egna nätet. Högst 2 MB läses.
   - Dela från Safari: delningstillägget (`app/HouseMatesShare`) lägger länken i en inkorg i en
     App Group (`group.se.housemates.app`). Appen hämtar receptet nästa gång den öppnas.
     Tillägget har ingen inloggning. En sida som inte går att läsa sparas ändå, med sajtens namn,

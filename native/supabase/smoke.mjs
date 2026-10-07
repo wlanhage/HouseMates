@@ -134,11 +134,14 @@ assert.ifError((await erik.client.from('todos').insert({ id: todo, title: ' Boka
 assert.ifError((await anna.client.from('todos').update({ done: true, done_by: erik.id }).eq('id', todo)).error);
 const { data: savedTodo } = await erik.client.from('todos').select('title, created_by, done_by, assignee').eq('id', todo).single();
 assert.deepEqual(savedTodo, { title: 'Boka tvättid', created_by: erik.id, done_by: anna.id, assignee: anna.id });
+assert.ifError((await erik.client.from('todos').update({ title: 'Boka tvättstugan', created_by: erik.id, done_by: erik.id }).eq('id', todo)).error);
+const { data: renamedTodo } = await anna.client.from('todos').select('created_by, done_by').eq('id', todo).single();
+assert.deepEqual(renamedTodo, { created_by: erik.id, done_by: anna.id });
 assert.ok((await anna.client.from('todos').insert({ id: randomUUID(), title: 'Fel period', start_date: '2026-10-12', due_date: '2026-10-10' })).error);
 assert.equal((await eva.client.from('todos').select('id')).data.length, 0);
 assert.ifError((await anna.client.from('todos').update({ deleted_at: new Date().toISOString() }).eq('id', todo)).error);
 assert.deepEqual(await activityTypes(todo), ['todo.created', 'todo.done']);
-step('uppgift: aktörer sätts på servern, perioden valideras, Eva ser inget, att rensa en klar uppgift ger ingen notis');
+step('uppgift: aktörer sätts på servern och går inte att ändra, perioden valideras, Eva ser inget, att rensa en klar uppgift ger ingen notis');
 
 const chore = randomUUID();
 assert.ifError((await erik.client.from('chores').insert({ id: chore, title: 'Dammsuga', interval_days: 7, last_done_at: '2020-01-01T00:00:00Z' })).error);
@@ -151,10 +154,13 @@ assert.equal(doneChore.last_done_by, anna.id);
 assert.ok(new Date(doneChore.last_done_at).getTime() <= Date.now() + 1000, 'avbockning kan inte ligga i framtiden');
 assert.ifError((await anna.client.from('chores').update({ last_done_at: '2026-09-01T10:00:00Z', last_done_by: erik.id }).eq('id', chore)).error);
 const { data: undoneChore } = await anna.client.from('chores').select('last_done_at, last_done_by').eq('id', chore).single();
-assert.equal(undoneChore.last_done_by, erik.id);
+assert.equal(undoneChore.last_done_by, anna.id, 'att rätta datumet byter inte vem som gjorde den');
+assert.ifError((await erik.client.from('chores').update({ last_done_at: null }).eq('id', chore)).error);
+const { data: clearedChore } = await anna.client.from('chores').select('last_done_at, last_done_by').eq('id', chore).single();
+assert.deepEqual(clearedChore, { last_done_at: null, last_done_by: null });
 assert.ok((await anna.client.from('chores').insert({ id: randomUUID(), title: 'Fel intervall', interval_days: 0 })).error);
 assert.deepEqual(await activityTypes(chore), ['chore.created', 'chore.done']);
-step('städ: avbockning av den inloggade och aldrig i framtiden, ångra till ett tidigare datum ger ingen notis');
+step('städ: avbockning av den inloggade och aldrig i framtiden, rätta behåller vem, ångra tömmer, ingen notis');
 
 const tacos = randomUUID();
 assert.ifError((await erik.client.from('favorites').insert({ id: tacos, name: ' Tacos ', items: ['500 g köttfärs', 'Tortillas'], created_by: anna.id })).error);

@@ -20,8 +20,8 @@ struct DeleteAccountButton: View {
         guard session.household != nil else {
             return "Ditt konto och ditt namn raderas. Det går inte att ångra."
         }
-        let household = session.partner.map { "Inköpslistan finns kvar för \($0.name)." }
-            ?? "Hushållets inköpslista raderas också."
+        let household = session.partner.map { "Listorna och middagarna finns kvar för \($0.name)." }
+            ?? "Hushållets listor och middagar raderas också."
         return "Ditt konto, ditt namn och din historik raderas. \(household) Kalendern i Apple Kalender påverkas inte. Det går inte att ångra."
     }
 }

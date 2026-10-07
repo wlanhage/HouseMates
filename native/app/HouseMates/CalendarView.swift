@@ -201,7 +201,8 @@ struct CalendarView: View {
             Task { await session.logCalendarActivity(activity) }
             if activity.type == "event.created" && session.partner != nil {
                 askingAssignee = AssigneeQuestion(eventUID: activity.eventUID, title: activity.title)
-            } else if activity.type == "event.deleted" {
+            } else if activity.type == "event.deleted" && !request.event.hasRecurrenceRules {
+                // Av en återkommande händelse kan bara ett tillfälle ha raderats; resten är kvar.
                 assignees.forget(activity.eventUID)
             }
         }

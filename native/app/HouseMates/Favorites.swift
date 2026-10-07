@@ -18,11 +18,12 @@ struct Favorite: Codable, Identifiable, Equatable {
         case createdAt = "created_at"
     }
 
-    /// En vara per rad. Skrivs allt på en rad går det också bra med kommatecken. Dubbletter tas bort.
+    /// En vara per rad; dubbletter tas bort. Kommatecken delar inte, eftersom en rad som
+    /// "2 dl ris, gärna basmati" är en vara.
     static func items(from text: String) -> [String] {
         var seen = Set<String>()
         return text
-            .split(separator: text.contains("\n") ? "\n" : ",")
+            .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
@@ -112,15 +113,20 @@ extension SyncedTable where Change == FavoriteChange {
     @discardableResult
     func add(name: String, items: [String], imageURL: String?, sourceURL: String?) -> UUID {
         let favorite = Favorite(
-            id: UUID(), name: name, items: items, imageURL: imageURL, sourceURL: sourceURL, createdAt: .now
+            id: UUID(), name: Self.limited(name), items: Self.limited(items),
+            imageURL: imageURL, sourceURL: sourceURL, createdAt: .now
         )
         record(.add(favorite))
         return favorite.id
     }
 
     func update(_ favorite: Favorite, name: String, items: [String]) {
-        record(.update(id: favorite.id, name: name, items: items))
+        record(.update(id: favorite.id, name: Self.limited(name), items: Self.limited(items)))
     }
+
+    // Databasen tar namn på högst 120 tecken och högst 100 varor.
+    private static func limited(_ name: String) -> String { String(name.prefix(120)) }
+    private static func limited(_ items: [String]) -> [String] { Array(items.prefix(100)) }
 
     func remove(_ favorite: Favorite) {
         record(.remove(ids: [favorite.id]))

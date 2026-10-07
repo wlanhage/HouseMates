@@ -53,7 +53,7 @@ func userMessage(for error: Error) -> String {
 }
 
 /// Våra edge functions svarar med `{ "error": { "message": "…" } }` på svenska.
-private struct FunctionErrorReply: Decodable {
+struct FunctionErrorReply: Decodable {
     struct Detail: Decodable { let message: String }
     let error: Detail
 }

@@ -1,3 +1,4 @@
+import Supabase
 import XCTest
 @testable import HouseMates
 
@@ -31,6 +32,13 @@ final class ShoppingListTests: XCTestCase {
         ]
 
         XCTAssertTrue(ShoppingList.applying(changes, to: [milk]).isEmpty)
+    }
+
+    func testOnlyAnAnswerFromTheDatabaseDropsAChange() {
+        XCTAssertTrue(ShoppingList.isRejected(PostgrestError(code: "23505", message: "Dubblett")))
+        XCTAssertFalse(ShoppingList.isRejected(PostgrestError(message: "An invalid response was received from the upstream server")))
+        XCTAssertFalse(ShoppingList.isRejected(URLError(.notConnectedToInternet)))
+        XCTAssertFalse(ShoppingList.isRejected(CancellationError()))
     }
 
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {

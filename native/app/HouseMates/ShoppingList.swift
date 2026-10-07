@@ -64,8 +64,9 @@ extension SyncedTable where Change == ShoppingChange {
     @discardableResult
     func add(ingredients lines: [String]) -> Int {
         var added = 0
-        for ingredient in lines.map(Ingredient.init(line:)) where add(ingredient.name, qty: ingredient.qty) {
-            added += 1
+        for line in lines {
+            let ingredient = Ingredient(line: line)
+            if add(ingredient.name, qty: ingredient.qty) { added += 1 }
         }
         return added
     }

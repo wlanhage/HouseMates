@@ -18,7 +18,9 @@ enum LocalFiles {
         try? JSONEncoder().encode(value).write(to: directory.appending(path: name), options: .atomic)
     }
 
+    /// Också receptlänkar som delats från Safari men inte hämtats än.
     static func removeAll() {
         try? FileManager.default.removeItem(at: directory)
+        RecipeInbox.clear()
     }
 }
