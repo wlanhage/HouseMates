@@ -156,6 +156,17 @@ assert.ok((await anna.client.from('chores').insert({ id: randomUUID(), title: 'F
 assert.deepEqual(await activityTypes(chore), ['chore.created', 'chore.done']);
 step('städ: avbockning av den inloggade och aldrig i framtiden, ångra till ett tidigare datum ger ingen notis');
 
+const tacos = randomUUID();
+assert.ifError((await erik.client.from('favorites').insert({ id: tacos, name: ' Tacos ', items: ['500 g köttfärs', 'Tortillas'], created_by: anna.id })).error);
+const { data: savedTacos } = await anna.client.from('favorites').select('name, items, created_by').eq('id', tacos).single();
+assert.deepEqual(savedTacos, { name: 'Tacos', items: ['500 g köttfärs', 'Tortillas'], created_by: erik.id });
+assert.ok((await erik.client.from('favorites').insert({ id: randomUUID(), name: 'Bild via http', image_url: 'http://exempel.se/bild.jpg' })).error);
+assert.equal((await eva.client.from('favorites').select('id')).data.length, 0);
+assert.deepEqual(await activityTypes(tacos), []);
+assert.ifError((await anna.client.from('shopping_items').insert({ id: randomUUID(), name: 'Köttfärs', qty: '500 g' })).error);
+assert.ok((await anna.client.from('shopping_items').insert({ id: randomUUID(), name: 'Mjöl', qty: 'x'.repeat(41) })).error);
+step('middagar: skaparen sätts på servern, bilder bara över https, Eva ser inget, ingen notis; varor kan ha mängd');
+
 const count = async (table, column, value) =>
   (await service.from(table).select('*', { count: 'exact', head: true }).eq(column, value)).count;
 

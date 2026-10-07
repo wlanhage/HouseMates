@@ -23,7 +23,7 @@ Appen läser och skriver bara i den kalender ni har valt att dela.
 
 ## Recept från en länk
 
-När du importerar ett recept hämtar vår server sidan bakom länken. Vi sparar receptets namn, ingredienser, bildlänk och länken.
+När du importerar ett recept hämtar vår server sidan bakom länken. Vi sparar receptets namn, ingredienser, bildlänk och länken. En länk som du delar från Safari ligger på telefonen tills appen har hämtat receptet.
 
 ## Varför vi sparar uppgifterna
 

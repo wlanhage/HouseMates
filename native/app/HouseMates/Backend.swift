@@ -44,6 +44,16 @@ func userMessage(for error: Error) -> String {
         }
     }
     if let error = error as? PostgrestError { return error.message }
+    if case let FunctionsError.httpError(_, data) = error,
+       let reply = try? JSONDecoder().decode(FunctionErrorReply.self, from: data) {
+        return reply.error.message
+    }
     if error is URLError { return "Ingen kontakt med servern. Kontrollera nätet och försök igen." }
     return error.localizedDescription
+}
+
+/// Våra edge functions svarar med `{ "error": { "message": "…" } }` på svenska.
+private struct FunctionErrorReply: Decodable {
+    struct Detail: Decodable { let message: String }
+    let error: Detail
 }

@@ -2,12 +2,12 @@ import XCTest
 @testable import HouseMates
 
 final class ShoppingListTests: XCTestCase {
-    private let milk = ShoppingItem(id: UUID(), name: "Mjölk", checked: false, createdAt: .distantPast)
+    private let milk = ShoppingItem(id: UUID(), name: "Mjölk", qty: nil, checked: false, createdAt: .distantPast)
 
     func testChangesMadeOfflineShowOnTopOfTheServersList() {
         let bread = UUID()
         let changes: [ShoppingChange] = [
-            .add(id: bread, name: "Bröd", createdAt: .now),
+            .add(id: bread, name: "Bröd", qty: nil, createdAt: .now),
             .setChecked(id: milk.id, checked: true)
         ]
 
@@ -18,7 +18,7 @@ final class ShoppingListTests: XCTestCase {
     }
 
     func testAnAddAlreadyOnTheServerIsNotShownTwice() {
-        let shown = ShoppingList.applying([.add(id: milk.id, name: "Mjölk", createdAt: .now)], to: [milk])
+        let shown = ShoppingList.applying([.add(id: milk.id, name: "Mjölk", qty: nil, createdAt: .now)], to: [milk])
 
         XCTAssertEqual(shown.count, 1)
     }
@@ -26,7 +26,7 @@ final class ShoppingListTests: XCTestCase {
     func testRemovingHidesTheItemsEvenIfAddedInTheSameQueue() {
         let bread = UUID()
         let changes: [ShoppingChange] = [
-            .add(id: bread, name: "Bröd", createdAt: .now),
+            .add(id: bread, name: "Bröd", qty: nil, createdAt: .now),
             .remove(ids: [bread, milk.id])
         ]
 
@@ -34,7 +34,7 @@ final class ShoppingListTests: XCTestCase {
     }
 
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {
-        let changes: [ShoppingChange] = [.add(id: UUID(), name: "Kaffe", createdAt: .now), .remove(ids: [milk.id])]
+        let changes: [ShoppingChange] = [.add(id: UUID(), name: "Kaffe", qty: nil, createdAt: .now), .remove(ids: [milk.id])]
 
         let decoded = try JSONDecoder().decode([ShoppingChange].self, from: JSONEncoder().encode(changes))
 

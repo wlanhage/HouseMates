@@ -67,13 +67,14 @@ struct MainTabs: View {
     @State private var shopping = ShoppingList()
     @State private var todos = TodoList()
     @State private var chores = ChoreList()
+    @State private var favorites = FavoriteList()
     @State private var calendar = SharedCalendar()
     @State private var tab: AppTab = .shopping
     private let push = Push.shared
 
     var body: some View {
         TabView(selection: $tab) {
-            ShoppingView(list: shopping)
+            ShoppingView(list: shopping, favorites: favorites)
                 .tabItem { Label("Inköp", systemImage: "cart") }
                 .tag(AppTab.shopping)
             HouseworkView(todos: todos, chores: chores)
@@ -93,6 +94,8 @@ struct MainTabs: View {
             shopping.start(householdID: householdID)
             todos.start(householdID: householdID)
             chores.start(householdID: householdID)
+            favorites.start(householdID: householdID)
+            await favorites.importSharedLinks()
         }
         .onChange(of: session.household, initial: true) { _, household in
             calendar.update(household: household)
@@ -103,6 +106,10 @@ struct MainTabs: View {
             Task { await shopping.sync() }
             Task { await todos.sync() }
             Task { await chores.sync() }
+            Task {
+                await favorites.sync()
+                await favorites.importSharedLinks()
+            }
             calendar.refresh()
         }
         .onChange(of: push.openedTab) { _, opened in
@@ -115,6 +122,7 @@ struct MainTabs: View {
                 await shopping.stop()
                 await todos.stop()
                 await chores.stop()
+                await favorites.stop()
             }
         }
     }

@@ -5,18 +5,18 @@ import Supabase
 typealias ShoppingList = SyncedTable<ShoppingChange>
 
 enum ShoppingChange: TableChange {
-    case add(id: UUID, name: String, createdAt: Date)
+    case add(id: UUID, name: String, qty: String?, createdAt: Date)
     case setChecked(id: UUID, checked: Bool)
     case remove(ids: [UUID])
 
     static let table = "shopping_items"
-    static let columns = "id, name, checked, created_at"
+    static let columns = "id, name, qty, checked, created_at"
 
     func apply(to items: inout [ShoppingItem]) {
         switch self {
-        case let .add(id, name, createdAt):
+        case let .add(id, name, qty, createdAt):
             if !items.contains(where: { $0.id == id }) {
-                items.append(ShoppingItem(id: id, name: name, checked: false, createdAt: createdAt))
+                items.append(ShoppingItem(id: id, name: name, qty: qty, checked: false, createdAt: createdAt))
             }
         case let .setChecked(id, checked):
             if let index = items.firstIndex(where: { $0.id == id }) {
@@ -29,8 +29,8 @@ enum ShoppingChange: TableChange {
 
     func send(to table: PostgrestQueryBuilder) async throws {
         switch self {
-        case let .add(id, name, _):
-            try await table.insert(NewItem(id: id, name: name)).execute()
+        case let .add(id, name, qty, _):
+            try await table.insert(NewItem(id: id, name: name, qty: qty)).execute()
         case let .setChecked(id, checked):
             try await table.update(["checked": checked]).eq("id", value: id).execute()
         case let .remove(ids):
@@ -41,6 +41,7 @@ enum ShoppingChange: TableChange {
     private struct NewItem: Encodable {
         let id: UUID
         let name: String
+        let qty: String?
     }
 }
 
@@ -49,10 +50,29 @@ extension SyncedTable where Change == ShoppingChange {
     var bought: [ShoppingItem] { records.filter(\.checked) }
 
     /// Samma vara kan inte stå på listan två gånger; att lägga till den igen gör inget.
-    func add(_ rawName: String) {
+    /// Svarar med om varan lades till.
+    @discardableResult
+    func add(_ rawName: String, qty: String? = nil) -> Bool {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, !open.contains(where: { $0.name.lowercased() == name.lowercased() }) else { return }
-        record(.add(id: UUID(), name: name, createdAt: .now))
+        guard !name.isEmpty, !isOnList(name) else { return false }
+        // Databasen tar namn på högst 80 tecken och mängder på högst 40.
+        record(.add(id: UUID(), name: String(name.prefix(80)), qty: qty.map { String($0.prefix(40)) }, createdAt: .now))
+        return true
+    }
+
+    /// Lägger en rätts ingredienser på listan som vara och mängd. Svarar med hur många som lades till.
+    @discardableResult
+    func add(ingredients lines: [String]) -> Int {
+        var added = 0
+        for ingredient in lines.map(Ingredient.init(line:)) where add(ingredient.name, qty: ingredient.qty) {
+            added += 1
+        }
+        return added
+    }
+
+    /// Om varan redan står obockad på listan.
+    func isOnList(_ name: String) -> Bool {
+        open.contains { $0.name.lowercased() == name.lowercased() }
     }
 
     func toggle(_ item: ShoppingItem) {

@@ -92,7 +92,8 @@ describe('APNs-förfrågan', () => {
 describe('kopior av webbappens testade logik i native', () => {
   it.each([
     ['supabase/functions/_shared/digest.ts', 'native/supabase/functions/_shared/digest.ts'],
-    ['src/lib/server/notify-util.ts', 'native/supabase/functions/_shared/notify-util.ts']
+    ['src/lib/server/notify-util.ts', 'native/supabase/functions/_shared/notify-util.ts'],
+    ['supabase/functions/_shared/recipe.ts', 'native/supabase/functions/_shared/recipe.ts']
   ])('%s är identisk med kopian', (original, copy) => {
     expect(readFileSync(copy, 'utf8')).toBe(readFileSync(original, 'utf8'));
   });

@@ -3,7 +3,9 @@ import SwiftUI
 struct ShoppingView: View {
     @Environment(AppSession.self) private var session
     let list: ShoppingList
+    let favorites: FavoriteList
     @State private var newItem = ""
+    @State private var showsFavorites = false
     @FocusState private var isAdding: Bool
     @AppStorage("notiskort-dolt") private var hidesNotificationCard = false
     private let push = Push.shared
@@ -54,6 +56,13 @@ struct ShoppingView: View {
                 }
             }
             .navigationTitle("Inköp")
+            .toolbar {
+                Button("Middagar", systemImage: "fork.knife") { showsFavorites = true }
+                    .labelStyle(.titleAndIcon)
+            }
+            .sheet(isPresented: $showsFavorites) {
+                FavoritesView(favorites: favorites, shopping: list)
+            }
             .refreshable { await list.sync() }
             .alert("Något gick fel", isPresented: errorIsShown) {
                 Button("OK") {}
@@ -93,6 +102,9 @@ private struct ItemRow: View {
                 Text(item.name)
                     .strikethrough(item.checked)
                     .foregroundStyle(item.checked ? .secondary : .primary)
+                if let qty = item.qty {
+                    Text(qty).foregroundStyle(.secondary)
+                }
             }
         }
         .foregroundStyle(.primary)

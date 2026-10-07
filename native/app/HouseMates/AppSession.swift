@@ -43,8 +43,10 @@ final class AppSession {
     }
 
     /// Länkar från mejlen: bekräftat konto loggar in, återställningslänken frågar efter nytt lösenord.
+    /// Andra länkar till appen öppnar den bara.
     func handle(_ url: URL) async {
-        guard url.scheme == Self.signedInLink.scheme else { return }
+        let mailLinks = [Self.signedInLink, Self.newPasswordLink]
+        guard mailLinks.contains(where: { $0.scheme == url.scheme && $0.host() == url.host() }) else { return }
         do {
             try await client.auth.session(from: url)
             needsNewPassword = url.host() == Self.newPasswordLink.host()

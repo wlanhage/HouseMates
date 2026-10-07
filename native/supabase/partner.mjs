@@ -5,6 +5,8 @@
 //   node native/supabase/partner.mjs todo Boka tvättid  – Anna lägger till en uppgift
 //   node native/supabase/partner.mjs chore Dammsuga     – Anna lägger till en städsyssla varje vecka
 //   node native/supabase/partner.mjs done Dammsuga      – Anna gör klart en uppgift eller städsyssla
+//   node native/supabase/partner.mjs recipe <länk>      – Anna sparar ett recept i Våra middagar
+//                                                         (kräver `supabase functions serve`)
 //   node native/supabase/partner.mjs leave              – Anna lämnar hushållet
 import { createClient } from '@supabase/supabase-js';
 import { apiUrl, publishableKey, secretKey } from './local.mjs';
@@ -58,9 +60,18 @@ if (command === 'join') {
   const error = todos.error ?? chores.error;
   const done = [...todos.data ?? [], ...chores.data ?? []].map((row) => row.title);
   console.log(error ? `Fel: ${error.message}` : `Anna gjorde klart ${done.join(', ') || 'inget'}`);
+} else if (command === 'recipe') {
+  const { data, error } = await anna.functions.invoke('recipe-import', { body: { url: argument } });
+  if (error) {
+    console.log(`Fel: ${(await error.context?.json?.())?.error?.message ?? error.message}`);
+  } else {
+    const { recipe } = data;
+    const saved = await anna.from('favorites').insert({ id: randomUUID(), ...recipe });
+    console.log(saved.error ? `Fel: ${saved.error.message}` : `Anna sparade ${recipe.name} (${recipe.items.length} varor)`);
+  }
 } else if (command === 'leave') {
   const { error } = await anna.rpc('leave_household');
   console.log(error ? `Fel: ${error.message}` : 'Anna lämnade hushållet');
 } else {
-  console.log('Användning: join <epost> | add <vara> | check <vara> | todo <uppgift> | chore <syssla> | done <titel> | leave');
+  console.log('Användning: join <epost> | add <vara> | check <vara> | todo <uppgift> | chore <syssla> | done <titel> | recipe <länk> | leave');
 }

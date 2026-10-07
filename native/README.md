@@ -1,9 +1,9 @@
 # HouseMates native
 
 MVP (2026-10-05): inloggning, hushåll för två, delad inköpslista i realtid, delad kalender via
-iPhonens egen kalender (väg A nedan) och notiser till partnern. Sedan 2026-10-07 även att göra
-och städ. SwiftUI-app i `app/`, eget Supabase-projekt i `supabase/`. Webbappen och dess
-databas påverkas inte.
+iPhonens egen kalender (väg A nedan) och notiser till partnern. Sedan 2026-10-07 även att göra,
+städ och Våra middagar. SwiftUI-app i `app/`, eget Supabase-projekt i `supabase/`. Webbappen och
+dess databas påverkas inte.
 
 ## Kom igång lokalt
 
@@ -20,7 +20,8 @@ databas påverkas inte.
    ```
    `partner.mjs add <vara>` och `partner.mjs check <vara>` ändrar listan som "Anna";
    ändringen syns direkt i appen. `todo <uppgift>`, `chore <syssla>` och `done <titel>` gör
-   samma sak för att göra och städ. `partner.mjs leave` låter Anna lämna hushållet.
+   samma sak för att göra och städ. `recipe <länk>` sparar ett recept i Våra middagar (kräver
+   `supabase functions serve`, se nästa punkt). `partner.mjs leave` låter Anna lämna hushållet.
 5. Se vilka notiser som skulle skickas (torrt, utan APNs-nyckel):
    ```bash
    (cd native && supabase functions serve --env-file supabase/functions/.env)
@@ -64,6 +65,16 @@ Testerna:
   - En städsyssla har ett intervall. Nästa gång räknas från när den senast gjordes, samma regel
     som webbappen. Servern sätter vem som gjorde den och godtar inga datum i framtiden.
   - Klara uppgifter raderas efter 30 dagar (`cron.sql`).
+- **Våra middagar:** `favorites`, öppnas från Inköp. Ingredienserna sparas som råa rader
+  ("500 g köttfärs") och delas i vara och mängd (`Ingredient`, samma regler som webbappens
+  `ingredients.ts`) först när de läggs på listan, som "Köttfärs · 500 g" (`shopping_items.qty`).
+  - Allt utom det som redan står på listan är förvalt. Ett tryck lägger varorna på listan.
+  - Import från en länk: edge function `recipe-import` hämtar sidan och läser schema.org/Recipe
+    med webbappens tolkning (`_shared/recipe.ts`, kopia med identitetstest).
+  - Dela från Safari: delningstillägget (`app/HouseMatesShare`) lägger länken i en inkorg i en
+    App Group (`group.se.housemates.app`). Appen hämtar receptet nästa gång den öppnas.
+    Tillägget har ingen inloggning. En sida som inte går att läsa sparas ändå, med sajtens namn,
+    så att länken inte försvinner.
 - **Färger:** den som skapar hushållet blir blå och den som går med rosa. Gemensamt är grönt,
   som i webbappen. Färgen visas vid uppgifter och sysslor.
 - **Kalender:** finns bara i telefonerna (EventKit). Den som sätter upp väljer en delad
@@ -130,6 +141,11 @@ Testerna:
   och ångrad avbockning sparas, och ångra ger ingen notis.
 - notistexten för uppgifter och städ ("William klarade av Byt glodlampa") leder till fliken
   Att göra
+- middagar: ett recept från ICA hämtas via länk med namn, bild och 17 ingredienser. Ett tryck
+  lägger de valda varorna på listan med mängd ("Cream cheese · 150 g"), och arket stängs.
+- dela från Safari: HouseMates finns i delningsmenyn. Tillägget sparar länken, och appen hämtar
+  receptet (13 ingredienser) när den öppnas. Inkorgen töms efteråt.
+- en länk som bara öppnar appen (`housemates://`) ger inget felmeddelande
 
 **Inte verifierat:**
 - att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck
@@ -148,8 +164,12 @@ Testerna:
      (innehållet i .p8-filen), `APNS_BUNDLE_ID=se.housemates.app` och `CRON_SECRET`.
      Lägg till `APNS_PRODUCTION=true` för TestFlight och App Store.
    - Lägg till `aps-environment` i appens entitlements.
+   - Registrera App Group `group.se.housemates.app` och slå på den för både
+     `se.housemates.app` och `se.housemates.app.share` (delningstillägget). Ett gratiskonto kan
+     inte signera App Groups.
 2. **Hostat Supabase-projekt, i EU** (policyn lovar servrar inom EU).
-   - Kör `supabase link` och `supabase db push`, deploya `notify` och kör `cron.sql`.
+   - Kör `supabase link` och `supabase db push`, deploya `notify` och `recipe-import`, och kör
+     `cron.sql`.
    - Kör `supabase config push`. Det för över länkadresserna (`additional_redirect_urls`) och
      de svenska mejlmallarna.
    - Koppla en egen e-posttjänst (SMTP). Supabases inbyggda klarar bara ett par mejl i timmen.
