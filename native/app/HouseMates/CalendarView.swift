@@ -6,8 +6,11 @@ struct CalendarView: View {
     @Environment(AppSession.self) private var session
     @Environment(\.openURL) private var openURL
     let calendar: SharedCalendar
+    let assignees: EventAssigneeList
     @State private var editing: EditRequest?
     @State private var isChoosing = false
+    @State private var askingAssignee: AssigneeQuestion?
+    @AppStorage("kalender-manadsvy") private var showsMonth = false
     /// Hushållet vars kalender den här telefonen just valt; guiden gäller bara den som valde.
     @AppStorage("delningsguide-hushall") private var shareGuideHousehold = ""
 
@@ -32,6 +35,16 @@ struct CalendarView: View {
                 .sheet(item: $editing) { request in
                     EventEditor(store: calendar.store, event: request.event) { action in finish(request, action) }
                         .ignoresSafeArea()
+                }
+                .confirmationDialog(
+                    askingAssignee.map { "För vem är \($0.title)?" } ?? "",
+                    isPresented: askingIsShown,
+                    titleVisibility: .visible,
+                    presenting: askingAssignee
+                ) { question in
+                    ForEach(session.assigneeChoices) { choice in
+                        Button(choice.name) { assignees.assign(question.eventUID, to: choice.id) }
+                    }
                 }
                 .alert("Kalendern", isPresented: errorIsShown) {
                     Button("OK") {}
@@ -133,21 +146,38 @@ struct CalendarView: View {
             if shareGuideHousehold == session.household?.id.uuidString, let title = calendar.linkedCalendar?.title {
                 ShareGuide(calendarTitle: title, partnerName: partnerName) { shareGuideHousehold = "" }
             }
-            if calendar.upcoming.isEmpty {
-                Text("Inga händelser de kommande 60 dagarna.").foregroundStyle(.secondary)
+            Picker("Visa", selection: $showsMonth) {
+                Text("Lista").tag(false)
+                Text("Månad").tag(true)
             }
-            ForEach(calendar.upcoming) { day in
-                Section(dayTitle(day.day)) {
-                    ForEach(day.events, id: \.self) { event in
-                        Button { editing = EditRequest(event: event, isNew: false) } label: {
-                            EventRow(event: event)
+            .pickerStyle(.segmented)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+
+            if showsMonth {
+                MonthSections(calendar: calendar, assignees: assignees, edit: edit)
+            } else {
+                if calendar.upcoming.isEmpty {
+                    Text("Inga händelser de kommande 60 dagarna.").foregroundStyle(.secondary)
+                }
+                ForEach(calendar.upcoming) { day in
+                    Section(dayTitle(day.day)) {
+                        ForEach(day.events, id: \.self) { event in
+                            EventButton(event: event, assignees: assignees, edit: edit)
                         }
-                        .foregroundStyle(.primary)
                     }
                 }
             }
         }
         .refreshable { calendar.refresh() }
+    }
+
+    private func edit(_ event: EKEvent) {
+        editing = EditRequest(event: event, isNew: false)
+    }
+
+    private var askingIsShown: Binding<Bool> {
+        Binding(get: { askingAssignee != nil }, set: { if !$0 { askingAssignee = nil } })
     }
 
     private var errorIsShown: Binding<Bool> {
@@ -169,6 +199,11 @@ struct CalendarView: View {
         editing = nil
         if let activity = calendar.activity(after: action, on: request.event, wasNew: request.isNew) {
             Task { await session.logCalendarActivity(activity) }
+            if activity.type == "event.created" && session.partner != nil {
+                askingAssignee = AssigneeQuestion(eventUID: activity.eventUID, title: activity.title)
+            } else if activity.type == "event.deleted" {
+                assignees.forget(activity.eventUID)
+            }
         }
         calendar.refresh()
     }
@@ -186,8 +221,48 @@ private struct EditRequest: Identifiable {
     let isNew: Bool
 }
 
+/// Frågan "För vem?" efter en ny händelse.
+private struct AssigneeQuestion {
+    let eventUID: String
+    let title: String
+}
+
+/// En händelse i listan: tryck för att ändra den, håll inne för att välja vem den är för.
+private struct EventButton: View {
+    @Environment(AppSession.self) private var session
+    let event: EKEvent
+    let assignees: EventAssigneeList
+    let edit: (EKEvent) -> Void
+
+    var body: some View {
+        let assignee = assignees.assignee(for: event.calendarItemExternalIdentifier)
+        Button { edit(event) } label: {
+            EventRow(event: event, color: session.color(for: assignee))
+        }
+        .foregroundStyle(.primary)
+        .contextMenu {
+            if let uid = event.calendarItemExternalIdentifier {
+                Section("För vem?") {
+                    ForEach(session.assigneeChoices) { choice in
+                        Button {
+                            assignees.assign(uid, to: choice.id)
+                        } label: {
+                            if choice.id == assignee {
+                                Label(choice.name, systemImage: "checkmark")
+                            } else {
+                                Text(choice.name)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 private struct EventRow: View {
     let event: EKEvent
+    let color: Color
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -196,7 +271,12 @@ private struct EventRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 96, alignment: .leading)
             VStack(alignment: .leading) {
-                Text(event.title ?? "")
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 8, height: 8)
+                    Text(event.title ?? "")
+                }
                 if let location = event.location, !location.isEmpty {
                     Text(location).font(.caption).foregroundStyle(.secondary)
                 }
@@ -209,6 +289,114 @@ private struct EventRow: View {
         let start = event.startDate.formatted(date: .omitted, time: .shortened)
         let end = event.endDate.formatted(date: .omitted, time: .shortened)
         return "\(start)–\(end)"
+    }
+}
+
+/// Månadsvyn: ett rutnät med en prick per händelse i personens färg, och den valda dagens händelser.
+private struct MonthSections: View {
+    @Environment(AppSession.self) private var session
+    let calendar: SharedCalendar
+    let assignees: EventAssigneeList
+    let edit: (EKEvent) -> Void
+    @State private var month = MonthGrid(containing: LocalDay.string(from: .now))
+    @State private var selectedDay = LocalDay.string(from: .now)
+
+    var body: some View {
+        let today = LocalDay.string(from: .now)
+        let days = calendar.eventsByDay(from: month.first, through: month.last)
+        Section {
+            VStack(spacing: 12) {
+                HStack {
+                    Button { show(month.adding(months: -1)) } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Föregående månad")
+                    Spacer()
+                    Text(month.title).font(.headline)
+                    Spacer()
+                    Button { show(month.adding(months: 1)) } label: { Image(systemName: "chevron.right") }
+                        .accessibilityLabel("Nästa månad")
+                }
+                .buttonStyle(.borderless)
+                // Fasta rader i stället för LazyVGrid, som inne i en listrad gav en layoutloop.
+                VStack(spacing: 4) {
+                    HStack(spacing: 0) {
+                        ForEach(MonthGrid.weekdays, id: \.self) { weekday in
+                            Text(weekday)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    ForEach(Array(month.weeks.enumerated()), id: \.offset) { _, week in
+                        HStack(spacing: 0) {
+                            ForEach(Array(week.enumerated()), id: \.offset) { _, day in
+                                if let day {
+                                    DayCell(
+                                        day: day,
+                                        isToday: day == today,
+                                        isSelected: day == selectedDay,
+                                        colors: dotColors(days[day] ?? [])
+                                    )
+                                    .onTapGesture { selectedDay = day }
+                                } else {
+                                    Color.clear.frame(maxWidth: .infinity, minHeight: 44)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        Section(LocalDay.label(selectedDay)) {
+            let events = days[selectedDay] ?? []
+            if events.isEmpty {
+                Text("Inget inplanerat.").foregroundStyle(.secondary)
+            }
+            ForEach(events, id: \.self) { event in
+                EventButton(event: event, assignees: assignees, edit: edit)
+            }
+        }
+    }
+
+    private func show(_ next: MonthGrid) {
+        month = next
+        let today = LocalDay.string(from: .now)
+        selectedDay = next.contains(today) ? today : next.first
+    }
+
+    /// En prick per händelse i personens färg, högst tre.
+    private func dotColors(_ events: [EKEvent]) -> [Color] {
+        events.prefix(3).map { session.color(for: assignees.assignee(for: $0.calendarItemExternalIdentifier)) }
+    }
+}
+
+private struct DayCell: View {
+    let day: String
+    let isToday: Bool
+    let isSelected: Bool
+    let colors: [Color]
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Text(String(Int(day.suffix(2)) ?? 0))
+                .font(.callout)
+                .fontWeight(isToday ? .bold : .regular)
+                .foregroundStyle(isSelected ? Color.white : isToday ? Color.accentColor : Color.primary)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(isSelected ? Color.accentColor : Color.clear))
+            HStack(spacing: 2) {
+                ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
+                    Circle().fill(color).frame(width: 5, height: 5)
+                }
+            }
+            .frame(height: 5)
+        }
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(LocalDay.label(day))
+        .accessibilityValue(colors.isEmpty ? "" : "Har händelser")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

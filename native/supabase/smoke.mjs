@@ -167,6 +167,15 @@ assert.ifError((await anna.client.from('shopping_items').insert({ id: randomUUID
 assert.ok((await anna.client.from('shopping_items').insert({ id: randomUUID(), name: 'Mjöl', qty: 'x'.repeat(41) })).error);
 step('middagar: skaparen sätts på servern, bilder bara över https, Eva ser inget, ingen notis; varor kan ha mängd');
 
+const dinnerAssignee = randomUUID();
+assert.ifError((await erik.client.from('event_assignees').insert({ id: dinnerAssignee, event_uid: 'MIDDAG-1', assignee: anna.id })).error);
+assert.ok((await anna.client.from('event_assignees').insert({ id: randomUUID(), event_uid: 'MIDDAG-1', assignee: erik.id })).error);
+assert.ifError((await anna.client.from('event_assignees').upsert({ id: dinnerAssignee, event_uid: 'MIDDAG-1', assignee: null })).error);
+const { data: dinner } = await erik.client.from('event_assignees').select('assignee').eq('id', dinnerAssignee).single();
+assert.equal(dinner.assignee, null);
+assert.equal((await eva.client.from('event_assignees').select('id')).data.length, 0);
+step('för vem: en person per händelse, partnern kan ändra till gemensamt, Eva ser inget');
+
 const count = async (table, column, value) =>
   (await service.from(table).select('*', { count: 'exact', head: true }).eq(column, value)).count;
 

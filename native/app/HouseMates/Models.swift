@@ -35,6 +35,7 @@ struct ShoppingItem: Codable, Identifiable, Equatable {
 
 /// Flikarna. Råvärdet är samma som notisernas `url` (digest.ts), så ett tryck på en notis öppnar rätt flik.
 enum AppTab: String {
+    case home = "hem"
     case shopping = "inkop"
     case todos = "todo"
     case calendar = "kalender"

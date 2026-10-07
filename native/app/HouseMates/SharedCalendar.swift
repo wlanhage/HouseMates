@@ -172,6 +172,35 @@ final class SharedCalendar {
         return ISO8601DateFormatter().string(from: event.startDate)
     }
 
+    /// Den delade kalenderns händelser dag för dag ("2026-10-07") mellan två dagar, för månadsvyn
+    /// och Hem.
+    func eventsByDay(from first: String, through last: String) -> [String: [EKEvent]] {
+        guard let linkedCalendar, let start = LocalDay.date(from: first),
+              let end = LocalDay.adding(1, to: last).flatMap(LocalDay.date(from:)) else { return [:] }
+        let events = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: [linkedCalendar]))
+            .filter { $0.url != Self.markerURL }
+        return Self.byDay(events, from: first, through: last)
+    }
+
+    /// En händelse som pågår flera dagar finns på varje dag. Sluttiden räknas inte med, så en
+    /// händelse som slutar vid midnatt hamnar inte på dagen efter. Heldag först, sedan efter tid.
+    nonisolated static func byDay(_ events: [EKEvent], from first: String, through last: String) -> [String: [EKEvent]] {
+        var days: [String: [EKEvent]] = [:]
+        for event in events {
+            let lastMoment = max(event.startDate, event.endDate.addingTimeInterval(-1))
+            var day = max(LocalDay.string(from: event.startDate), first)
+            let lastDay = min(LocalDay.string(from: lastMoment), last)
+            while day <= lastDay {
+                days[day, default: []].append(event)
+                guard let next = LocalDay.adding(1, to: day) else { break }
+                day = next
+            }
+        }
+        return days.mapValues { events in
+            events.sorted { ($0.isAllDay ? 0 : 1, $0.startDate) < ($1.isAllDay ? 0 : 1, $1.startDate) }
+        }
+    }
+
     /// Händelser som började före idag (flerdagars) visas på idag.
     nonisolated static func groupByDay(_ events: [EKEvent], from today: Date) -> [EventDay] {
         let calendar = Calendar.current

@@ -28,6 +28,17 @@ extension AppSession {
     func name(for assignee: UUID?) -> String {
         person(assignee)?.name ?? "Gemensamt"
     }
+
+    /// Vem något kan vara för: gemensamt, jag eller partnern.
+    var assigneeChoices: [AssigneeChoice] {
+        [AssigneeChoice(id: nil, name: "Gemensamt")]
+            + [me, partner].compactMap { $0 }.map { AssigneeChoice(id: $0.id, name: $0.name) }
+    }
+}
+
+struct AssigneeChoice: Identifiable {
+    let id: UUID?       // nil = gemensamt
+    let name: String
 }
 
 /// Gemensamt, jag eller partnern.
@@ -37,12 +48,8 @@ struct AssigneePicker: View {
 
     var body: some View {
         Picker("För vem", selection: $assignee) {
-            Text("Gemensamt").tag(UUID?.none)
-            if let me = session.me {
-                Text(me.name).tag(Optional(me.id))
-            }
-            if let partner = session.partner {
-                Text(partner.name).tag(Optional(partner.id))
+            ForEach(session.assigneeChoices) { choice in
+                Text(choice.name).tag(choice.id)
             }
         }
         .pickerStyle(.segmented)

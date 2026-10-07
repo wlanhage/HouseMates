@@ -68,19 +68,23 @@ struct MainTabs: View {
     @State private var todos = TodoList()
     @State private var chores = ChoreList()
     @State private var favorites = FavoriteList()
+    @State private var assignees = EventAssigneeList()
     @State private var calendar = SharedCalendar()
-    @State private var tab: AppTab = .shopping
+    @State private var tab: AppTab = .home
     private let push = Push.shared
 
     var body: some View {
         TabView(selection: $tab) {
+            HomeView(todos: todos, chores: chores, shopping: shopping, calendar: calendar, assignees: assignees)
+                .tabItem { Label("Hem", systemImage: "house") }
+                .tag(AppTab.home)
             ShoppingView(list: shopping, favorites: favorites)
                 .tabItem { Label("Inköp", systemImage: "cart") }
                 .tag(AppTab.shopping)
             HouseworkView(todos: todos, chores: chores)
                 .tabItem { Label("Att göra", systemImage: "checklist") }
                 .tag(AppTab.todos)
-            CalendarView(calendar: calendar)
+            CalendarView(calendar: calendar, assignees: assignees)
                 .tabItem { Label("Kalender", systemImage: "calendar") }
                 .tag(AppTab.calendar)
             SettingsView(calendar: calendar)
@@ -95,6 +99,7 @@ struct MainTabs: View {
             todos.start(householdID: householdID)
             chores.start(householdID: householdID)
             favorites.start(householdID: householdID)
+            assignees.start(householdID: householdID)
             await favorites.importSharedLinks()
         }
         .onChange(of: session.household, initial: true) { _, household in
@@ -106,6 +111,7 @@ struct MainTabs: View {
             Task { await shopping.sync() }
             Task { await todos.sync() }
             Task { await chores.sync() }
+            Task { await assignees.sync() }
             Task {
                 await favorites.sync()
                 await favorites.importSharedLinks()
@@ -123,6 +129,7 @@ struct MainTabs: View {
                 await todos.stop()
                 await chores.stop()
                 await favorites.stop()
+                await assignees.stop()
             }
         }
     }

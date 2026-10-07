@@ -116,7 +116,7 @@ private struct TodoSections: View {
     }
 }
 
-private struct TodoRow: View {
+struct TodoRow: View {
     let todo: Todo
     let toggle: () -> Void
     let edit: () -> Void
@@ -166,7 +166,7 @@ private struct TodoRow: View {
     }
 }
 
-private struct TodoEditor: View {
+struct TodoEditor: View {
     @Environment(\.dismiss) private var dismiss
     let todos: TodoList
     let todo: Todo?
@@ -286,7 +286,7 @@ private struct ChoreSections: View {
     }
 }
 
-private struct ChoreRow: View {
+struct ChoreRow: View {
     @Environment(AppSession.self) private var session
     let chore: Chore
     let markDone: () -> Void
@@ -336,7 +336,7 @@ private struct ChoreRow: View {
     }
 }
 
-private struct ChoreEditor: View {
+struct ChoreEditor: View {
     @Environment(AppSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     let chores: ChoreList

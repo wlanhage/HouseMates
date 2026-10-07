@@ -30,6 +30,7 @@ select cron.schedule(
   delete from public.todos where done and done_at < now() - interval '30 days';
   delete from public.chores where deleted_at < now() - interval '30 days';
   delete from public.favorites where deleted_at < now() - interval '30 days';
+  delete from public.event_assignees where deleted_at < now() - interval '30 days';
   delete from public.notification_queue where sent_at < now() - interval '7 days';
   delete from public.activity_log where created_at < now() - interval '90 days';
   $$

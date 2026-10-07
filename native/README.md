@@ -2,7 +2,7 @@
 
 MVP (2026-10-05): inloggning, hushåll för två, delad inköpslista i realtid, delad kalender via
 iPhonens egen kalender (väg A nedan) och notiser till partnern. Sedan 2026-10-07 även att göra,
-städ och Våra middagar. SwiftUI-app i `app/`, eget Supabase-projekt i `supabase/`. Webbappen och
+städ, Våra middagar, en Hem-flik, "för vem" på händelser och en månadsvy i kalendern. SwiftUI-app i `app/`, eget Supabase-projekt i `supabase/`. Webbappen och
 dess databas påverkas inte.
 
 ## Kom igång lokalt
@@ -85,6 +85,14 @@ Testerna:
     Inställningar".
   - Har kalendern raderats eller slutat delas kan vem som helst av er välja en ny kalender
     för hushållet från vänteläget. Partnerns telefon följer med automatiskt.
+  - **För vem:** efter en ny händelse frågar appen vem den är för. Svaret sparas i
+    `event_assignees` med händelsens UID (händelsen själv finns bara i telefonerna), och pricken
+    får personens färg på båda telefonerna. Håll inne på en händelse för att ändra.
+  - Lista eller månad: månadsvyn visar en prick per händelse i personens färg och den valda
+    dagens händelser under rutnätet (`MonthGrid`, samma regler som webbappens `monthGrid.ts`).
+- **Hem:** dagens händelser, uppgifter med sista dag idag eller tidigare, städsysslor som ska
+  göras, och "Nyligen i inköp" ur `activity_log`. Samma person och slag inom 30 minuter blir en
+  rad, som i webbappens `activityFeed.ts`. Flödet hämtas om när inköpslistan ändras.
 - **Notiser:** varje ändring skriver en rad i `activity_log` i samma transaktion (trigger). För
   kalendern rapporterar appen sina ändringar via `log_calendar_activity`. Raden köas till
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
@@ -146,6 +154,11 @@ Testerna:
 - dela från Safari: HouseMates finns i delningsmenyn. Tillägget sparar länken, och appen hämtar
   receptet (13 ingredienser) när den öppnas. Inkorgen töms efteråt.
 - en länk som bara öppnar appen (`housemates://`) ger inget felmeddelande
+- för vem: efter en ny händelse kommer frågan "För vem är …?". Valet sparas och pricken får
+  personens färg. Långtryck byter person.
+- månadsvyn: rätt veckodagar och prickar, val av dag visar dagens händelser, byte av månad
+- Hem: dagens händelse i personens färg, uppgift med sista dag idag, och inköpsflödet
+  grupperat per person ("William la till 8 varor")
 
 **Inte verifierat:**
 - att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck
