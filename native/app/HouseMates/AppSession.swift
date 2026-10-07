@@ -126,7 +126,7 @@ final class AppSession {
         }
         do {
             // RLS ger bara den egna profilen och partnerns, och bara det egna hushållet.
-            let profiles: [Profile] = try await client.from("profiles").select("id, name").execute().value
+            let profiles: [Profile] = try await client.from("profiles").select("id, name, color").execute().value
             guard let me = profiles.first(where: { $0.id == userID }) else {
                 // Profilen skapas tillsammans med kontot, så den saknas bara om kontot har raderats.
                 await signOut()

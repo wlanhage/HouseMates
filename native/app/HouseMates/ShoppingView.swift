@@ -12,14 +12,7 @@ struct ShoppingView: View {
         NavigationStack {
             List {
                 if list.isOffline {
-                    Label(
-                        list.pending.isEmpty
-                            ? "Ingen kontakt. Listan visar senast hämtade läge."
-                            : "Ingen kontakt. Dina ändringar skickas när nätet är tillbaka.",
-                        systemImage: "wifi.slash"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    OfflineNotice(hasPending: !list.pending.isEmpty)
                 }
                 if push.authorization == .notDetermined && !hidesNotificationCard {
                     NotificationCard(partnerName: session.partner?.name) { hidesNotificationCard = true }

@@ -26,6 +26,9 @@ select cron.schedule(
   'cleanup', '0 4 * * *',
   $$
   delete from public.shopping_items where deleted_at < now() - interval '30 days';
+  delete from public.todos where deleted_at < now() - interval '30 days';
+  delete from public.todos where done and done_at < now() - interval '30 days';
+  delete from public.chores where deleted_at < now() - interval '30 days';
   delete from public.notification_queue where sent_at < now() - interval '7 days';
   delete from public.activity_log where created_at < now() - interval '90 days';
   $$

@@ -2,6 +2,9 @@
 //   node native/supabase/partner.mjs join <din-epost>   – Anna går med i ditt hushåll
 //   node native/supabase/partner.mjs add Bröd           – Anna lägger till en vara
 //   node native/supabase/partner.mjs check Mjölk        – Anna bockar av en vara
+//   node native/supabase/partner.mjs todo Boka tvättid  – Anna lägger till en uppgift
+//   node native/supabase/partner.mjs chore Dammsuga     – Anna lägger till en städsyssla varje vecka
+//   node native/supabase/partner.mjs done Dammsuga      – Anna gör klart en uppgift eller städsyssla
 //   node native/supabase/partner.mjs leave              – Anna lämnar hushållet
 import { createClient } from '@supabase/supabase-js';
 import { apiUrl, publishableKey, secretKey } from './local.mjs';
@@ -41,9 +44,23 @@ if (command === 'join') {
   const { data, error } = await anna.from('shopping_items').update({ checked: true })
     .ilike('name', argument).eq('checked', false).is('deleted_at', null).select('name');
   console.log(error ? `Fel: ${error.message}` : `Anna bockade av ${data.map((d) => d.name).join(', ') || 'inget'}`);
+} else if (command === 'todo') {
+  const { error } = await anna.from('todos').insert({ id: randomUUID(), title: argument });
+  console.log(error ? `Fel: ${error.message}` : `Anna la till uppgiften ${argument}`);
+} else if (command === 'chore') {
+  const { error } = await anna.from('chores').insert({ id: randomUUID(), title: argument, interval_days: 7 });
+  console.log(error ? `Fel: ${error.message}` : `Anna la till städsysslan ${argument}`);
+} else if (command === 'done') {
+  const todos = await anna.from('todos').update({ done: true })
+    .ilike('title', argument).eq('done', false).is('deleted_at', null).select('title');
+  const chores = await anna.from('chores').update({ last_done_at: new Date().toISOString() })
+    .ilike('title', argument).is('deleted_at', null).select('title');
+  const error = todos.error ?? chores.error;
+  const done = [...todos.data ?? [], ...chores.data ?? []].map((row) => row.title);
+  console.log(error ? `Fel: ${error.message}` : `Anna gjorde klart ${done.join(', ') || 'inget'}`);
 } else if (command === 'leave') {
   const { error } = await anna.rpc('leave_household');
   console.log(error ? `Fel: ${error.message}` : 'Anna lämnade hushållet');
 } else {
-  console.log('Användning: join <epost> | add <vara> | check <vara> | leave');
+  console.log('Användning: join <epost> | add <vara> | check <vara> | todo <uppgift> | chore <syssla> | done <titel> | leave');
 }

@@ -36,7 +36,8 @@ Uppgifterna lagras hos Supabase på servrar inom EU. Pushnotiser skickas via App
 ## Hur länge vi sparar uppgifterna
 
 - Historiken över vad som har hänt sparas i 90 dagar.
-- Borttagna varor, uppgifter och middagar raderas helt efter 30 dagar.
+- Borttagna varor, uppgifter, städsysslor och middagar raderas helt efter 30 dagar.
+- Uppgifter som varit klara i 30 dagar raderas.
 - Allt annat sparas tills du raderar ditt konto.
 
 ## Radera dina uppgifter

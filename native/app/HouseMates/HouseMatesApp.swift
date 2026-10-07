@@ -65,6 +65,8 @@ struct MainTabs: View {
     @Environment(AppSession.self) private var session
     @Environment(\.scenePhase) private var scenePhase
     @State private var shopping = ShoppingList()
+    @State private var todos = TodoList()
+    @State private var chores = ChoreList()
     @State private var calendar = SharedCalendar()
     @State private var tab: AppTab = .shopping
     private let push = Push.shared
@@ -74,6 +76,9 @@ struct MainTabs: View {
             ShoppingView(list: shopping)
                 .tabItem { Label("Inköp", systemImage: "cart") }
                 .tag(AppTab.shopping)
+            HouseworkView(todos: todos, chores: chores)
+                .tabItem { Label("Att göra", systemImage: "checklist") }
+                .tag(AppTab.todos)
             CalendarView(calendar: calendar)
                 .tabItem { Label("Kalender", systemImage: "calendar") }
                 .tag(AppTab.calendar)
@@ -85,7 +90,9 @@ struct MainTabs: View {
             guard let householdID = session.household?.id else { return }
             // Notisbehörigheten läses först, så att notiskortet inte blinkar fram medan listan synkar.
             await push.registerIfAllowed()
-            await shopping.start(householdID: householdID)
+            shopping.start(householdID: householdID)
+            todos.start(householdID: householdID)
+            chores.start(householdID: householdID)
         }
         .onChange(of: session.household, initial: true) { _, household in
             calendar.update(household: household)
@@ -94,6 +101,8 @@ struct MainTabs: View {
             // Realtidsanslutningen kan ha brutits medan appen låg i bakgrunden.
             guard phase == .active else { return }
             Task { await shopping.sync() }
+            Task { await todos.sync() }
+            Task { await chores.sync() }
             calendar.refresh()
         }
         .onChange(of: push.openedTab) { _, opened in
@@ -101,6 +110,12 @@ struct MainTabs: View {
             tab = opened
             push.openedTab = nil
         }
-        .onDisappear { Task { await shopping.stop() } }
+        .onDisappear {
+            Task {
+                await shopping.stop()
+                await todos.stop()
+                await chores.stop()
+            }
+        }
     }
 }

@@ -6,7 +6,7 @@ final class ShoppingListTests: XCTestCase {
 
     func testChangesMadeOfflineShowOnTopOfTheServersList() {
         let bread = UUID()
-        let changes: [PendingChange] = [
+        let changes: [ShoppingChange] = [
             .add(id: bread, name: "Bröd", createdAt: .now),
             .setChecked(id: milk.id, checked: true)
         ]
@@ -25,7 +25,7 @@ final class ShoppingListTests: XCTestCase {
 
     func testRemovingHidesTheItemsEvenIfAddedInTheSameQueue() {
         let bread = UUID()
-        let changes: [PendingChange] = [
+        let changes: [ShoppingChange] = [
             .add(id: bread, name: "Bröd", createdAt: .now),
             .remove(ids: [bread, milk.id])
         ]
@@ -34,9 +34,9 @@ final class ShoppingListTests: XCTestCase {
     }
 
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {
-        let changes: [PendingChange] = [.add(id: UUID(), name: "Kaffe", createdAt: .now), .remove(ids: [milk.id])]
+        let changes: [ShoppingChange] = [.add(id: UUID(), name: "Kaffe", createdAt: .now), .remove(ids: [milk.id])]
 
-        let decoded = try JSONDecoder().decode([PendingChange].self, from: JSONEncoder().encode(changes))
+        let decoded = try JSONDecoder().decode([ShoppingChange].self, from: JSONEncoder().encode(changes))
 
         XCTAssertEqual(decoded, changes)
     }

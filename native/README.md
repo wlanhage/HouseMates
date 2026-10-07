@@ -1,8 +1,9 @@
 # HouseMates native
 
 MVP (2026-10-05): inloggning, hushåll för två, delad inköpslista i realtid, delad kalender via
-iPhonens egen kalender (väg A nedan) och notiser till partnern. SwiftUI-app i `app/`, eget
-Supabase-projekt i `supabase/`. Webbappen och dess databas påverkas inte.
+iPhonens egen kalender (väg A nedan) och notiser till partnern. Sedan 2026-10-07 även att göra
+och städ. SwiftUI-app i `app/`, eget Supabase-projekt i `supabase/`. Webbappen och dess
+databas påverkas inte.
 
 ## Kom igång lokalt
 
@@ -18,7 +19,8 @@ Supabase-projekt i `supabase/`. Webbappen och dess databas påverkas inte.
    node native/supabase/partner.mjs join <din-epost>
    ```
    `partner.mjs add <vara>` och `partner.mjs check <vara>` ändrar listan som "Anna";
-   ändringen syns direkt i appen. `partner.mjs leave` låter Anna lämna hushållet.
+   ändringen syns direkt i appen. `todo <uppgift>`, `chore <syssla>` och `done <titel>` gör
+   samma sak för att göra och städ. `partner.mjs leave` låter Anna lämna hushållet.
 5. Se vilka notiser som skulle skickas (torrt, utan APNs-nyckel):
    ```bash
    (cd native && supabase functions serve --env-file supabase/functions/.env)
@@ -46,13 +48,24 @@ Testerna:
   - Mejlen är på svenska (`supabase/templates`).
 - **Hushåll:** den ena skapar, den andra går med med en sexteckenskod. Max två medlemmar.
   Alla tabeller bär `household_id`, och RLS släpper bara igenom det egna hushållet.
-- **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
+- **Listorna** (inköp, uppgifter, städ) synkas på samma sätt, av `SyncedTable`:
   - Ändringar visas direkt, sparas i en kö på telefonen och skickas i tur och ordning.
   - Utan nät ligger kön kvar, även om appen stängs, och skickas när kontakten är tillbaka.
     Appen försöker igen var tionde sekund.
-  - Listan och hushållet sparas på telefonen, så appen visar senaste läge direkt, även utan nät.
-  - Realtid hämtar om listan när partnern ändrar något. Listan hämtas också om när appen
+  - Listorna och hushållet sparas på telefonen, så appen visar senaste läge direkt, även utan nät.
+  - Realtid hämtar om en lista när partnern ändrar något. Listorna hämtas också om när appen
     kommer tillbaka från bakgrunden, ifall realtidsanslutningen brutits.
+  - Varje tabell beskriver bara sina ändringar (`ShoppingChange`, `TodoChange`, `ChoreChange`):
+    hur de syns i listan och hur de skickas.
+- **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
+- **Att göra:** `todos` för engångsuppgifter och `chores` för återkommande städsysslor.
+  - En uppgift kan ha sista dag och en period ("kan göras från"). Datumen är rena dagar i
+    telefonens tidszon (`LocalDay`), aldrig midnatt i UTC.
+  - En städsyssla har ett intervall. Nästa gång räknas från när den senast gjordes, samma regel
+    som webbappen. Servern sätter vem som gjorde den och godtar inga datum i framtiden.
+  - Klara uppgifter raderas efter 30 dagar (`cron.sql`).
+- **Färger:** den som skapar hushållet blir blå och den som går med rosa. Gemensamt är grönt,
+  som i webbappen. Färgen visas vid uppgifter och sysslor.
 - **Kalender:** finns bara i telefonerna (EventKit). Den som sätter upp väljer en delad
   kalender eller skapar en ny. Kalenderns titel och UID för några händelser sparas i
   `households`, så partnerns app hittar samma kalender själv. Händelser skapas och ändras i
@@ -76,7 +89,8 @@ Testerna:
 - **Radera konto:** `delete_account()` lämnar först hushållet och tar sedan bort
   inloggningen. Profil, push-token, egen historik och återstående notiser följer med
   (`on delete cascade`).
-  - Varor man lagt till blir kvar för partnern, utan koppling till personen.
+  - Varor, uppgifter och sysslor man lagt till blir kvar för partnern, utan koppling till
+    personen.
   - Appen rensar sedan allt den sparat på telefonen.
   - Kalendern i Apple Kalender rörs inte. Den ligger i iCloud och kan vara delad med partnern.
 
@@ -110,6 +124,12 @@ Testerna:
   4. det gamla lösenordet nekas och det nya fungerar
 - tysta timmar sparas från appen, och notis-workern sköt upp en notis till exakt när de tar slut
 - integritetspolicyn visas i appen under Inställningar → Om HouseMates
+- att göra: ny uppgift med person och sista dag, bocka av och ångra. Partnerns uppgift syns
+  direkt. Utan kontakt med servern köas en ny uppgift och når databasen när servern är tillbaka.
+- städ: partnern bockar av och raden visar "Gjord idag av Anna · Om 7 dagar". Ändrat intervall
+  och ångrad avbockning sparas, och ångra ger ingen notis.
+- notistexten för uppgifter och städ ("William klarade av Byt glodlampa") leder till fliken
+  Att göra
 
 **Inte verifierat:**
 - att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck

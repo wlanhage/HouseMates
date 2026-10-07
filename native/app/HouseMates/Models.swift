@@ -3,6 +3,7 @@ import Foundation
 struct Profile: Codable, Identifiable, Equatable {
     let id: UUID
     let name: String
+    let color: String   // "#378ADD"; sätts när man skapar eller går med i ett hushåll
 }
 
 struct Household: Codable, Identifiable, Equatable {
@@ -34,6 +35,7 @@ struct ShoppingItem: Codable, Identifiable, Equatable {
 /// Flikarna. Råvärdet är samma som notisernas `url` (digest.ts), så ett tryck på en notis öppnar rätt flik.
 enum AppTab: String {
     case shopping = "inkop"
+    case todos = "todo"
     case calendar = "kalender"
     case settings = "installningar"
 }
