@@ -111,6 +111,17 @@ const { data: hidden } = await anna.client.from('device_tokens').select('token')
 assert.equal(hidden.length, 0);
 step('enhetstoken följer den som loggat in senast och är osynlig för klienter');
 
+const annasPrefs = { user_id: anna.id, quiet_enabled: true, quiet_from: '22:30', quiet_to: '06:45', time_zone: 'Europe/Stockholm' };
+assert.ifError((await anna.client.from('notification_prefs').upsert(annasPrefs)).error);
+assert.ifError((await anna.client.from('notification_prefs').upsert({ ...annasPrefs, quiet_to: '07:15' })).error);
+const { data: annasSaved } = await anna.client.from('notification_prefs').select('quiet_to').single();
+assert.equal(annasSaved.quiet_to, '07:15');
+const { data: erikSeesPrefs } = await erik.client.from('notification_prefs').select('user_id');
+assert.equal(erikSeesPrefs.length, 0);
+assert.ok((await erik.client.from('notification_prefs').upsert({ ...annasPrefs, quiet_enabled: false })).error);
+assert.ok((await anna.client.from('notification_prefs').upsert({ ...annasPrefs, quiet_from: '25:00' })).error);
+step('tysta timmar: sparas och ändras av ägaren, osynliga och oskrivbara för partnern, klockslag valideras');
+
 const count = async (table, column, value) =>
   (await service.from(table).select('*', { count: 'exact', head: true }).eq(column, value)).count;
 

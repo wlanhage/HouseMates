@@ -1,0 +1,43 @@
+import XCTest
+@testable import HouseMates
+
+final class ShoppingListTests: XCTestCase {
+    private let milk = ShoppingItem(id: UUID(), name: "Mjölk", checked: false, createdAt: .distantPast)
+
+    func testChangesMadeOfflineShowOnTopOfTheServersList() {
+        let bread = UUID()
+        let changes: [PendingChange] = [
+            .add(id: bread, name: "Bröd", createdAt: .now),
+            .setChecked(id: milk.id, checked: true)
+        ]
+
+        let shown = ShoppingList.applying(changes, to: [milk])
+
+        XCTAssertEqual(shown.map(\.name), ["Mjölk", "Bröd"])
+        XCTAssertEqual(shown.first?.checked, true)
+    }
+
+    func testAnAddAlreadyOnTheServerIsNotShownTwice() {
+        let shown = ShoppingList.applying([.add(id: milk.id, name: "Mjölk", createdAt: .now)], to: [milk])
+
+        XCTAssertEqual(shown.count, 1)
+    }
+
+    func testRemovingHidesTheItemsEvenIfAddedInTheSameQueue() {
+        let bread = UUID()
+        let changes: [PendingChange] = [
+            .add(id: bread, name: "Bröd", createdAt: .now),
+            .remove(ids: [bread, milk.id])
+        ]
+
+        XCTAssertTrue(ShoppingList.applying(changes, to: [milk]).isEmpty)
+    }
+
+    func testTheQueueSurvivesBeingSavedAndReadBack() throws {
+        let changes: [PendingChange] = [.add(id: UUID(), name: "Kaffe", createdAt: .now), .remove(ids: [milk.id])]
+
+        let decoded = try JSONDecoder().decode([PendingChange].self, from: JSONEncoder().encode(changes))
+
+        XCTAssertEqual(decoded, changes)
+    }
+}

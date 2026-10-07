@@ -94,7 +94,7 @@ final class ShoppingList {
     }
 
     /// Lägger väntande ändringar ovanpå en lista, så att det man gjort utan nät syns även efter en omhämtning.
-    static func applying(_ changes: [PendingChange], to items: [ShoppingItem]) -> [ShoppingItem] {
+    nonisolated static func applying(_ changes: [PendingChange], to items: [ShoppingItem]) -> [ShoppingItem] {
         var result = items
         for change in changes {
             switch change {

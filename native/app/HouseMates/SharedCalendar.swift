@@ -161,7 +161,7 @@ final class SharedCalendar {
     }
 
     /// Heldag som datum, annars ISO-tid – det format digest.ts förstår.
-    static func activityStart(for event: EKEvent) -> String {
+    nonisolated static func activityStart(for event: EKEvent) -> String {
         if event.isAllDay {
             let formatter = DateFormatter()
             formatter.calendar = Calendar(identifier: .gregorian)
@@ -173,7 +173,7 @@ final class SharedCalendar {
     }
 
     /// Händelser som började före idag (flerdagars) visas på idag.
-    static func groupByDay(_ events: [EKEvent], from today: Date) -> [EventDay] {
+    nonisolated static func groupByDay(_ events: [EKEvent], from today: Date) -> [EventDay] {
         let calendar = Calendar.current
         let firstDay = calendar.startOfDay(for: today)
         return Dictionary(grouping: events) { max(calendar.startOfDay(for: $0.startDate), firstDay) }

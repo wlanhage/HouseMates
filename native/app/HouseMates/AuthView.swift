@@ -9,6 +9,7 @@ struct AuthView: View {
     @State private var errorMessage: String?
     @State private var notice: String?
     @State private var isWorking = false
+    @State private var isResettingPassword = false
 
     var body: some View {
         NavigationStack {
@@ -46,8 +47,17 @@ struct AuthView: View {
                     Task { await submit() }
                 }
                 .disabled(!canSubmit || isWorking)
+
+                if !isCreatingAccount {
+                    Button("Glömt lösenordet?") { isResettingPassword = true }
+                        .font(.subheadline)
+                        .listRowBackground(Color.clear)
+                }
             }
             .navigationTitle("HouseMates")
+            .sheet(isPresented: $isResettingPassword) {
+                ForgotPasswordView(email: email)
+            }
         }
     }
 

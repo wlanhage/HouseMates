@@ -25,13 +25,25 @@ Supabase-projekt i `supabase/`. Webbappen och dess databas påverkas inte.
    ```
    `supabase/functions/.env` behöver raden `CRON_SECRET=lokal-hemlighet`. Kör sedan
    `node native/supabase/notify-check.mjs` i en annan terminal.
+6. Mejl (till exempel "Glömt lösenordet") hamnar i den lokala brevlådan på
+   http://127.0.0.1:55324. Länken i mejlet öppnas med
+   `xcrun simctl openurl booted "<länken>"`.
 
-Behörigheter, triggers och notiskö testas med `node native/supabase/smoke.mjs` (22 kontroller
-mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm test`).
+Testerna:
+- `node native/supabase/smoke.mjs`: behörigheter, triggers och notiskö mot den lokala databasen.
+- `npm test`: bland annat APNs-signeringen (`tests/native-notify.test.ts`), och att
+  notislogiken som kopierats från webbappen är identisk med originalet.
+- Swift-testerna i `app/HouseMatesTests`: `xcodebuild test -project app/HouseMates.xcodeproj
+  -scheme HouseMates -destination 'platform=iOS Simulator,name=<simulator>'`.
 
 ## Hur det hänger ihop
 
 - **Inloggning:** e-post och lösenord (Supabase Auth). Namnet sparas i `profiles`.
+  - Glömt lösenordet: mejlet innehåller en länk som öppnar appen (`housemates://nytt-losenord`),
+    som frågar efter ett nytt lösenord. Länken fungerar bara på telefonen som bad om den,
+    eftersom den bär en engångskod som appen sparat (PKCE).
+  - Bekräftelselänken vid nytt konto loggar in i appen (`housemates://inloggad`).
+  - Mejlen är på svenska (`supabase/templates`).
 - **Hushåll:** den ena skapar, den andra går med med en sexteckenskod. Max två medlemmar.
   Alla tabeller bär `household_id`, och RLS släpper bara igenom det egna hushållet.
 - **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
@@ -54,6 +66,8 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
   notis när det varit tyst i tre minuter. Det är samma digest som webbappen. Ett tryck på
   notisen öppnar rätt flik.
+  - Tysta timmar per person (`notification_prefs`, med telefonens tidszon). Notiser under
+    natten skjuts upp till när de tysta timmarna slutar, med samma testade logik som webbappen.
 - **Lämna hushåll:** `leave_household()` tar bort medlemskapet och de notiser som väntar
   till den som lämnar.
   - Den som är sist kvar tar hushållet och listan med sig.
@@ -66,7 +80,7 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
   - Appen rensar sedan allt den sparat på telefonen.
   - Kalendern i Apple Kalender rörs inte. Den ligger i iCloud och kan vara delad med partnern.
 
-## Verifierat i simulatorn (2026-10-05–06)
+## Verifierat i simulatorn (2026-10-05–07)
 
 - skapa konto → skapa hushåll → partnern går med via koden
 - lägga till, bocka av, radera och tömma varor
@@ -89,6 +103,13 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
 - appen visar listan och hushållet från telefonen direkt vid start
 - partnerns ändring medan appen låg i bakgrunden syns när appen öppnas igen
 - nekad kalenderåtkomst ger "Öppna Inställningar"; vänteläget kan byta kalender för hushållet
+- glömt lösenord hela vägen:
+  1. mejlet (på svenska) med länk
+  2. Safari frågar "Öppna i HouseMates?"
+  3. appen visar "Nytt lösenord"
+  4. det gamla lösenordet nekas och det nya fungerar
+- tysta timmar sparas från appen, och notis-workern sköt upp en notis till exakt när de tar slut
+- integritetspolicyn visas i appen under Inställningar → Om HouseMates
 
 **Inte verifierat:**
 - att ett tryck på notisen öppnar rätt flik (simulatorns notiscenter tog inte emot tryck
@@ -107,21 +128,25 @@ mot den lokala databasen). APNs-signeringen testas i `tests/apns.test.ts` (`npm 
      (innehållet i .p8-filen), `APNS_BUNDLE_ID=se.housemates.app` och `CRON_SECRET`.
      Lägg till `APNS_PRODUCTION=true` för TestFlight och App Store.
    - Lägg till `aps-environment` i appens entitlements.
-2. **Hostat Supabase-projekt.**
+2. **Hostat Supabase-projekt, i EU** (policyn lovar servrar inom EU).
    - Kör `supabase link` och `supabase db push`, deploya `notify` och kör `cron.sql`.
-   - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel.
-3. **Integritetspolicy:** en länk i appen och i App Store Connect. Beskriv där vad
-   "Radera konto" tar bort. Uppgifterna i App Store Connect ska stämma med
-   `PrivacyInfo.xcprivacy`: e-post, namn, användar-id och inköpslistan, kopplade till
-   kontot, används bara för appens funktion och spårar ingen.
-4. **Riktig app-ikon.** Den nuvarande är tillfällig: ett vitt hus på grönt.
-5. **Versionsnummer:** räkna upp `CURRENT_PROJECT_VERSION` i `project.yml` inför varje
+   - Kör `supabase config push`. Det för över länkadresserna (`additional_redirect_urls`) och
+     de svenska mejlmallarna.
+   - Koppla en egen e-posttjänst (SMTP). Supabases inbyggda klarar bara ett par mejl i timmen.
+   - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel, och
+     `SUPPORT_EMAIL`.
+3. **Fyll i och publicera integritetspolicyn.**
+   - Byt `[NAMN]` och `[E-POST]` i `app/HouseMates/integritetspolicy.md`.
+   - Publicera samma text på en webbadress. Den adressen och en support-adress behövs i App
+     Store Connect.
+4. **App Store Connect:** texter, granskningsanteckningar och integritetssvar finns i
+   `appstore/README.md`.
+   - Skapa två demokonton i samma hushåll åt granskarna.
+   - Ta skärmbilder för 6,9 tum.
+5. **Riktig app-ikon.** Den nuvarande är tillfällig: ett vitt hus på grönt.
+6. **Versionsnummer:** räkna upp `CURRENT_PROJECT_VERSION` i `project.yml` inför varje
    uppladdning. App Store Connect nekar samma byggnummer två gånger.
-6. **Granskningsanteckningar:** förklara varför full kalenderåtkomst behövs och hur
-   granskaren testar.
-7. **Senare:**
-   - tysta timmar för notiser
-   - flytta in er befintliga data
+7. **Senare:** flytta in er befintliga data från webbappen.
 
 # Spike: kan två personer få en delad kalender smidigt?
 

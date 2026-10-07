@@ -2,9 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppSession.self) private var session
-    @Environment(\.openURL) private var openURL
     let calendar: SharedCalendar
-    private let push = Push.shared
 
     var body: some View {
         NavigationStack {
@@ -29,28 +27,18 @@ struct SettingsView: View {
                 Section("Kalender") {
                     LabeledContent("Delad kalender", value: calendar.linkedCalendar?.title ?? "Inte vald")
                 }
-                Section("Notiser") {
-                    switch push.authorization {
-                    case .authorized, .provisional, .ephemeral:
-                        LabeledContent("Notiser", value: "På")
-                    case .denied:
-                        Button("Slå på notiser i Inställningar") {
-                            if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
-                        }
-                    default:
-                        Button("Slå på notiser") { Task { await push.requestPermission() } }
-                    }
-                }
-                Section {
+                NotificationSection()
+                Section("Konto") {
+                    Button("Byt lösenord") { session.needsNewPassword = true }
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
                 }
+                AboutSection()
                 Section {
                     DeleteAccountButton()
                 }
             }
             .navigationTitle("Inställningar")
             .refreshable { await session.reload() }
-            .task { await push.refreshAuthorization() }
         }
     }
 

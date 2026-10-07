@@ -18,6 +18,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>se.housemates.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>housemates</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -33,6 +44,8 @@
 	<string>$(SUPABASE_KEY)</string>
 	<key>SupabaseURL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>SupportEmail</key>
+	<string>$(SUPPORT_EMAIL)</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

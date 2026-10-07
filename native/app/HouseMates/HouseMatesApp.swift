@@ -19,6 +19,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        @Bindable var session = session
         Group {
             switch session.phase {
             case .loading: LoadingView()
@@ -27,9 +28,20 @@ struct RootView: View {
             case .ready: MainTabs()
             }
         }
+        .onOpenURL { url in Task { await session.handle(url) } }
+        .sheet(isPresented: $session.needsNewPassword) { NewPasswordView() }
+        .alert("Länken fungerade inte", isPresented: linkErrorIsShown) {
+            Button("OK") {}
+        } message: {
+            Text(session.linkError ?? "")
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await session.reload() } }
         }
+    }
+
+    private var linkErrorIsShown: Binding<Bool> {
+        Binding(get: { session.linkError != nil }, set: { if !$0 { session.linkError = nil } })
     }
 }
 

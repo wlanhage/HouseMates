@@ -15,6 +15,8 @@ targets:
     sources: [HouseMates]
     dependencies:
       - package: Supabase
+    scheme:
+      testTargets: [HouseMatesTests]
     configFiles:
       Debug: Config/Local.xcconfig
       Release: Config/Local.xcconfig
@@ -28,6 +30,10 @@ targets:
         UILaunchScreen: {}
         SupabaseURL: $(SUPABASE_URL)
         SupabaseKey: $(SUPABASE_KEY)
+        SupportEmail: $(SUPPORT_EMAIL)
+        CFBundleURLTypes:
+          - CFBundleURLName: se.housemates.app
+            CFBundleURLSchemes: [housemates]
         NSCalendarsFullAccessUsageDescription: HouseMates visar och skapar händelser i den kalender ni väljer att dela. Andra kalendrar används inte.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -40,3 +46,14 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
+  HouseMatesTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [HouseMatesTests]
+    dependencies:
+      - target: HouseMates
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"

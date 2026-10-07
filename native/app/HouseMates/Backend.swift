@@ -35,7 +35,11 @@ func userMessage(for error: Error) -> String {
         case .invalidCredentials: return "Fel e-post eller lösenord."
         case .userAlreadyExists, .emailExists: return "Det finns redan ett konto med den e-postadressen."
         case .weakPassword: return "Lösenordet är för svagt. Använd minst 6 tecken."
+        case .samePassword: return "Välj ett annat lösenord än det du har nu."
         case .validationFailed: return "Kontrollera e-postadressen."
+        case .overEmailSendRateLimit, .overRequestRateLimit: return "För många försök just nu. Vänta en stund och försök igen."
+        case .flowStateExpired, .flowStateNotFound, .otpExpired, .badCodeVerifier:
+            return "Länken har gått ut eller redan använts. Be om en ny."
         default: return error.message
         }
     }

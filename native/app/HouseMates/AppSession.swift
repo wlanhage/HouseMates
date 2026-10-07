@@ -13,8 +13,15 @@ final class AppSession {
     private(set) var partner: Profile?
     private(set) var household: Household?
     private(set) var loadError: String?
+    /// Visar "Nytt lösenord" efter en återställningslänk, eller när man väljer Byt lösenord.
+    var needsNewPassword = false
+    var linkError: String?
 
     private let client = Backend.client
+
+    /// Dit länkarna i mejlen leder; adresserna måste också finnas i Supabase (additional_redirect_urls).
+    static let signedInLink = URL(string: "housemates://inloggad")!
+    static let newPasswordLink = URL(string: "housemates://nytt-losenord")!
 
     func start() async {
         for await (_, session) in client.auth.authStateChanges {
@@ -28,9 +35,32 @@ final class AppSession {
 
     /// Svarar true när e-postadressen måste bekräftas innan inloggning (standard i ett hostat projekt).
     func signUp(name: String, email: String, password: String) async throws -> Bool {
-        let response = try await client.auth.signUp(email: email, password: password, data: ["name": .string(name)])
+        let response = try await client.auth.signUp(
+            email: email, password: password, data: ["name": .string(name)], redirectTo: Self.signedInLink
+        )
         if case .user = response { return true }
         return false
+    }
+
+    /// Länkar från mejlen: bekräftat konto loggar in, återställningslänken frågar efter nytt lösenord.
+    func handle(_ url: URL) async {
+        guard url.scheme == Self.signedInLink.scheme else { return }
+        do {
+            try await client.auth.session(from: url)
+            needsNewPassword = url.host() == Self.newPasswordLink.host()
+        } catch {
+            linkError = userMessage(for: error)
+        }
+    }
+
+    /// Länken fungerar bara på den här telefonen: den bär en engångskod som appen sparat lokalt (PKCE).
+    func requestPasswordReset(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(email, redirectTo: Self.newPasswordLink)
+    }
+
+    func setNewPassword(_ password: String) async throws {
+        try await client.auth.update(user: UserAttributes(password: password))
+        needsNewPassword = false
     }
 
     func signIn(email: String, password: String) async throws {
