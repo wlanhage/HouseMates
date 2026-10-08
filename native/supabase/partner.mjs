@@ -18,10 +18,14 @@ const [command, ...rest] = process.argv.slice(2);
 const argument = rest.join(' ');
 const anna = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
 
-const signIn = await anna.auth.signInWithPassword(ANNA);
-if (signIn.error) {
-  const { error } = await anna.auth.signUp({ ...ANNA, options: { data: { name: 'Anna' } } });
+const service = createClient(apiUrl, secretKey, { auth: { persistSession: false } });
+
+// Första gången skapas Anna som ett bekräftat konto (e-postbekräftelse är påslagen).
+if ((await anna.auth.signInWithPassword(ANNA)).error) {
+  const { error } = await service.auth.admin.createUser({ ...ANNA, email_confirm: true, user_metadata: { name: 'Anna' } });
   if (error) throw error;
+  const { error: signInError } = await anna.auth.signInWithPassword(ANNA);
+  if (signInError) throw signInError;
 }
 
 const { count: memberships } = await anna.from('household_members').select('user_id', { count: 'exact', head: true });
@@ -31,14 +35,13 @@ if (command !== 'join' && !memberships) {
 }
 
 if (command === 'join') {
-  const service = createClient(apiUrl, secretKey, { auth: { persistSession: false } });
   const { data: users } = await service.auth.admin.listUsers();
   const owner = users.users.find((u) => u.email === argument);
   if (!owner) throw new Error(`Hittar ingen användare med e-post ${argument}`);
   const { data: membership } = await service.from('household_members').select('household_id').eq('user_id', owner.id).single();
   const { data: household } = await service.from('households').select('invite_code').eq('id', membership.household_id).single();
-  const { error } = await anna.rpc('join_household', { p_code: household.invite_code });
-  console.log(error ? `Kunde inte gå med: ${error.message}` : `Anna gick med via koden ${household.invite_code}`);
+  const { data: joined, error } = await anna.rpc('join_household', { p_code: household.invite_code });
+  console.log(error ? `Kunde inte gå med: ${error.message}` : joined ? `Anna gick med via koden ${household.invite_code}` : 'Fel kod');
 } else if (command === 'add') {
   const { error } = await anna.from('shopping_items').insert({ id: randomUUID(), name: argument });
   console.log(error ? `Fel: ${error.message}` : `Anna la till ${argument}`);

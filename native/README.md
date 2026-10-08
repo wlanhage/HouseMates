@@ -26,7 +26,8 @@ dess databas påverkas inte.
    ```bash
    (cd native && supabase functions serve --env-file supabase/functions/.env)
    ```
-   `supabase/functions/.env` behöver raden `CRON_SECRET=lokal-hemlighet`. Kör sedan
+   `supabase/functions/.env` behöver raderna `CRON_SECRET=lokal-hemlighet` och
+   `NOTIFY_DRY_RUN=true` (utan den rör notify inte kön när APNs-nyckeln saknas). Kör sedan
    `node native/supabase/notify-check.mjs` i en annan terminal.
 6. Mejl (till exempel "Glömt lösenordet") hamnar i den lokala brevlådan på
    http://127.0.0.1:55324. Länken i mejlet öppnas med
@@ -34,6 +35,7 @@ dess databas påverkas inte.
 
 Testerna:
 - `node native/supabase/smoke.mjs`: behörigheter, triggers och notiskö mot den lokala databasen.
+  E-postbekräftelse är påslagen, så skripten skapar bekräftade konton direkt (admin-API).
 - `npm test`: bland annat APNs-signeringen (`tests/native-notify.test.ts`), och att
   notislogiken som kopierats från webbappen är identisk med originalet.
 - Swift-testerna i `app/HouseMatesTests`: `xcodebuild test -project app/HouseMates.xcodeproj
@@ -47,7 +49,8 @@ Testerna:
     eftersom den bär en engångskod som appen sparat (PKCE).
   - Bekräftelselänken vid nytt konto loggar in i appen (`housemates://inloggad`).
   - Mejlen är på svenska (`supabase/templates`).
-- **Hushåll:** den ena skapar, den andra går med med en sexteckenskod. Max två medlemmar.
+- **Hushåll:** den ena skapar, den andra går med med en kod på åtta tecken. Max två medlemmar.
+  Högst tio felaktiga koder i timmen per person, så att ingen kan gissa sig in.
   Alla tabeller bär `household_id`, och RLS släpper bara igenom det egna hushållet.
 - **Listorna** (inköp, uppgifter, städ) synkas på samma sätt, av `SyncedTable`:
   - Ändringar visas direkt, sparas i en kö på telefonen och skickas i tur och ordning.
@@ -101,6 +104,10 @@ Testerna:
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
   notis när det varit tyst i tre minuter. Det är samma digest som webbappen. Ett tryck på
   notisen öppnar rätt flik.
+  - Raderna tas i samma anrop som de hämtas, så att två körningar aldrig skickar samma notis.
+    Svarar inte Apple (eller för många anrop) släpps de och skickas nästa minut.
+  - Ett token från ett Xcode-bygge (Apples testmiljö) och ett från TestFlight fungerar mot
+    samma server: får det ena svaret "fel token" provas den andra miljön.
   - Tysta timmar per person (`notification_prefs`, med telefonens tidszon). Notiser under
     natten skjuts upp till när de tysta timmarna slutar, med samma testade logik som webbappen.
 - **Lämna hushåll:** `leave_household()` tar bort medlemskapet och de notiser som väntar
@@ -179,18 +186,19 @@ Testerna:
    - Sätt secrets på det hostade projektet: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`
      (innehållet i .p8-filen), `APNS_BUNDLE_ID=se.housemates.app` och `CRON_SECRET`.
      Lägg till `APNS_PRODUCTION=true` för TestFlight och App Store.
-   - Lägg till `aps-environment` i appens entitlements.
    - Registrera App Group `group.se.housemates.app` och slå på den för både
      `se.housemates.app` och `se.housemates.app.share` (delningstillägget). Ett gratiskonto kan
      inte signera App Groups.
 2. **Hostat Supabase-projekt, i EU** (policyn lovar servrar inom EU).
    - Kör `supabase link` och `supabase db push`, deploya `notify` och `recipe-import`, och kör
      `cron.sql`.
-   - Kör `supabase config push`. Det för över länkadresserna (`additional_redirect_urls`) och
-     de svenska mejlmallarna.
+   - Kör `supabase config push`. Det för över länkadresserna (`additional_redirect_urls`), de
+     svenska mejlmallarna och inloggningsreglerna: e-postbekräftelse, lösenord på minst 8
+     tecken och högst ett mejl i minuten per adress.
+   - Lägg hellre `CRON_SECRET` i Vault än i klartext i `cron.sql`.
    - Koppla en egen e-posttjänst (SMTP). Supabases inbyggda klarar bara ett par mejl i timmen.
-   - Lägg till en `Config/Release.xcconfig` med projektets adress och nyckel, och
-     `SUPPORT_EMAIL`.
+   - Fyll i `Config/Release.xcconfig` med projektets adress och nyckel, och `SUPPORT_EMAIL`.
+     Ett release-bygge stoppas tills de är ifyllda och `[NAMN]`/`[E-POST]` är bytta i policyn.
 3. **Fyll i och publicera integritetspolicyn.**
    - Byt `[NAMN]` och `[E-POST]` i `app/HouseMates/integritetspolicy.md`.
    - Publicera samma text på en webbadress. Den adressen och en support-adress behövs i App

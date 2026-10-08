@@ -45,13 +45,18 @@ async function requireMember(req: Request): Promise<void> {
   if (!count) throw new HttpError('Du är inte med i något hushåll.', 403);
 }
 
+// Lokala och reserverade IPv4-nät, också delade (100.64/10), test (198.18/15) och multicast (224+).
 const PRIVATE_IPV4 =
-  /^(0|10|127)\.|^169\.254\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\.|^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./;
+  /^(0|10|127)\.|^169\.254\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\.|^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|^198\.1[89]\.|^(22[4-9]|2[3-5]\d)\./;
 
-/** Adresser i det egna nätet eller på servern själv (IPv4, och IPv6 som lokala eller inbäddade IPv4). */
+/**
+ * Adresser i det egna nätet eller på servern själv. IPv6: ospecificerad, loopback, unika lokala
+ * (fc00::/7), länklokala (fe80::/10), multicast (ff00::/8) och adresser med en inbäddad
+ * IPv4-adress (::ffff:, 64:ff9b::, 2002::), som skulle kunna peka var som helst.
+ */
 function isPrivateAddress(address: string): boolean {
   const ip = address.toLowerCase();
-  if (ip.includes(':')) return ip === '::' || ip === '::1' || /^(f[cd]|fe[89ab]|::ffff:)/.test(ip);
+  if (ip.includes(':')) return ip === '::' || ip === '::1' || /^(f[cdf]|fe[89ab]|::ffff:|64:ff9b:|2002:)/.test(ip);
   return PRIVATE_IPV4.test(ip);
 }
 
@@ -147,13 +152,13 @@ async function fromSiteApi(url: URL, html: string): Promise<ParsedRecipe | null>
   return res.ok ? parseCoopRecipe(await res.json()) : null;
 }
 
-/** Bilden som en fullständig https-adress, eller ingen bild alls. */
+/** Bilden som en fullständig https-adress, eller ingen bild alls (aldrig data:, javascript: o.d.). */
 function imageUrl(raw: string | null, page: URL): string | null {
   if (!raw) return null;
   try {
     const u = new URL(raw, page);
-    u.protocol = 'https:';
-    return u.toString();
+    if (u.protocol === 'http:') u.protocol = 'https:';
+    return u.protocol === 'https:' ? u.toString() : null;
   } catch {
     return null;
   }

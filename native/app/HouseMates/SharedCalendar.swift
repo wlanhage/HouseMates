@@ -35,25 +35,33 @@ final class SharedCalendar {
     private(set) var linkedCalendar: EKCalendar?
     private(set) var choosableCalendars: [EKCalendar] = []
     private(set) var upcoming: [EventDay] = []
+    /// Nya UID:n för hushållet när de sparade inte längre finns i kalendern (se `replacementUIDs`).
+    private(set) var uidsToSave: [String]?
     var errorMessage: String?
 
-    let store = EKEventStore()
+    /// Skapas först när den behövs: SwiftUI skapar objektet på nytt varje gång vyn byggs om, men
+    /// behåller bara det första.
+    @ObservationIgnored lazy var store = EKEventStore()
     private let defaults = UserDefaults.standard
     @ObservationIgnored private var household: Household?
+    @ObservationIgnored private var storeChanges: NSObjectProtocol?
 
     private static let linkedCalendarKey = "kopplad-kalender"
     private static let linkedUIDsKey = "kopplad-med-uids"
     static let markerURL = URL(string: "housemates://koppling")!
 
-    init() {
-        NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
-        }
-    }
-
     func update(household: Household?) {
         self.household = household
+        observeStoreChanges()
         refresh()
+    }
+
+    /// Kalendern läses om när den ändras utanför appen, t.ex. i Apple Kalender eller via iCloud.
+    private func observeStoreChanges() {
+        guard storeChanges == nil else { return }
+        storeChanges = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
     }
 
     func requestAccess() async {
@@ -80,8 +88,9 @@ final class SharedCalendar {
         choosableCalendars = store.calendars(for: .event)
             .filter { $0.allowsContentModifications && !$0.isSubscribed && $0.type != .birthday }
             .sorted { ($0.isICloud ? 0 : 1, $0.title) < ($1.isICloud ? 0 : 1, $1.title) }
-        linkedCalendar = householdCalendar()
+        linkedCalendar = locateHouseholdCalendar()
         upcoming = linkedCalendar.map(eventDays(in:)) ?? []
+        uidsToSave = linkedCalendar.flatMap(replacementUIDs(for:))
         if linkedCalendar != nil {
             state = .linked
         } else if household?.calendarEventUIDs.isEmpty ?? true {
@@ -113,7 +122,7 @@ final class SharedCalendar {
             try store.saveCalendar(calendar, commit: true)
             return calendar
         } catch {
-            errorMessage = "Kunde inte skapa kalendern: \(error.localizedDescription)"
+            errorMessage = "Kunde inte skapa kalendern. Kontrollera att iCloud är påslaget för Kalender i telefonens inställningar."
             return nil
         }
     }
@@ -124,7 +133,7 @@ final class SharedCalendar {
     /// om kalendern inte innehåller hushållets händelser.
     func pickManually(_ calendar: EKCalendar) {
         let uids = household?.calendarEventUIDs ?? []
-        let isSame = uids.contains { uid in
+        let isSame = calendar.title == household?.calendarTitle || uids.contains { uid in
             store.calendarItems(withExternalIdentifier: uid).contains { $0.calendar?.calendarIdentifier == calendar.calendarIdentifier }
         }
         if !isSame {
@@ -212,8 +221,9 @@ final class SharedCalendar {
 
     // MARK: Privat
 
-    /// Den lokala kopplingen gäller så länge hushållet pekar på samma kalender; annars letas den upp via UID:n.
-    private func householdCalendar() -> EKCalendar? {
+    /// Den lokala kopplingen gäller så länge hushållet pekar på samma kalender; annars letas den upp
+    /// via UID:n. En kalender som hittas sparas på telefonen, och kopplingshändelsen raderas.
+    private func locateHouseholdCalendar() -> EKCalendar? {
         let uids = household?.calendarEventUIDs ?? []
         if let id = defaults.string(forKey: Self.linkedCalendarKey),
            let calendar = store.calendar(withIdentifier: id),
@@ -231,6 +241,19 @@ final class SharedCalendar {
     private func calendarContaining(_ uids: [String]) -> EKCalendar? {
         let calendars = uids.flatMap { store.calendarItems(withExternalIdentifier: $0) }.compactMap(\.calendar)
         return Dictionary(grouping: calendars, by: \.calendarIdentifier).values.max { $0.count < $1.count }?.first
+    }
+
+    /// Hushållets UID:n ska peka på händelser som finns, så att en telefon som installerat om appen
+    /// hittar kalendern. Kopplingshändelsen raderas när partnern hittat kalendern; när ingen av
+    /// UID:na finns kvar föreslås nya från kalenderns kommande händelser.
+    private func replacementUIDs(for calendar: EKCalendar) -> [String]? {
+        let uids = household?.calendarEventUIDs ?? []
+        let stillThere = uids.contains { uid in
+            store.calendarItems(withExternalIdentifier: uid).contains { $0.calendar?.calendarIdentifier == calendar.calendarIdentifier }
+        }
+        guard !stillThere else { return nil }
+        let fresh = upcomingEventUIDs(in: calendar)
+        return fresh.isEmpty ? nil : fresh
     }
 
     /// Kommande händelser: telefoner synkar ungefär en månads historik som standard, men alltid framtiden.
@@ -255,7 +278,7 @@ final class SharedCalendar {
             try store.save(marker, span: .thisEvent, commit: true)
             return marker.calendarItemExternalIdentifier
         } catch {
-            errorMessage = "Kunde inte förbereda kalendern: \(error.localizedDescription)"
+            errorMessage = "Kunde inte förbereda kalendern. Försök igen."
             return nil
         }
     }

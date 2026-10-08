@@ -15,6 +15,17 @@ struct NotificationPrefs: Codable, Equatable {
         case quietTo = "quiet_to"
         case timeZone = "time_zone"
     }
+
+    /// Tysta timmar gäller i telefonens tidszon; efter en resa flyttas de med.
+    static func syncTimeZone() async {
+        guard let userID = Backend.client.auth.currentUser?.id else { return }
+        let zone = TimeZone.current.identifier
+        _ = try? await Backend.client.from("notification_prefs")
+            .update(["time_zone": zone])
+            .eq("user_id", value: userID)
+            .neq("time_zone", value: zone)
+            .execute()
+    }
 }
 
 /// Notisbehörighet och tysta timmar. Tysta timmar gäller på servern, som väntar med notisen tills de tar slut.
@@ -22,6 +33,7 @@ struct NotificationSection: View {
     @Environment(\.openURL) private var openURL
     @State private var prefs: NotificationPrefs?
     @State private var errorMessage: String?
+    @State private var saving: Task<Void, Never>?
     private let push = Push.shared
 
     var body: some View {
@@ -75,7 +87,9 @@ struct NotificationSection: View {
         var updated = updated
         updated.timeZone = TimeZone.current.identifier
         prefs = updated
-        Task {
+        // I tur och ordning, så att den senaste ändringen alltid är den som gäller på servern.
+        saving = Task { [previous = saving] in
+            await previous?.value
             do {
                 try await Backend.client.from("notification_prefs").upsert(updated).execute()
                 errorMessage = nil

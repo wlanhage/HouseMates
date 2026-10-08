@@ -84,9 +84,10 @@ extension SyncedTable where Change == ShoppingChange {
         record(.remove(ids: [item.id]))
     }
 
+    /// I omgångar om 50, eftersom raderna skickas i adressen till servern.
     func clearBought() {
-        let ids = bought.map(\.id)
-        guard !ids.isEmpty else { return }
-        record(.remove(ids: ids))
+        for ids in bought.map(\.id).chunked(into: 50) {
+            record(.remove(ids: ids))
+        }
     }
 }

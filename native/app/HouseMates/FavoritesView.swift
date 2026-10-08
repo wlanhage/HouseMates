@@ -237,6 +237,7 @@ private struct IngredientRow: View {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(line)
                         .foregroundStyle(isOnList && !isSelected ? .secondary : .primary)
@@ -249,6 +250,7 @@ private struct IngredientRow: View {
             }
         }
         .foregroundStyle(.primary)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -308,6 +310,7 @@ private struct FavoriteEditor: View {
                 Section {
                     TextEditor(text: $itemsText)
                         .frame(minHeight: 180)
+                        .accessibilityLabel("Ingredienser")
                         .overlay(alignment: .topLeading) {
                             if itemsText.isEmpty {
                                 Text("500 g köttfärs\nTortillas\nSalsa")
@@ -318,7 +321,7 @@ private struct FavoriteEditor: View {
                             }
                         }
                 } header: {
-                    Text("Varor, en per rad")
+                    Text("Ingredienser, en per rad")
                 } footer: {
                     if !items.isEmpty {
                         Text(itemCountLabel(items.count))
@@ -326,6 +329,8 @@ private struct FavoriteEditor: View {
                 }
             }
             .navigationTitle(favorite == nil ? "Ny middag" : "Ändra middag")
+            // Ett svep nedåt ska inte kasta en lång ingredienslista; Avbryt gör det med flit.
+            .interactiveDismissDisabled(hasChanges)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -344,6 +349,12 @@ private struct FavoriteEditor: View {
     }
 
     private var trimmedLink: String { link.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Något har skrivits eller ändrats sedan arket öppnades.
+    private var hasChanges: Bool {
+        guard let favorite else { return !name.isEmpty || !itemsText.isEmpty }
+        return name != favorite.name || itemsText != favorite.items.joined(separator: "\n")
+    }
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var items: [String] { Favorite.items(from: itemsText) }
 

@@ -73,7 +73,7 @@ struct NewPasswordView: View {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)
                     } else {
-                        Text("Minst 6 tecken.")
+                        Text("Minst 8 tecken.")
                     }
                 }
             }
@@ -85,7 +85,7 @@ struct NewPasswordView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Spara") { Task { await save() } }
-                        .disabled(password.count < 6 || isSaving)
+                        .disabled(password.count < 8 || isSaving)
                 }
             }
         }

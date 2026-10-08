@@ -9,14 +9,15 @@ import { randomUUID } from 'node:crypto';
 const run = Date.now();
 const service = createClient(apiUrl, secretKey, { auth: { persistSession: false } });
 
+// Kontot skapas bekräftat (e-postbekräftelse är påslagen) och loggas sedan in som i appen.
 async function signUp(name) {
-  const client = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
-  const { data, error } = await client.auth.signUp({
-    email: `${name.toLowerCase()}-${run}@example.com`,
-    password: 'hemligt-123',
-    options: { data: { name } }
+  const email = `${name.toLowerCase()}-${run}@example.com`;
+  const { data, error } = await service.auth.admin.createUser({
+    email, password: 'hemligt-123', email_confirm: true, user_metadata: { name }
   });
   assert.ifError(error);
+  const client = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
+  assert.ifError((await client.auth.signInWithPassword({ email, password: 'hemligt-123' })).error);
   return { client, id: data.user.id };
 }
 
@@ -32,11 +33,12 @@ step('profil skapas från namnet vid registrering');
 
 const { data: household, error: createError } = await anna.client.rpc('create_household');
 assert.ifError(createError);
-assert.match(household.invite_code, /^[A-HJ-NP-Z2-9]{6}$/);
+assert.match(household.invite_code, /^[A-HJ-NP-Z2-9]{8}$/);
 step(`Anna skapar hushåll med kod ${household.invite_code}`);
 
-const { error: joinError } = await erik.client.rpc('join_household', { p_code: household.invite_code.toLowerCase() });
+const { data: joined, error: joinError } = await erik.client.rpc('join_household', { p_code: household.invite_code.toLowerCase() });
 assert.ifError(joinError);
+assert.equal(joined, true);
 step('Erik går med (koden är skiftlägesokänslig)');
 
 const { error: fullError } = await eva.client.rpc('join_household', { p_code: household.invite_code });
@@ -102,7 +104,7 @@ const { data: erikSees } = await erik.client.from('households').select('calendar
 assert.deepEqual(erikSees, { calendar_title: 'Vi två', calendar_event_uids: ['a', 'b'] });
 step('kalenderkopplingen som Anna sparar syns för Erik');
 
-const token = `token-${run}`;
+const token = run.toString(16).padStart(64, '0');
 assert.ifError((await anna.client.rpc('register_device', { p_token: token })).error);
 assert.ifError((await erik.client.rpc('register_device', { p_token: token })).error);
 const { data: device } = await service.from('device_tokens').select('user_id').eq('token', token).single();
@@ -205,7 +207,8 @@ assert.equal(await count('shopping_items', 'id', coffee), 1);
 step('Olle lämnar: medlemskap och väntande notiser borta, listan kvar för Lisa, ny inbjudningskod');
 
 const oldCode = await olle.client.rpc('join_household', { p_code: lisasHome.invite_code });
-assert.match(oldCode.error?.message ?? '', /Hittade inget hushåll/);
+assert.ifError(oldCode.error);
+assert.equal(oldCode.data, false);
 assert.ifError((await olle.client.rpc('join_household', { p_code: lisasHomeAfter.invite_code })).error);
 step('den gamla koden fungerar inte längre, den nya gör det');
 
@@ -221,6 +224,13 @@ assert.ok((await notLoggedIn.rpc('delete_account')).error);
 assert.ok((await notLoggedIn.rpc('leave_household')).error);
 step('radering och att lämna kräver inloggning');
 
+const eriksTodo = randomUUID();
+assert.ifError((await erik.client.from('todos').insert({ id: eriksTodo, title: 'Laga cykeln' })).error);
+assert.ifError((await erik.client.from('todos').update({ done: true }).eq('id', eriksTodo)).error);
+const eriksChore = randomUUID();
+assert.ifError((await erik.client.from('chores').insert({ id: eriksChore, title: 'Torka damm' })).error);
+assert.ifError((await erik.client.from('chores').update({ last_done_at: new Date().toISOString() }).eq('id', eriksChore)).error);
+
 assert.ifError((await erik.client.rpc('delete_account')).error);
 assert.equal((await service.auth.admin.getUserById(erik.id)).data.user, null);
 assert.equal(await count('profiles', 'id', erik.id), 0);
@@ -235,7 +245,11 @@ assert.deepEqual(breadAfter, { created_by: null, checked_by: null });
 assert.equal(await count('households', 'id', household.id), 1);
 const { data: annaAlone } = await anna.client.from('profiles').select('name');
 assert.deepEqual(annaAlone.map((p) => p.name), ['Anna']);
-step('Annas hushåll och varan Erik la till finns kvar, utan koppling till Erik');
+const { data: todoAfter } = await anna.client.from('todos').select('created_by, done_by').eq('id', eriksTodo).single();
+assert.deepEqual(todoAfter, { created_by: null, done_by: null });
+const { data: choreAfter } = await anna.client.from('chores').select('created_by, last_done_by').eq('id', eriksChore).single();
+assert.deepEqual(choreAfter, { created_by: null, last_done_by: null });
+step('Annas hushåll och det Erik la till och gjorde finns kvar, utan koppling till Erik');
 
 assert.ifError((await anna.client.rpc('delete_account')).error);
 assert.equal(await count('households', 'id', household.id), 0);
@@ -246,5 +260,31 @@ step('Anna var sist kvar: hushållet, listan och historiken raderas med henne');
 assert.ifError((await eva.client.rpc('delete_account')).error);
 assert.equal((await service.auth.admin.getUserById(eva.id)).data.user, null);
 step('konto utan hushåll går också att radera');
+
+const guesser = await signUp('Gissa');
+for (let attempt = 0; attempt < 10; attempt++) {
+  const { data, error } = await guesser.client.rpc('join_household', { p_code: 'ZZZZZZZZ' });
+  assert.ifError(error);
+  assert.equal(data, false);
+}
+const blocked = await guesser.client.rpc('join_household', { p_code: lisasHomeAfter.invite_code });
+assert.match(blocked.error?.message ?? '', /För många felaktiga koder/);
+step('högst tio felaktiga koder i timmen, sedan nekas även en rätt kod');
+
+const hexToken = (n) => n.toString(16).padStart(64, 'a');
+assert.ok((await guesser.client.rpc('register_device', { p_token: '../../3/device/x' })).error);
+for (let n = 1; n <= 7; n++) {
+  assert.ifError((await guesser.client.rpc('register_device', { p_token: hexToken(n) })).error);
+}
+assert.equal(await count('device_tokens', 'user_id', guesser.id), 5);
+step('notisadresser: bara hexadecimala tokens, högst fem per person');
+
+const anonymous = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
+assert.ok((await anonymous.from('shopping_items').select('id')).error);
+step('utan inloggning går inga tabeller att läsa');
+
+for (const user of [lisa, olle, guesser]) {
+  assert.ifError((await service.auth.admin.deleteUser(user.id)).error);
+}
 
 console.log('\nAlla kontroller gick igenom.');

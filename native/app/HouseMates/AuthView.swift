@@ -14,7 +14,7 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("Konto", selection: $isCreatingAccount) {
+                Picker("Konto", selection: mode) {
                     Text("Logga in").tag(false)
                     Text("Skapa konto").tag(true)
                 }
@@ -33,22 +33,36 @@ struct AuthView: View {
                         .autocorrectionDisabled()
                     SecureField("Lösenord", text: $password)
                         .textContentType(isCreatingAccount ? .newPassword : .password)
+                        .submitLabel(.go)
+                        .onSubmit { if canSubmit { Task { await submit() } } }
                 } footer: {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)
                     } else if let notice {
                         Text(notice)
                     } else if isCreatingAccount {
-                        Text("Minst 6 tecken. Ditt namn syns för din partner.")
+                        Text("Minst 8 tecken. Ditt namn syns för din partner.")
                     }
                 }
 
-                Button(isCreatingAccount ? "Skapa konto" : "Logga in") {
+                Button {
                     Task { await submit() }
+                } label: {
+                    HStack {
+                        Text(isCreatingAccount ? "Skapa konto" : "Logga in")
+                        if isWorking {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
                 }
                 .disabled(!canSubmit || isWorking)
 
-                if !isCreatingAccount {
+                if isCreatingAccount {
+                    Section {
+                        NavigationLink("Så hanterar vi dina uppgifter") { PolicyView() }
+                    }
+                } else {
                     Button("Glömt lösenordet?") { isResettingPassword = true }
                         .font(.subheadline)
                         .listRowBackground(Color.clear)
@@ -56,29 +70,42 @@ struct AuthView: View {
             }
             .navigationTitle("HouseMates")
             .sheet(isPresented: $isResettingPassword) {
-                ForgotPasswordView(email: email)
+                ForgotPasswordView(email: trimmedEmail)
             }
         }
     }
 
+    /// Byte mellan att logga in och skapa konto tar bort meddelanden som gällde det andra läget.
+    private var mode: Binding<Bool> {
+        Binding(get: { isCreatingAccount }, set: {
+            isCreatingAccount = $0
+            errorMessage = nil
+            notice = nil
+        })
+    }
+
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var trimmedEmail: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private var canSubmit: Bool {
-        !email.isEmpty && password.count >= 6 && (!isCreatingAccount || !trimmedName.isEmpty)
+        guard !trimmedEmail.isEmpty, !password.isEmpty else { return false }
+        // Längdkravet gäller nya lösenord; ett äldre kortare lösenord ska fortfarande gå att logga in med.
+        return !isCreatingAccount || (password.count >= 8 && !trimmedName.isEmpty)
     }
 
     private func submit() async {
         isWorking = true
         defer { isWorking = false }
         errorMessage = nil
+        notice = nil
         do {
             if isCreatingAccount {
-                if try await session.signUp(name: trimmedName, email: email, password: password) {
+                if try await session.signUp(name: trimmedName, email: trimmedEmail, password: password) {
                     isCreatingAccount = false
-                    notice = "Vi har skickat ett mejl till \(email). Bekräfta adressen och logga sedan in."
+                    notice = "Vi har skickat ett mejl till \(trimmedEmail). Bekräfta adressen och logga sedan in."
                 }
             } else {
-                try await session.signIn(email: email, password: password)
+                try await session.signIn(email: trimmedEmail, password: password)
             }
         } catch {
             errorMessage = userMessage(for: error)
@@ -96,17 +123,17 @@ struct HouseholdSetupView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Ett hushåll delar inköpslista och kalender. Den ena skapar hushållet och skickar koden till den andra.")
+                    Text("Ett hushåll delar listor, middagar och kalender. Den ena skapar hushållet och skickar koden till den andra.")
                 }
                 Section("Ny här?") {
                     Button("Skapa hushåll") { Task { await run { try await session.createHousehold() } } }
                 }
                 Section {
-                    TextField("Kod, t.ex. K7M2QX", text: $code)
+                    TextField("Kod, t.ex. K7M2QXPA", text: $code)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                     Button("Gå med") { Task { await run { try await session.joinHousehold(code: code) } } }
-                        .disabled(code.trimmingCharacters(in: .whitespaces).count != 6)
+                        .disabled(code.trimmingCharacters(in: .whitespaces).count != 8)
                 } header: {
                     Text("Har du fått en kod?")
                 } footer: {

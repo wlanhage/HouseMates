@@ -25,11 +25,27 @@ targets:
       path: HouseMates/HouseMates.entitlements
       properties:
         com.apple.security.application-groups: [group.se.housemates.app]
+        # Xcode byter till production vid uppladdning till TestFlight och App Store.
+        aps-environment: development
     scheme:
       testTargets: [HouseMatesTests]
     configFiles:
       Debug: Config/Local.xcconfig
-      Release: Config/Local.xcconfig
+      Release: Config/Release.xcconfig
+    preBuildScripts:
+      - name: Stoppa ofärdigt release-bygge
+        basedOnDependencyAnalysis: false
+        inputFiles: [$(SRCROOT)/HouseMates/integritetspolicy.md]
+        script: |
+          # Ett bygge för TestFlight och App Store får inte peka på den lokala databasen
+          # eller visa platshållare i integritetspolicyn.
+          [ "$CONFIGURATION" = "Release" ] || exit 0
+          case "$SUPABASE_URL" in https://*) ;; *) echo "error: Fyll i SUPABASE_URL (https) i Config/Release.xcconfig"; exit 1 ;; esac
+          [ -n "$SUPABASE_KEY" ] || { echo "error: Fyll i SUPABASE_KEY i Config/Release.xcconfig"; exit 1; }
+          [ -n "$SUPPORT_EMAIL" ] || { echo "error: Fyll i SUPPORT_EMAIL i Config/Release.xcconfig"; exit 1; }
+          if grep -q -e '\[NAMN\]' -e '\[E-POST\]' "$SRCROOT/HouseMates/integritetspolicy.md"; then
+            echo "error: Byt [NAMN] och [E-POST] i HouseMates/integritetspolicy.md"; exit 1
+          fi
     info:
       path: HouseMates/Info.plist
       properties:

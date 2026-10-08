@@ -25,11 +25,13 @@ struct CalendarView: View {
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
+                        .accessibilityLabel("Fler val")
                         Button {
                             if let event = calendar.newEvent() { editing = EditRequest(event: event, isNew: true) }
                         } label: {
                             Image(systemName: "plus")
                         }
+                        .accessibilityLabel("Ny händelse")
                     }
                 }
                 .sheet(item: $editing) { request in
@@ -49,7 +51,7 @@ struct CalendarView: View {
                 .alert("Kalendern", isPresented: errorIsShown) {
                     Button("OK") {}
                 } message: {
-                    Text(calendar.errorMessage ?? "")
+                    Text(calendar.errorMessage ?? assignees.errorMessage ?? "")
                 }
         }
     }
@@ -169,7 +171,10 @@ struct CalendarView: View {
                 }
             }
         }
-        .refreshable { calendar.refresh() }
+        .refreshable {
+            calendar.refresh()
+            await assignees.sync()
+        }
     }
 
     private func edit(_ event: EKEvent) {
@@ -181,7 +186,10 @@ struct CalendarView: View {
     }
 
     private var errorIsShown: Binding<Bool> {
-        Binding(get: { calendar.errorMessage != nil }, set: { if !$0 { calendar.errorMessage = nil } })
+        Binding(
+            get: { calendar.errorMessage != nil || assignees.errorMessage != nil },
+            set: { if !$0 { calendar.errorMessage = nil; assignees.errorMessage = nil } }
+        )
     }
 
     private func choose(_ chosen: EKCalendar) async {
@@ -238,7 +246,7 @@ private struct EventButton: View {
     var body: some View {
         let assignee = assignees.assignee(for: event.calendarItemExternalIdentifier)
         Button { edit(event) } label: {
-            EventRow(event: event, color: session.color(for: assignee))
+            EventRow(event: event, assignee: assignee)
         }
         .foregroundStyle(.primary)
         .contextMenu {
@@ -261,28 +269,28 @@ private struct EventButton: View {
     }
 }
 
+/// Titeln överst; tid, person och plats på raden under, så att inget behöver en fast bredd
+/// (12-timmarsklocka och större text får plats) och personen syns med namn, inte bara färg.
 private struct EventRow: View {
     let event: EKEvent
-    let color: Color
+    let assignee: UUID?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(timeLabel)
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 96, alignment: .leading)
-            VStack(alignment: .leading) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 8, height: 8)
-                    Text(event.title ?? "")
-                }
+        VStack(alignment: .leading, spacing: 2) {
+            Text(event.title ?? "")
+            HStack(spacing: 6) {
+                Text(timeLabel).monospacedDigit()
+                Text("·")
+                PersonLabel(assignee: assignee)
                 if let location = event.location, !location.isEmpty {
-                    Text(location).font(.caption).foregroundStyle(.secondary)
+                    Text("·")
+                    Text(location).lineLimit(1)
                 }
             }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var timeLabel: String {
@@ -308,12 +316,12 @@ private struct MonthSections: View {
         Section {
             VStack(spacing: 12) {
                 HStack {
-                    Button { show(month.adding(months: -1)) } label: { Image(systemName: "chevron.left") }
+                    Button { show(month.adding(months: -1)) } label: { MonthArrow(systemName: "chevron.left") }
                         .accessibilityLabel("Föregående månad")
                     Spacer()
                     Text(month.title).font(.headline)
                     Spacer()
-                    Button { show(month.adding(months: 1)) } label: { Image(systemName: "chevron.right") }
+                    Button { show(month.adding(months: 1)) } label: { MonthArrow(systemName: "chevron.right") }
                         .accessibilityLabel("Nästa månad")
                 }
                 .buttonStyle(.borderless)
@@ -397,7 +405,18 @@ private struct DayCell: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(LocalDay.label(day))
         .accessibilityValue(colors.isEmpty ? "" : "Har händelser")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// Pilen för att byta månad, med en träffyta stor nog för ett finger.
+private struct MonthArrow: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
     }
 }
 

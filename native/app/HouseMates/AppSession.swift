@@ -50,8 +50,11 @@ final class AppSession {
         do {
             try await client.auth.session(from: url)
             needsNewPassword = url.host() == Self.newPasswordLink.host()
+        } catch is URLError {
+            linkError = "Ingen kontakt med servern. Öppna länken igen när du har nät."
         } catch {
-            linkError = userMessage(for: error)
+            // Servern säger sällan varför; det vanliga är en gammal länk eller en annan telefon.
+            linkError = "Länken har gått ut, redan använts eller öppnats på en annan telefon än den som bad om den. Be om en ny."
         }
     }
 
@@ -73,6 +76,8 @@ final class AppSession {
         await Push.shared.unregisterDevice()
         LocalFiles.removeAll()
         try? await client.auth.signOut()
+        // SDK:n meddelar inte alltid utloggningen (t.ex. om inloggningen redan hade gått ut).
+        await load(signedIn: false)
     }
 
     /// Raderar kontot och allt kopplat till det på servern (delete_account), sedan det appen sparat på telefonen.
@@ -83,6 +88,7 @@ final class AppSession {
             UserDefaults.standard.removePersistentDomain(forName: bundleID)
         }
         try? await client.auth.signOut()
+        await load(signedIn: false)
     }
 
     func leaveHousehold() async throws {
@@ -97,7 +103,8 @@ final class AppSession {
     }
 
     func joinHousehold(code: String) async throws {
-        try await client.rpc("join_household", params: ["p_code": code]).execute()
+        let joined: Bool = try await client.rpc("join_household", params: ["p_code": code]).execute().value
+        guard joined else { throw UserFacingError(message: "Hittade inget hushåll med den koden.") }
         await reload()
     }
 
@@ -127,14 +134,19 @@ final class AppSession {
             show(saved)
         }
         do {
+            // Inloggningen kontrolleras först: utan den skulle svaren nedan vara tomma, och en tom
+            // profil får inte tolkas som ett raderat konto.
+            _ = try await client.auth.session
             // RLS ger bara den egna profilen och partnerns, och bara det egna hushållet.
             let profiles: [Profile] = try await client.from("profiles").select("id, name, color").execute().value
+            let households: [Household] = try await client.from("households").select().execute().value
+            // Hann användaren logga ut medan svaren var på väg gäller de inte längre.
+            guard client.auth.currentUser?.id == userID else { return }
             guard let me = profiles.first(where: { $0.id == userID }) else {
                 // Profilen skapas tillsammans med kontot, så den saknas bara om kontot har raderats.
                 await signOut()
                 return
             }
-            let households: [Household] = try await client.from("households").select().execute().value
             let session = SavedSession(me: me, partner: profiles.first { $0.id != userID }, household: households.first)
             show(session)
             LocalFiles.write(session, to: Self.sessionFile)

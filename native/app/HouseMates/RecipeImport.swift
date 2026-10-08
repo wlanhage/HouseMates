@@ -49,8 +49,12 @@ extension SyncedTable where Change == FavoriteChange {
                 if !contains(sourceURL: link) {
                     add(name: hostLabel(link), items: [], imageURL: nil, sourceURL: link)
                 }
-            } catch {
+            } catch is URLError {
                 return
+            } catch {
+                // Servern svarade inte som väntat: länken ligger kvar till nästa gång, och resten
+                // försöks ändå.
+                continue
             }
             RecipeInbox.remove(link)
         }

@@ -85,8 +85,9 @@ Svaren ska stämma med `app/HouseMates/PrivacyInfo.xcprivacy`.
   - Kontaktuppgifter → E-postadress
   - Kontaktuppgifter → Namn
   - Identifierare → Användar-id
+  - Identifierare → Enhets-id (Device ID; telefonens adress för pushnotiser)
   - Användarinnehåll → Övrigt användarinnehåll (inköpslista, uppgifter, städsysslor, middagar,
-    och titel och tid för händelser som skapas i appen)
+    titel och tid för händelser som skapas i appen, och vem en händelse är för)
 - **Inte insamlat:** plats, kontakter, hälsa, ekonomi, webbhistorik, sökhistorik, diagnostik,
   användningsdata och köp.
 

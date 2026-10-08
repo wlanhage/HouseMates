@@ -6,7 +6,7 @@ import Foundation
 enum RecipeInbox {
     static let appGroup = "group.se.housemates.app"
     private static let key = "delade-recept"
-    private static let defaults = UserDefaults(suiteName: appGroup)
+    private static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
 
     static var links: [String] {
         defaults?.stringArray(forKey: key) ?? []

@@ -20,10 +20,7 @@ struct HomeView: View {
                         Text("Inget planerat idag.").foregroundStyle(.secondary)
                     }
                     ForEach(todayEvents, id: \.self) { event in
-                        TodayEventRow(
-                            event: event,
-                            color: session.color(for: assignees.assignee(for: event.calendarItemExternalIdentifier))
-                        )
+                        TodayEventRow(event: event, assignee: assignees.assignee(for: event.calendarItemExternalIdentifier))
                     }
                     ForEach(todayTodos) { todo in
                         TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { editing = .todo(todo) })
@@ -111,14 +108,16 @@ struct HomeView: View {
 
 private struct TodayEventRow: View {
     let event: EKEvent
-    let color: Color
+    let assignee: UUID?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
-            Text(event.title ?? "")
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title ?? "")
+                PersonLabel(assignee: assignee)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             Text(event.isAllDay ? "Heldag" : event.startDate.formatted(date: .omitted, time: .shortened))
                 .font(.subheadline.monospacedDigit())

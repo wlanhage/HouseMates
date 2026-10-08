@@ -34,11 +34,34 @@ final class ShoppingListTests: XCTestCase {
         XCTAssertTrue(ShoppingList.applying(changes, to: [milk]).isEmpty)
     }
 
-    func testOnlyAnAnswerFromTheDatabaseDropsAChange() {
+    func testOnlyAPermanentNoDropsAChange() {
         XCTAssertTrue(ShoppingList.isRejected(PostgrestError(code: "23505", message: "Dubblett")))
+        XCTAssertTrue(ShoppingList.isRejected(PostgrestError(code: "42501", message: "Behörighet")))
+        XCTAssertTrue(ShoppingList.isRejected(PostgrestError(code: "P0001", message: "Eget fel")))
+        XCTAssertTrue(ShoppingList.isRejected(httpError(414)))
+    }
+
+    func testAServerThatDoesNotAnswerIsTriedAgain() {
         XCTAssertFalse(ShoppingList.isRejected(PostgrestError(message: "An invalid response was received from the upstream server")))
+        XCTAssertFalse(ShoppingList.isRejected(PostgrestError(code: "PGRST000", message: "Ingen databas")))
+        XCTAssertFalse(ShoppingList.isRejected(PostgrestError(code: "PGRST303", message: "Utgången inloggning")))
+        XCTAssertFalse(ShoppingList.isRejected(httpError(503)))
+        XCTAssertFalse(ShoppingList.isRejected(httpError(429)))
         XCTAssertFalse(ShoppingList.isRejected(URLError(.notConnectedToInternet)))
         XCTAssertFalse(ShoppingList.isRejected(CancellationError()))
+    }
+
+    func testBulkChangesAreSplitIntoParts() {
+        let ids = (0..<120).map { _ in UUID() }
+
+        let parts = ids.chunked(into: 50)
+
+        XCTAssertEqual(parts.map(\.count), [50, 50, 20])
+        XCTAssertEqual(parts.flatMap { $0 }, ids)
+    }
+
+    private func httpError(_ status: Int) -> HTTPError {
+        HTTPError(data: Data(), response: HTTPURLResponse(url: URL(string: "https://exempel.se")!, statusCode: status, httpVersion: nil, headerFields: nil)!)
     }
 
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {

@@ -70,7 +70,7 @@ export async function sendApns(
   fetchImpl: typeof fetch = fetch
 ): Promise<ApnsResult> {
   const host = config.production ? 'api.push.apple.com' : 'api.sandbox.push.apple.com';
-  const response = await fetchImpl(`https://${host}/3/device/${deviceToken}`, {
+  const response = await fetchImpl(`https://${host}/3/device/${encodeURIComponent(deviceToken)}`, {
     method: 'POST',
     headers: {
       authorization: `bearer ${await providerToken(config)}`,
@@ -79,7 +79,9 @@ export async function sendApns(
       'apns-priority': '10',
       'content-type': 'application/json'
     },
-    body: apnsPayload(message)
+    body: apnsPayload(message),
+    // Ett Apple som inte svarar får inte hålla kvar resten av körningen.
+    signal: AbortSignal.timeout(10_000)
   });
   if (response.ok) return { status: response.status, unregistered: false };
   const reason = ((await response.json().catch(() => ({}))) as { reason?: string }).reason;

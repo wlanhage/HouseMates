@@ -5,7 +5,7 @@ import Supabase
 /// En ändring i en av hushållets tabeller: hur den syns i listan direkt, och hur den skickas.
 /// Ändringarna måste gå att skicka flera gånger utan skada (klientens UUID, sätt värden,
 /// mjuk radering), eftersom en ändring kan skickas igen efter ett nätfel.
-protocol TableChange: Codable, Equatable {
+protocol TableChange: Codable, Equatable, Sendable {
     associatedtype Record: Codable & Identifiable & Equatable
     static var table: String { get }
     /// Kolumnerna som hämtas till `Record`.
@@ -32,6 +32,8 @@ final class SyncedTable<Change: TableChange> {
     @ObservationIgnored private var listening: Task<Void, Never>?
     @ObservationIgnored private var retry: Task<Void, Never>?
     @ObservationIgnored private var isSending = false
+    @ObservationIgnored private var isSyncing = false
+    @ObservationIgnored private var needsAnotherSync = false
 
     /// Visar direkt det som sparats på telefonen och hämtar sedan nytt i bakgrunden.
     func start(householdID: UUID) {
@@ -49,10 +51,10 @@ final class SyncedTable<Change: TableChange> {
             )
             self.channel = channel
             listening = Task { [weak self] in
-                for await _ in changes { await self?.sync() }
+                for await _ in changes { self?.syncInBackground() }
             }
         }
-        Task { await sync() }
+        syncInBackground()
     }
 
     /// Efter utloggning eller att man lämnat hushållet: inget mer skickas eller sparas på telefonen.
@@ -67,13 +69,32 @@ final class SyncedTable<Change: TableChange> {
     }
 
     /// Skickar väntande ändringar och hämtar sedan tabellen. Utan kontakt görs ett nytt försök om en stund.
+    /// Pågår redan en synk görs en till efteråt i stället för samtidigt, så att flera ändringar i rad
+    /// från partnern ger en hämtning och ett äldre svar aldrig skriver över ett nyare.
     func sync() async {
-        await sendPending()
-        await fetch()
-        if !isOffline {
-            // Ingen effekt om kanalen redan är ansluten; annars återansluts realtiden efter ett avbrott.
-            try? await channel?.subscribeWithError()
+        guard !isSyncing else {
+            needsAnotherSync = true
+            return
         }
+        isSyncing = true
+        defer { isSyncing = false }
+        repeat {
+            needsAnotherSync = false
+            await sendPending()
+            await fetch()
+        } while needsAnotherSync
+        reconnectRealtime()
+    }
+
+    private func syncInBackground() {
+        Task { await sync() }
+    }
+
+    /// Realtiden återansluts för sig efter ett avbrott, så att en blockerad anslutning inte håller
+    /// kvar synken (ett försök kan ta upp till en minut).
+    private func reconnectRealtime() {
+        guard !isOffline, let channel, channel.status == .unsubscribed else { return }
+        Task { try? await channel.subscribeWithError() }
     }
 
     func record(_ change: Change) {
@@ -91,16 +112,17 @@ final class SyncedTable<Change: TableChange> {
     }
 
     private func sendPending() async {
-        guard !isSending else { return }
+        guard !isSending, !pending.isEmpty else { return }
         isSending = true
         defer { isSending = false }
+        guard await hasSession() else { return }
         while let change = pending.first {
             do {
                 try await change.send(to: client.from(Change.table))
                 isOffline = false
             } catch let error where Self.isRejected(error) {
                 // Ett nytt försök skulle nekas igen, så ändringen släpps. En dubblett är inget fel.
-                if (error as? PostgrestError)?.code != "23505" { errorMessage = userMessage(for: error) }
+                if (error as? PostgrestError)?.code != "23505" { errorMessage = Self.rejectionMessage(error) }
             } catch {
                 waitForServer(after: error)
                 return
@@ -110,19 +132,47 @@ final class SyncedTable<Change: TableChange> {
         }
     }
 
-    /// Databasen har svarat med en felkod (t.ex. dubblett eller ogiltigt värde), eller svaret går
-    /// inte att läsa. Andra fel, som inget nät eller en server som inte svarar, går över.
+    /// Utan giltig inloggning skickar SDK:n den anonyma nyckeln. Då ser databasen inga rader, och en
+    /// ändring skulle räknas som skickad fast inget hände. Därför kontrolleras inloggningen först;
+    /// går den inte att förnya (t.ex. dålig täckning) väntar ändringarna som vid nätfel.
+    private func hasSession() async -> Bool {
+        do {
+            _ = try await client.auth.session
+            return true
+        } catch {
+            waitForServer(after: error)
+            return false
+        }
+    }
+
+    /// Servern har sagt nej till själva ändringen, och ett nytt försök skulle nekas igen: ogiltigt
+    /// värde (22), dubblett eller annan regel (23), behörighet eller fel i frågan (42), ett eget fel
+    /// från en funktion (P0001), en felaktig begäran (PGRST1, 4xx utom 401, 408 och 429) eller ett
+    /// svar som inte går att läsa. Allt annat, som inget nät eller en server som inte svarar, går över.
     nonisolated static func isRejected(_ error: Error) -> Bool {
-        (error as? PostgrestError)?.code != nil || error is DecodingError
+        if let code = (error as? PostgrestError)?.code {
+            return ["22", "23", "42"].contains(String(code.prefix(2))) || code == "P0001" || code.hasPrefix("PGRST1")
+        }
+        if let status = (error as? HTTPError)?.response.statusCode {
+            return (400..<500).contains(status) && ![401, 408, 429].contains(status)
+        }
+        return error is DecodingError
+    }
+
+    private nonisolated static func rejectionMessage(_ error: Error) -> String {
+        if let error = error as? PostgrestError, error.code == "P0001" { return error.message }
+        return "En ändring kunde inte sparas och har tagits bort."
     }
 
     /// Ändringarna ligger kvar och skickas igen om en stund.
     private func waitForServer(after error: Error) {
-        if !(error is CancellationError) { isOffline = true }
+        let wasCancelled = error is CancellationError || (error as? URLError)?.code == .cancelled
+        if !wasCancelled { isOffline = true }
         scheduleRetry()
     }
 
     private func fetch() async {
+        guard await hasSession() else { return }
         do {
             let fresh: [Change.Record] = try await client.from(Change.table)
                 .select(Change.columns)
@@ -134,7 +184,7 @@ final class SyncedTable<Change: TableChange> {
             isOffline = false
             save()
         } catch let error where Self.isRejected(error) {
-            errorMessage = userMessage(for: error)
+            errorMessage = "Listan kunde inte hämtas. Försök igen senare."
         } catch {
             waitForServer(after: error)
         }
@@ -158,5 +208,12 @@ final class SyncedTable<Change: TableChange> {
     private struct Saved: Codable {
         let records: [Change.Record]
         let pending: [Change]
+    }
+}
+
+extension Array {
+    /// Delar upp i bitar om högst `size`, t.ex. så att en adress till servern inte blir för lång.
+    func chunked(into size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map { Array(self[$0..<Swift.min($0 + size, count)]) }
     }
 }

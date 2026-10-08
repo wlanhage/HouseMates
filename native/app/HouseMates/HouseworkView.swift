@@ -122,14 +122,16 @@ struct TodoRow: View {
     let edit: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             Button(action: toggle) {
                 Image(systemName: todo.done ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(todo.done ? Color.green : Color.secondary)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(todo.done ? "Markera som inte klar" : "Markera som klar")
+            .accessibilityLabel(todo.done ? "Markera \(todo.title) som inte klar" : "Markera \(todo.title) som klar")
 
             Button(action: edit) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -140,7 +142,8 @@ struct TodoRow: View {
                         PersonLabel(assignee: todo.assignee)
                         if let when {
                             Text("·")
-                            Text(when).foregroundStyle(isOverdue ? Color.red : Color.secondary)
+                            Text(isOverdue ? "\(when) · försenad" : when)
+                                .foregroundStyle(isOverdue ? Color.red : Color.secondary)
                         }
                     }
                     .font(.caption)

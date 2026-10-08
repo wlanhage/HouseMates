@@ -5,6 +5,7 @@ struct ShoppingView: View {
     let list: ShoppingList
     let favorites: FavoriteList
     @State private var newItem = ""
+    @State private var alreadyOnList: String?
     @State private var showsFavorites = false
     @FocusState private var isAdding: Bool
     @AppStorage("notiskort-dolt") private var hidesNotificationCard = false
@@ -29,6 +30,10 @@ struct ShoppingView: View {
                             Button("Lägg till", action: add)
                         }
                     }
+                } footer: {
+                    if let alreadyOnList {
+                        Text("Står redan på listan: \(alreadyOnList)")
+                    }
                 }
                 Section {
                     if list.open.isEmpty {
@@ -49,7 +54,7 @@ struct ShoppingView: View {
                         HStack {
                             Text("Handlat")
                             Spacer()
-                            Button("Töm") { list.clearBought() }
+                            Button("Rensa") { list.clearBought() }
                                 .font(.subheadline)
                         }
                     }
@@ -64,6 +69,7 @@ struct ShoppingView: View {
                 FavoritesView(favorites: favorites, shopping: list)
             }
             .refreshable { await list.sync() }
+            .onChange(of: newItem) { if !newItem.isEmpty { alreadyOnList = nil } }
             .alert("Något gick fel", isPresented: errorIsShown) {
                 Button("OK") {}
             } message: {
@@ -77,10 +83,11 @@ struct ShoppingView: View {
     }
 
     private func add() {
-        let name = newItem
+        let name = newItem.trimmingCharacters(in: .whitespacesAndNewlines)
         newItem = ""
         isAdding = true
-        list.add(name)
+        let wasAdded = list.add(name)
+        alreadyOnList = wasAdded || name.isEmpty ? nil : name
     }
 
     private func remove(at offsets: IndexSet, in items: [ShoppingItem]) {
@@ -99,6 +106,7 @@ private struct ItemRow: View {
             HStack {
                 Image(systemName: item.checked ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(item.checked ? Color.green : Color.secondary)
+                    .accessibilityHidden(true)
                 Text(item.name)
                     .strikethrough(item.checked)
                     .foregroundStyle(item.checked ? .secondary : .primary)
@@ -108,6 +116,7 @@ private struct ItemRow: View {
             }
         }
         .foregroundStyle(.primary)
+        .accessibilityValue(item.checked ? "Handlad" : "")
     }
 }
 
@@ -118,7 +127,7 @@ private struct NotificationCard: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Få en notis när \(partnerName ?? "din partner") lägger till varor eller nya händelser i kalendern.")
+                Text("Få en notis när \(partnerName ?? "din partner") ändrar listorna eller kalendern.")
                 HStack {
                     Button("Slå på notiser") { Task { await Push.shared.requestPermission() } }
                         .buttonStyle(.borderedProminent)

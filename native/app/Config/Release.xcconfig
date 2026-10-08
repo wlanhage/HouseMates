@@ -1,0 +1,6 @@
+// Det hostade Supabase-projektet, för TestFlight och App Store. Fylls i när projektet finns.
+// Bygget stoppas tills adressen är https och alla tre värden är ifyllda (se project.yml).
+// "$()" hindrar xcconfig från att läsa "//" i adressen som en kommentar.
+SUPABASE_URL =
+SUPABASE_KEY =
+SUPPORT_EMAIL =

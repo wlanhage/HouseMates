@@ -100,6 +100,7 @@ struct MainTabs: View {
             chores.start(householdID: householdID)
             favorites.start(householdID: householdID)
             assignees.start(householdID: householdID)
+            await NotificationPrefs.syncTimeZone()
             await favorites.importSharedLinks()
         }
         .onChange(of: session.household, initial: true) { _, household in
@@ -108,6 +109,11 @@ struct MainTabs: View {
         .onChange(of: scenePhase) { _, phase in
             // Realtidsanslutningen kan ha brutits medan appen låg i bakgrunden.
             guard phase == .active else { return }
+            // Notiser kan ha slagits på i Inställningar, och telefonen kan ha bytt tidszon.
+            Task {
+                await push.registerIfAllowed()
+                await NotificationPrefs.syncTimeZone()
+            }
             Task { await shopping.sync() }
             Task { await todos.sync() }
             Task { await chores.sync() }
@@ -118,7 +124,12 @@ struct MainTabs: View {
             }
             calendar.refresh()
         }
-        .onChange(of: push.openedTab) { _, opened in
+        .onChange(of: calendar.uidsToSave) { _, uids in
+            guard let uids, let title = calendar.linkedCalendar?.title else { return }
+            Task { try? await session.saveCalendarLink(title: title, eventUIDs: uids) }
+        }
+        // initial: ett tryck på en notis kan komma innan flikarna finns (när appen startas av trycket).
+        .onChange(of: push.openedTab, initial: true) { _, opened in
             guard let opened else { return }
             tab = opened
             push.openedTab = nil

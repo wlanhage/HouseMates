@@ -136,9 +136,10 @@ extension SyncedTable where Change == TodoChange {
         record(.remove(ids: [todo.id]))
     }
 
+    /// I omgångar om 50, eftersom raderna skickas i adressen till servern.
     func clearFinished() {
-        let ids = finished.map(\.id)
-        guard !ids.isEmpty else { return }
-        record(.remove(ids: ids))
+        for ids in finished.map(\.id).chunked(into: 50) {
+            record(.remove(ids: ids))
+        }
     }
 }
