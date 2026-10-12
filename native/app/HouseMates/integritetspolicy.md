@@ -31,7 +31,7 @@ Uppgifterna används bara för att appen ska fungera: för att du och din partne
 
 ## Var uppgifterna finns
 
-Uppgifterna lagras hos Supabase på servrar inom EU. Pushnotiser skickas via Apple. Båda behandlar uppgifterna för vår räkning och får inte använda dem till något annat.
+Uppgifterna lagras hos Supabase på servrar inom EU. Mejl från appen, som länken för att bekräfta kontot, skickas via Resend, och pushnotiser via Apple. De behandlar uppgifterna för vår räkning och får inte använda dem till något annat.
 
 ## Hur länge vi sparar uppgifterna
 

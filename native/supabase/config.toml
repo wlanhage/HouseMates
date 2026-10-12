@@ -232,15 +232,8 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# HouseMates: e-posttjänsten (Resend) ställs in för det hostade projektet längst ned i filen
+# ([remotes.produktion]). Lokalt fångar mailpit alla mejl.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -421,3 +414,22 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.notify]
 verify_jwt = false
+
+# ── HouseMates: det hostade projektet ────────────────────────────
+# Gäller bara projektet vars ref står i project_id (t.ex. vid `supabase config push` mot det),
+# inte `supabase start`. Byt platshållaren mot projektets ref (20 bokstäver, står i projektets
+# adress) när projektet finns; den matchar inget projekt, så blocket används inte förrän dess.
+# Sätt RESEND_API_KEY i miljön (eller i native/supabase/.env, som inte checkas in) innan
+# config push.
+[remotes.produktion]
+project_id = "abcdefghijklmnopqrst"
+
+# Inloggningsmejlen skickas från lanhage.net via Resend (EU-regionen, domänen verifierad där).
+[remotes.produktion.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@lanhage.net"
+sender_name = "HouseMates"

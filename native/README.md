@@ -196,7 +196,17 @@ Testerna:
      svenska mejlmallarna och inloggningsreglerna: e-postbekräftelse, lösenord på minst 8
      tecken och högst ett mejl i minuten per adress.
    - Lägg hellre `CRON_SECRET` i Vault än i klartext i `cron.sql`.
-   - Koppla en egen e-posttjänst (SMTP). Supabases inbyggda klarar bara ett par mejl i timmen.
+   - Mejlen skickas från `noreply@lanhage.net` via Resend (Supabases inbyggda e-post når bara
+     projektets medlemmar):
+     1. Skapa ett privat Resend-konto och lägg till domänen `lanhage.net` i EU-regionen.
+     2. Lägg in DNS-posterna Resend visar (DKIM på `resend._domainkey`, SPF och MX på `send`)
+        och en DMARC-post på `_dmarc` (`v=DMARC1; p=none; rua=mailto:<din adress>`). DNS:en
+        ligger hos Cloudflare: bara i ett privat konto, inte jobbets.
+     3. Skapa en API-nyckel som bara får skicka från `lanhage.net`.
+     4. Byt `project_id` under `[remotes.produktion]` sist i `supabase/config.toml` mot
+        projektets ref, och kör `RESEND_API_KEY=<nyckeln> supabase config push`. Utskriften ska
+        visa `Loading config override: [remotes.produktion]`; kontrollera sedan Authentication →
+        SMTP i projektet.
    - Fyll i `Config/Release.xcconfig` med projektets adress och nyckel, och `SUPPORT_EMAIL`.
      Ett release-bygge stoppas tills de är ifyllda och `[NAMN]`/`[E-POST]` är bytta i policyn.
 3. **Fyll i och publicera integritetspolicyn.**
