@@ -109,6 +109,18 @@ const eggTypes = (await service.from('activity_log').select('type').eq('entity_i
 assert.deepEqual(eggTypes, ['shopping.added', 'shopping.deleted', 'shopping.restored']);
 step('ångra: en borttagen vara tas tillbaka och loggas, så att notisen nettas bort');
 
+for (const name of ['Kaffe', 'Kanel', 'kaffe']) {
+  const id = randomUUID();
+  assert.ifError((await erik.client.from('shopping_items').insert({ id, name })).error);
+  assert.ifError((await erik.client.from('shopping_items').update({ deleted_at: new Date().toISOString() }).eq('id', id)).error);
+}
+const suggestions = async (user, q) => (await user.client.rpc('suggest_shopping', { q })).data.map((s) => s.name);
+assert.deepEqual(await suggestions(anna, 'KA'), ['kaffe', 'Kanel']);
+const everything = await suggestions(anna, '');
+assert.ok(everything.includes('Bröd') && !everything.includes('Ägg'));
+assert.deepEqual(await suggestions(eva, ''), []);
+step('förslag: tidigare varor som börjar på det man skrivit, vanligast först, inte det som står på listan');
+
 assert.ifError((await anna.client.rpc('set_calendar_link', { p_title: 'Vi två', p_uids: ['a', 'b'] })).error);
 const { data: erikSees } = await erik.client.from('households').select('calendar_title, calendar_event_uids').single();
 assert.deepEqual(erikSees, { calendar_title: 'Vi två', calendar_event_uids: ['a', 'b'] });
@@ -294,6 +306,7 @@ step('notisadresser: bara hexadecimala tokens, högst fem per person');
 
 const anonymous = createClient(apiUrl, publishableKey, { auth: { persistSession: false } });
 assert.ok((await anonymous.from('shopping_items').select('id')).error);
+assert.ok((await anonymous.rpc('suggest_shopping', { q: '' })).error);
 step('utan inloggning går inga tabeller att läsa');
 
 for (const user of [lisa, olle, guesser]) {

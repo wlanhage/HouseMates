@@ -72,6 +72,12 @@ Testerna:
     en syssla får tillbaka förra datumet och den som gjorde den, också om det var partnern.
     Triggers loggar `restored` och `undone`, så att notisen nettar bort det som ångrades.
 - **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
+  - Förslag medan man skriver: `suggest_shopping` ger tidigare tillagda varor som börjar på det
+    man skrivit, de vanligaste först, som i webbappen. Historiken är `activity_log` (90 dagar),
+    eftersom rensade varor raderas efter 30 dagar. Det som redan står på listan föreslås inte.
+    Ett tryck på ett förslag lägger till varan.
+  - Antal (valfritt) bredvid varan sparas i `qty`, samma fält som mängderna från Våra middagar.
+  - En prick i färgen hos den som lade till varan. Under Handlat står vem som handlade den.
 - **Att göra:** `todos` för engångsuppgifter och `chores` för återkommande städsysslor.
   - En uppgift kan ha sista dag och en period ("kan göras från"). Datumen är rena dagar i
     telefonens tidszon (`LocalDay`), aldrig midnatt i UTC.

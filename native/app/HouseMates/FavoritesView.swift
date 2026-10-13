@@ -109,6 +109,7 @@ private struct DishImage: View {
 // MARK: Rätten
 
 private struct FavoriteDetailView: View {
+    @Environment(AppSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     let favorites: FavoriteList
     let shopping: ShoppingList
@@ -186,7 +187,7 @@ private struct FavoriteDetailView: View {
         .safeAreaInset(edge: .bottom) {
             if !favorite.items.isEmpty {
                 Button {
-                    shopping.add(ingredients: favorite.items.filter(selected.contains))
+                    shopping.add(ingredients: favorite.items.filter(selected.contains), by: session.me?.id)
                     close()
                 } label: {
                     Text(selected.isEmpty ? "Välj varor att lägga till" : "Lägg \(itemCountLabel(selected.count)) på listan")

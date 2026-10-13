@@ -5,24 +5,25 @@ import Supabase
 typealias ShoppingList = SyncedTable<ShoppingChange>
 
 enum ShoppingChange: TableChange {
-    case add(id: UUID, name: String, qty: String?, createdAt: Date)
-    case setChecked(id: UUID, checked: Bool)
+    case add(id: UUID, name: String, qty: String?, by: UUID?, createdAt: Date)
+    case setChecked(id: UUID, checked: Bool, by: UUID?)
     case remove(ids: [UUID])
     /// Ångra en borttagning.
     case restore([ShoppingItem])
 
     static let table = "shopping_items"
-    static let columns = "id, name, qty, checked, created_at"
+    static let columns = "id, name, qty, checked, checked_by, created_by, created_at"
 
     func apply(to items: inout [ShoppingItem]) {
         switch self {
-        case let .add(id, name, qty, createdAt):
+        case let .add(id, name, qty, by, createdAt):
             if !items.contains(where: { $0.id == id }) {
-                items.append(ShoppingItem(id: id, name: name, qty: qty, checked: false, createdAt: createdAt))
+                items.append(ShoppingItem(id: id, name: name, qty: qty, checked: false, checkedBy: nil, createdBy: by, createdAt: createdAt))
             }
-        case let .setChecked(id, checked):
+        case let .setChecked(id, checked, by):
             if let index = items.firstIndex(where: { $0.id == id }) {
                 items[index].checked = checked
+                items[index].checkedBy = checked ? by : nil
             }
         case let .remove(ids):
             items.removeAll { ids.contains($0.id) }
@@ -35,9 +36,9 @@ enum ShoppingChange: TableChange {
 
     func send(to table: PostgrestQueryBuilder) async throws {
         switch self {
-        case let .add(id, name, qty, _):
+        case let .add(id, name, qty, _, _):
             try await table.insert(NewItem(id: id, name: name, qty: qty)).execute()
-        case let .setChecked(id, checked):
+        case let .setChecked(id, checked, _):
             try await table.update(["checked": checked]).eq("id", value: id).execute()
         case let .remove(ids):
             try await table.update(["deleted_at": Date.now]).in("id", values: ids).execute()
@@ -60,23 +61,36 @@ extension SyncedTable where Change == ShoppingChange {
     /// Samma vara kan inte stå på listan två gånger; att lägga till den igen gör inget.
     /// Svarar med om varan lades till.
     @discardableResult
-    func add(_ rawName: String, qty: String? = nil) -> Bool {
+    func add(_ rawName: String, qty rawQty: String? = nil, by me: UUID?) -> Bool {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let qty = rawQty?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !isOnList(name) else { return false }
         // Databasen tar namn på högst 80 tecken och mängder på högst 40.
-        record(.add(id: UUID(), name: String(name.prefix(80)), qty: qty.map { String($0.prefix(40)) }, createdAt: .now))
+        record(.add(
+            id: UUID(), name: String(name.prefix(80)), qty: qty.flatMap { $0.isEmpty ? nil : String($0.prefix(40)) },
+            by: me, createdAt: .now
+        ))
         return true
     }
 
     /// Lägger en rätts ingredienser på listan som vara och mängd. Svarar med hur många som lades till.
     @discardableResult
-    func add(ingredients lines: [String]) -> Int {
+    func add(ingredients lines: [String], by me: UUID?) -> Int {
         var added = 0
         for line in lines {
             let ingredient = Ingredient(line: line)
-            if add(ingredient.name, qty: ingredient.qty) { added += 1 }
+            if add(ingredient.name, qty: ingredient.qty, by: me) { added += 1 }
         }
         return added
+    }
+
+    /// Tidigare varor som börjar på `prefix`, de vanligaste först (`suggest_shopping`). Inga utan nät.
+    func suggestions(startingWith prefix: String) async -> [String] {
+        let suggestions: [Suggestion]? = try? await Backend.client
+            .rpc("suggest_shopping", params: ["q": prefix])
+            .execute()
+            .value
+        return suggestions?.map(\.name) ?? []
     }
 
     /// Om varan redan står obockad på listan.
@@ -84,8 +98,8 @@ extension SyncedTable where Change == ShoppingChange {
         open.contains { $0.name.lowercased() == name.lowercased() }
     }
 
-    func toggle(_ item: ShoppingItem) {
-        record(.setChecked(id: item.id, checked: !item.checked))
+    func toggle(_ item: ShoppingItem, by me: UUID?) {
+        record(.setChecked(id: item.id, checked: !item.checked, by: me))
     }
 
     func remove(_ items: [ShoppingItem]) {
@@ -108,4 +122,8 @@ extension SyncedTable where Change == ShoppingChange {
             record(.remove(ids: part.map(\.id)))
         }
     }
+}
+
+private struct Suggestion: Decodable {
+    let name: String
 }

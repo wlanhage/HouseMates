@@ -23,12 +23,16 @@ struct Household: Codable, Identifiable, Equatable {
 struct ShoppingItem: Codable, Identifiable, Equatable {
     let id: UUID
     let name: String
-    let qty: String?     // "500 g" när varan kommer från ett recept
+    let qty: String?     // "500 g" från ett recept, eller ett antal man skrivit själv
     var checked: Bool
+    var checkedBy: UUID?
+    let createdBy: UUID?
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, name, qty, checked
+        case checkedBy = "checked_by"
+        case createdBy = "created_by"
         case createdAt = "created_at"
     }
 }
