@@ -28,6 +28,8 @@ enum ChoreChange: TableChange {
     /// Gjord nu, ett annat datum eller ångrad. Servern sätter vem som gjorde den när datumet blir senare.
     case setLastDone(id: UUID, at: Date?, by: UUID?)
     case remove(ids: [UUID])
+    /// Ångra en borttagning.
+    case restore([Chore])
 
     static let table = "chores"
     static let columns = "id, title, assignee, interval_days, last_done_at, last_done_by, created_at"
@@ -52,6 +54,10 @@ enum ChoreChange: TableChange {
             chores[index].lastDoneBy = at == nil ? nil : by
         case let .remove(ids):
             chores.removeAll { ids.contains($0.id) }
+        case let .restore(restored):
+            for chore in restored where !chores.contains(where: { $0.id == chore.id }) {
+                chores.append(chore)
+            }
         }
     }
 
@@ -66,6 +72,8 @@ enum ChoreChange: TableChange {
             try await table.update(LastDone(at: at, by: at == nil ? nil : by)).eq("id", value: id).execute()
         case let .remove(ids):
             try await table.update(["deleted_at": Date.now]).in("id", values: ids).execute()
+        case let .restore(chores):
+            try await table.update(Undeleted()).in("id", values: chores.map(\.id)).execute()
         }
     }
 
@@ -193,8 +201,10 @@ extension SyncedTable where Change == ChoreChange {
         record(.update(id: chore.id, title: Self.limited(title), assignee: assignee, intervalDays: intervalDays))
     }
 
+    /// Ångra ger tillbaka förra avbockningen, också om partnern gjorde den.
     func markDone(_ chore: Chore, by me: UUID?) {
         record(.setLastDone(id: chore.id, at: .now, by: me))
+        offerUndo("Gjort: \(chore.title)", by: [.setLastDone(id: chore.id, at: chore.lastDoneAt, by: chore.lastDoneBy)])
     }
 
     /// Ångra en avbockning eller rätta när den gjordes.
@@ -204,5 +214,6 @@ extension SyncedTable where Change == ChoreChange {
 
     func remove(_ chore: Chore) {
         record(.remove(ids: [chore.id]))
+        offerUndo("Tog bort \(chore.title)", by: [.restore([chore])])
     }
 }

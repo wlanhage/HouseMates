@@ -47,6 +47,8 @@ struct HomeView: View {
                 calendar.refresh()
                 await loadFeed()
             }
+            .undoBanner(for: todos)
+            .undoBanner(for: chores)
             // Hämtar om flödet när listan ändras, också när partnern ändrar den.
             .task(id: shopping.records) { await loadFeed() }
             .sheet(item: $editing) { editing in

@@ -44,6 +44,8 @@ struct HouseworkView: View {
                 await todos.sync()
                 await chores.sync()
             }
+            .undoBanner(for: todos)
+            .undoBanner(for: chores)
             .sheet(item: $editing) { editing in
                 switch editing {
                 case let .todo(todo): TodoEditor(todos: todos, todo: todo)
@@ -96,14 +98,14 @@ private struct TodoSections: View {
             ForEach(open) { todo in
                 TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
             }
-            .onDelete { offsets in offsets.forEach { todos.remove(open[$0]) } }
+            .onDelete { offsets in todos.remove(offsets.map { open[$0] }) }
         }
         if !finished.isEmpty {
             Section {
                 ForEach(finished) { todo in
                     TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
                 }
-                .onDelete { offsets in offsets.forEach { todos.remove(finished[$0]) } }
+                .onDelete { offsets in todos.remove(offsets.map { finished[$0] }) }
             } header: {
                 HStack {
                     Text("Klart")
@@ -211,7 +213,7 @@ struct TodoEditor: View {
                 if let todo {
                     Section {
                         Button("Ta bort uppgiften", role: .destructive) {
-                            todos.remove(todo)
+                            todos.remove([todo])
                             dismiss()
                         }
                     }

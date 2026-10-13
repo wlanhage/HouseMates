@@ -46,6 +46,8 @@ enum FavoriteChange: TableChange {
     case add(Favorite)
     case update(id: UUID, name: String, items: [String])
     case remove(ids: [UUID])
+    /// Ångra en borttagning.
+    case restore([Favorite])
 
     static let table = "favorites"
     static let columns = "id, name, items, image_url, source_url, created_at"
@@ -60,6 +62,10 @@ enum FavoriteChange: TableChange {
             favorites[index].items = items
         case let .remove(ids):
             favorites.removeAll { ids.contains($0.id) }
+        case let .restore(restored):
+            for favorite in restored where !favorites.contains(where: { $0.id == favorite.id }) {
+                favorites.append(favorite)
+            }
         }
     }
 
@@ -74,6 +80,8 @@ enum FavoriteChange: TableChange {
             try await table.update(Contents(name: name, items: items)).eq("id", value: id).execute()
         case let .remove(ids):
             try await table.update(["deleted_at": Date.now]).in("id", values: ids).execute()
+        case let .restore(favorites):
+            try await table.update(Undeleted()).in("id", values: favorites.map(\.id)).execute()
         }
     }
 
@@ -130,5 +138,6 @@ extension SyncedTable where Change == FavoriteChange {
 
     func remove(_ favorite: Favorite) {
         record(.remove(ids: [favorite.id]))
+        offerUndo("Tog bort \(favorite.name)", by: [.restore([favorite])])
     }
 }

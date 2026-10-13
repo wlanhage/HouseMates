@@ -64,6 +64,21 @@ final class ShoppingListTests: XCTestCase {
         HTTPError(data: Data(), response: HTTPURLResponse(url: URL(string: "https://exempel.se")!, statusCode: status, httpVersion: nil, headerFields: nil)!)
     }
 
+    func testUndoBringsBackRemovedItemsOnce() {
+        let removed = ShoppingList.applying([.remove(ids: [milk.id])], to: [milk])
+        XCTAssertTrue(removed.isEmpty)
+
+        let restored = ShoppingList.applying([.restore([milk]), .restore([milk])], to: removed)
+
+        XCTAssertEqual(restored, [milk])
+    }
+
+    func testUndeletedSendsAnExplicitNull() throws {
+        let json = String(data: try JSONEncoder().encode(Undeleted()), encoding: .utf8)
+
+        XCTAssertEqual(json, #"{"deleted_at":null}"#)
+    }
+
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {
         let changes: [ShoppingChange] = [.add(id: UUID(), name: "Kaffe", qty: nil, createdAt: .now), .remove(ids: [milk.id])]
 

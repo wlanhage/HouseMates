@@ -30,6 +30,8 @@ enum TodoChange: TableChange {
     case update(id: UUID, title: String, assignee: UUID?, startDate: String?, dueDate: String?)
     case setDone(id: UUID, done: Bool, by: UUID?)
     case remove(ids: [UUID])
+    /// Ångra en borttagning.
+    case restore([Todo])
 
     static let table = "todos"
     static let columns = "id, title, assignee, start_date, due_date, done, done_at, done_by, created_at"
@@ -51,6 +53,10 @@ enum TodoChange: TableChange {
             todos[index].doneBy = done ? by : nil
         case let .remove(ids):
             todos.removeAll { ids.contains($0.id) }
+        case let .restore(restored):
+            for todo in restored where !todos.contains(where: { $0.id == todo.id }) {
+                todos.append(todo)
+            }
         }
     }
 
@@ -68,6 +74,8 @@ enum TodoChange: TableChange {
             try await table.update(["done": done]).eq("id", value: id).execute()
         case let .remove(ids):
             try await table.update(["deleted_at": Date.now]).in("id", values: ids).execute()
+        case let .restore(todos):
+            try await table.update(Undeleted()).in("id", values: todos.map(\.id)).execute()
         }
     }
 
@@ -130,16 +138,30 @@ extension SyncedTable where Change == TodoChange {
 
     func toggle(_ todo: Todo, by me: UUID?) {
         record(.setDone(id: todo.id, done: !todo.done, by: me))
+        if !todo.done {
+            offerUndo("Klar: \(todo.title)", by: [.setDone(id: todo.id, done: false, by: me)])
+        }
     }
 
-    func remove(_ todo: Todo) {
-        record(.remove(ids: [todo.id]))
+    func remove(_ todos: [Todo]) {
+        guard let first = todos.first else { return }
+        removeInParts(todos)
+        offerUndo(todos.count == 1 ? "Tog bort \(first.title)" : "Tog bort \(todos.count) uppgifter",
+                  by: todos.chunked(into: 50).map { .restore($0) })
+    }
+
+    func clearFinished() {
+        let todos = finished
+        guard !todos.isEmpty else { return }
+        removeInParts(todos)
+        offerUndo(todos.count == 1 ? "Rensade 1 klar uppgift" : "Rensade \(todos.count) klara uppgifter",
+                  by: todos.chunked(into: 50).map { .restore($0) })
     }
 
     /// I omgångar om 50, eftersom raderna skickas i adressen till servern.
-    func clearFinished() {
-        for ids in finished.map(\.id).chunked(into: 50) {
-            record(.remove(ids: ids))
+    private func removeInParts(_ todos: [Todo]) {
+        for part in todos.chunked(into: 50) {
+            record(.remove(ids: part.map(\.id)))
         }
     }
 }

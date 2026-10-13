@@ -47,6 +47,7 @@ struct FavoritesView: View {
                 }
             }
             .refreshable { await favorites.sync() }
+            .undoBanner(for: favorites)
             .sheet(isPresented: $isAdding) {
                 FavoriteEditor(favorites: favorites, favorite: nil)
             }

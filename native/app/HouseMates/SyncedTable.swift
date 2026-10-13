@@ -24,6 +24,8 @@ final class SyncedTable<Change: TableChange> {
     private(set) var pending: [Change] = []
     private(set) var isOffline = false
     var errorMessage: String?
+    /// Det senaste som går att ångra, en kort stund (se `offerUndo`).
+    private(set) var undo: UndoOffer?
 
     private let client = Backend.client
     private let retryDelay: Duration = .seconds(10)
@@ -34,6 +36,8 @@ final class SyncedTable<Change: TableChange> {
     @ObservationIgnored private var isSending = false
     @ObservationIgnored private var isSyncing = false
     @ObservationIgnored private var needsAnotherSync = false
+    @ObservationIgnored private var undoChanges: [Change] = []
+    @ObservationIgnored private var undoExpiry: Task<Void, Never>?
 
     /// Visar direkt det som sparats på telefonen och hämtar sedan nytt i bakgrunden.
     func start(householdID: UUID) {
@@ -64,6 +68,7 @@ final class SyncedTable<Change: TableChange> {
         listening = nil
         retry = nil
         fileName = ""
+        dismissUndo()
         if let channel { await client.removeChannel(channel) }
         channel = nil
     }
@@ -102,6 +107,31 @@ final class SyncedTable<Change: TableChange> {
         change.apply(to: &records)
         save()
         Task { await sendPending() }
+    }
+
+    /// Visar "Ångra" i sex sekunder, som i webbappen. Ändringarna tar tillbaka det som just gjordes
+    /// och går genom kön som alla andra, så att ångra fungerar även utan nät.
+    func offerUndo(_ message: String, by changes: [Change]) {
+        undo = UndoOffer(message: message)
+        undoChanges = changes
+        undoExpiry?.cancel()
+        undoExpiry = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            self?.dismissUndo()
+        }
+    }
+
+    func performUndo() {
+        let changes = undoChanges
+        dismissUndo()
+        changes.forEach(record)
+    }
+
+    func dismissUndo() {
+        undo = nil
+        undoChanges = []
+        undoExpiry?.cancel()
     }
 
     /// Lägger väntande ändringar ovanpå en lista, så att det man gjort utan nät syns även efter en omhämtning.
@@ -208,6 +238,17 @@ final class SyncedTable<Change: TableChange> {
     private struct Saved: Codable {
         let records: [Change.Record]
         let pending: [Change]
+    }
+}
+
+/// `deleted_at = null`: tar tillbaka en mjukt raderad rad. Null skickas uttryckligen, annars
+/// skulle fältet utelämnas och ingenting ändras.
+struct Undeleted: Encodable {
+    enum CodingKeys: String, CodingKey { case deletedAt = "deleted_at" }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeNil(forKey: .deletedAt)
     }
 }
 

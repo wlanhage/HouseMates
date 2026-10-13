@@ -13,7 +13,11 @@ dess databas påverkas inte.
    ```
 2. Bygg appen: `cd native/app && xcodegen generate && open HouseMates.xcodeproj` och kör på en
    simulator. `Config/Local.xcconfig` pekar på den lokala databasen.
-3. Skapa konto i appen, tryck "Skapa hushåll" och lägg till varor.
+3. Skapa konto i appen, tryck "Skapa hushåll" och lägg till varor. Eller skapa ett färdigt
+   testhushåll (William och Anna) och logga in i appen med kontot som skriptet skriver ut:
+   ```bash
+   node native/supabase/testhushall.mjs
+   ```
 4. Spela partnern från terminalen, så räcker en simulator:
    ```bash
    node native/supabase/partner.mjs join <din-epost>
@@ -62,6 +66,11 @@ Testerna:
     kommer tillbaka från bakgrunden, ifall realtidsanslutningen brutits.
   - Varje tabell beskriver bara sina ändringar (`ShoppingChange`, `TodoChange`, `ChoreChange`):
     hur de syns i listan och hur de skickas.
+  - **Ångra:** att ta bort, rensa, bocka av en uppgift och markera en syssla som gjord visar
+    "Tog bort Mjölk · Ångra" i sex sekunder (`Undo.swift`). Ångra lägger den omvända ändringen
+    i samma kö, så det fungerar också utan nät. En borttagen rad får `deleted_at = null`, och
+    en syssla får tillbaka förra datumet och den som gjorde den, också om det var partnern.
+    Triggers loggar `restored` och `undone`, så att notisen nettar bort det som ångrades.
 - **Inköp:** `shopping_items`. Samma vara kan bara stå en gång (unikt index).
 - **Att göra:** `todos` för engångsuppgifter och `chores` för återkommande städsysslor.
   - En uppgift kan ha sista dag och en period ("kan göras från"). Datumen är rena dagar i

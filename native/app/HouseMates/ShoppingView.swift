@@ -69,6 +69,7 @@ struct ShoppingView: View {
                 FavoritesView(favorites: favorites, shopping: list)
             }
             .refreshable { await list.sync() }
+            .undoBanner(for: list)
             .onChange(of: newItem) { if !newItem.isEmpty { alreadyOnList = nil } }
             .alert("Något gick fel", isPresented: errorIsShown) {
                 Button("OK") {}
@@ -91,9 +92,7 @@ struct ShoppingView: View {
     }
 
     private func remove(at offsets: IndexSet, in items: [ShoppingItem]) {
-        for item in offsets.map({ items[$0] }) {
-            list.remove(item)
-        }
+        list.remove(offsets.map { items[$0] })
     }
 }
 

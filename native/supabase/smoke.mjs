@@ -99,6 +99,16 @@ const { count: archived } = await service
 assert.equal(archived, 0);
 step('att tömma en bockad vara ger ingen notis');
 
+const eggs = randomUUID();
+assert.ifError((await anna.client.from('shopping_items').insert({ id: eggs, name: 'Ägg' })).error);
+assert.ifError((await anna.client.from('shopping_items').update({ deleted_at: new Date().toISOString() }).eq('id', eggs)).error);
+assert.ifError((await anna.client.from('shopping_items').update({ deleted_at: null }).eq('id', eggs)).error);
+const { data: eggsBack } = await erik.client.from('shopping_items').select('name').eq('id', eggs).is('deleted_at', null).single();
+assert.equal(eggsBack.name, 'Ägg');
+const eggTypes = (await service.from('activity_log').select('type').eq('entity_id', eggs).order('id')).data.map((a) => a.type);
+assert.deepEqual(eggTypes, ['shopping.added', 'shopping.deleted', 'shopping.restored']);
+step('ångra: en borttagen vara tas tillbaka och loggas, så att notisen nettas bort');
+
 assert.ifError((await anna.client.rpc('set_calendar_link', { p_title: 'Vi två', p_uids: ['a', 'b'] })).error);
 const { data: erikSees } = await erik.client.from('households').select('calendar_title, calendar_event_uids').single();
 assert.deepEqual(erikSees, { calendar_title: 'Vi två', calendar_event_uids: ['a', 'b'] });
@@ -156,13 +166,16 @@ assert.equal(doneChore.last_done_by, anna.id);
 assert.ok(new Date(doneChore.last_done_at).getTime() <= Date.now() + 1000, 'avbockning kan inte ligga i framtiden');
 assert.ifError((await anna.client.from('chores').update({ last_done_at: '2026-09-01T10:00:00Z', last_done_by: erik.id }).eq('id', chore)).error);
 const { data: undoneChore } = await anna.client.from('chores').select('last_done_at, last_done_by').eq('id', chore).single();
-assert.equal(undoneChore.last_done_by, anna.id, 'att rätta datumet byter inte vem som gjorde den');
+assert.equal(undoneChore.last_done_by, erik.id, 'ångra ger tillbaka den förra avbockningen, också partnerns');
+assert.ifError((await anna.client.from('chores').update({ last_done_at: '2026-08-01T10:00:00Z', last_done_by: eva.id }).eq('id', chore)).error);
+const { data: spoofedChore } = await anna.client.from('chores').select('last_done_by').eq('id', chore).single();
+assert.equal(spoofedChore.last_done_by, erik.id, 'någon utanför hushållet går inte att ange');
 assert.ifError((await erik.client.from('chores').update({ last_done_at: null }).eq('id', chore)).error);
 const { data: clearedChore } = await anna.client.from('chores').select('last_done_at, last_done_by').eq('id', chore).single();
 assert.deepEqual(clearedChore, { last_done_at: null, last_done_by: null });
 assert.ok((await anna.client.from('chores').insert({ id: randomUUID(), title: 'Fel intervall', interval_days: 0 })).error);
-assert.deepEqual(await activityTypes(chore), ['chore.created', 'chore.done']);
-step('städ: avbockning av den inloggade och aldrig i framtiden, rätta behåller vem, ångra tömmer, ingen notis');
+assert.deepEqual(await activityTypes(chore), ['chore.created', 'chore.done', 'chore.undone', 'chore.undone', 'chore.undone']);
+step('städ: avbockning av den inloggade och aldrig i framtiden; ångra och rätta loggas som ångrat och kan bara peka ut någon i hushållet');
 
 const tacos = randomUUID();
 assert.ifError((await erik.client.from('favorites').insert({ id: tacos, name: ' Tacos ', items: ['500 g köttfärs', 'Tortillas'], created_by: anna.id })).error);

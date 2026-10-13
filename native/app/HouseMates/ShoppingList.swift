@@ -8,6 +8,8 @@ enum ShoppingChange: TableChange {
     case add(id: UUID, name: String, qty: String?, createdAt: Date)
     case setChecked(id: UUID, checked: Bool)
     case remove(ids: [UUID])
+    /// Ångra en borttagning.
+    case restore([ShoppingItem])
 
     static let table = "shopping_items"
     static let columns = "id, name, qty, checked, created_at"
@@ -24,6 +26,10 @@ enum ShoppingChange: TableChange {
             }
         case let .remove(ids):
             items.removeAll { ids.contains($0.id) }
+        case let .restore(restored):
+            for item in restored where !items.contains(where: { $0.id == item.id }) {
+                items.append(item)
+            }
         }
     }
 
@@ -35,6 +41,8 @@ enum ShoppingChange: TableChange {
             try await table.update(["checked": checked]).eq("id", value: id).execute()
         case let .remove(ids):
             try await table.update(["deleted_at": Date.now]).in("id", values: ids).execute()
+        case let .restore(items):
+            try await table.update(Undeleted()).in("id", values: items.map(\.id)).execute()
         }
     }
 
@@ -80,14 +88,24 @@ extension SyncedTable where Change == ShoppingChange {
         record(.setChecked(id: item.id, checked: !item.checked))
     }
 
-    func remove(_ item: ShoppingItem) {
-        record(.remove(ids: [item.id]))
+    func remove(_ items: [ShoppingItem]) {
+        guard let first = items.first else { return }
+        removeInParts(items)
+        offerUndo(items.count == 1 ? "Tog bort \(first.name)" : "Tog bort \(itemCountLabel(items.count))",
+                  by: items.chunked(into: 50).map { .restore($0) })
+    }
+
+    func clearBought() {
+        let items = bought
+        guard !items.isEmpty else { return }
+        removeInParts(items)
+        offerUndo("Rensade \(itemCountLabel(items.count))", by: items.chunked(into: 50).map { .restore($0) })
     }
 
     /// I omgångar om 50, eftersom raderna skickas i adressen till servern.
-    func clearBought() {
-        for ids in bought.map(\.id).chunked(into: 50) {
-            record(.remove(ids: ids))
+    private func removeInParts(_ items: [ShoppingItem]) {
+        for part in items.chunked(into: 50) {
+            record(.remove(ids: part.map(\.id)))
         }
     }
 }
