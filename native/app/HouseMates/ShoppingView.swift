@@ -22,58 +22,63 @@ struct ShoppingView: View {
                 if push.authorization == .notDetermined && !hidesNotificationCard {
                     NotificationCard(partnerName: session.partner?.name) { hidesNotificationCard = true }
                 }
-                Section {
-                    HStack {
-                        TextField("Lägg till vara", text: $newItem)
-                            .focused($focus, equals: .name)
+                HStack(spacing: 8) {
+                    TextField("Lägg till vara", text: $newItem)
+                        .focused($focus, equals: .name)
+                        .submitLabel(.next)
+                        .onSubmit { add() }
+                        .paperField(isFocused: focus == .name)
+                    if !newItem.isEmpty {
+                        TextField("Antal", text: $qty)
+                            .focused($focus, equals: .qty)
                             .submitLabel(.next)
                             .onSubmit { add() }
-                        if !newItem.isEmpty {
-                            TextField("Antal", text: $qty)
-                                .focused($focus, equals: .qty)
-                                .submitLabel(.next)
-                                .onSubmit { add() }
-                                .frame(width: 64)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
-                                .accessibilityLabel("Antal (valfritt)")
-                            Button("Lägg till") { add() }
-                        }
+                            .frame(width: 56)
+                            .paperField(isFocused: focus == .qty)
+                            .accessibilityLabel("Antal (valfritt)")
                     }
-                    if focus != nil && !shownSuggestions.isEmpty {
-                        SuggestionChips(names: shownSuggestions) { add($0) }
+                    Button { add() } label: {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.bold))
+                            .frame(width: 22, height: 22)
                     }
-                } footer: {
-                    if let alreadyOnList {
-                        Text("Står redan på listan: \(alreadyOnList)")
-                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(newItem.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .accessibilityLabel("Lägg till")
                 }
-                Section {
-                    if list.open.isEmpty {
-                        Text("Inget att handla.").foregroundStyle(.secondary)
-                    }
-                    ForEach(list.open) { item in
-                        ItemRow(item: item) { list.toggle(item, by: session.me?.id) }
-                    }
-                    .onDelete { remove(at: $0, in: list.open) }
+                .plainRow(top: 8)
+                if focus != nil && !shownSuggestions.isEmpty {
+                    SuggestionChips(names: shownSuggestions) { add($0) }
+                        .plainRow(top: 2)
                 }
+                if let alreadyOnList {
+                    Text("Står redan på listan: \(alreadyOnList)")
+                        .font(.footnote)
+                        .foregroundStyle(Color.inkMuted)
+                        .plainRow(top: 0)
+                }
+                if list.open.isEmpty && list.bought.isEmpty {
+                    EmptyCard(emoji: "🛒", text: "Listan är tom. Lägg till något ovan.")
+                }
+                ForEach(list.open) { item in
+                    ItemRow(item: item) { list.toggle(item, by: session.me?.id) }
+                        .cardRow()
+                }
+                .onDelete { remove(at: $0, in: list.open) }
                 if !list.bought.isEmpty {
-                    Section {
-                        ForEach(list.bought) { item in
-                            ItemRow(item: item) { list.toggle(item, by: session.me?.id) }
-                        }
-                        .onDelete { remove(at: $0, in: list.bought) }
-                    } header: {
-                        HStack {
-                            Text("Handlat")
-                            Spacer()
-                            Button("Rensa") { list.clearBought() }
-                                .font(.subheadline)
-                        }
+                    SectionTitle("Handlat · \(list.bought.count)") {
+                        Button("Rensa") { list.clearBought() }
+                            .buttonStyle(SmallButtonStyle())
                     }
+                    .plainRow(top: 16, bottom: 4)
+                    ForEach(list.bought) { item in
+                        ItemRow(item: item) { list.toggle(item, by: session.me?.id) }
+                            .cardRow()
+                    }
+                    .onDelete { remove(at: $0, in: list.bought) }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Inköp")
             .paperBackground()
             .toolbar {
@@ -192,16 +197,23 @@ private struct SuggestionChips: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(names, id: \.self) { name in
                     Button(name) { add(name) }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.surfaceSecondary, in: Capsule())
+                        .overlay { Capsule().strokeBorder(Color.hairline) }
+                        .buttonStyle(.plain)
                         .accessibilityHint("Lägger till på listan")
                 }
             }
+            .padding(8)
         }
         .scrollIndicators(.hidden)
+        .card()
     }
 }
 
@@ -212,30 +224,24 @@ private struct ItemRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        Button(action: toggle) {
+        CheckButton(isOn: item.checked, accessibilityLabel: item.qty.map { "\(item.name), \($0)" } ?? item.name, action: toggle) {
             HStack {
-                Image(systemName: item.checked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.checked ? Color.green : Color.secondary)
-                    .accessibilityHidden(true)
                 Text(item.name)
                     .strikethrough(item.checked)
-                    .foregroundStyle(item.checked ? .secondary : .primary)
+                    .foregroundStyle(item.checked ? Color.inkMuted : Color.ink)
                 if let qty = item.qty {
-                    Text(qty).foregroundStyle(.secondary)
+                    Text("· \(qty)").foregroundStyle(Color.inkMuted)
                 }
                 Spacer()
                 if item.checked, let buyer = session.person(item.checkedBy) {
-                    PersonLabel(assignee: buyer.id)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    PersonAvatar(assignee: buyer.id)
                 } else if !item.checked, let adder = session.person(item.createdBy) {
                     Circle()
                         .fill(Color(hex: adder.color))
-                        .frame(width: 8, height: 8)
+                        .frame(width: 9, height: 9)
                 }
             }
         }
-        .foregroundStyle(.primary)
         .accessibilityValue(accessibilityValue)
     }
 
@@ -253,17 +259,16 @@ private struct NotificationCard: View {
     let dismiss: () -> Void
 
     var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Få en notis när \(partnerName ?? "din partner") ändrar listorna eller kalendern.")
-                HStack {
-                    Button("Slå på notiser") { Task { await Push.shared.requestPermission() } }
-                        .buttonStyle(.borderedProminent)
-                    Button("Inte nu", action: dismiss)
-                        .buttonStyle(.borderless)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Få en notis när \(partnerName ?? "din partner") ändrar listorna eller kalendern.")
+                .foregroundStyle(Color.ink)
+            HStack(spacing: 14) {
+                Button("Slå på notiser") { Task { await Push.shared.requestPermission() } }
+                    .buttonStyle(PrimaryButtonStyle())
+                Button("Inte nu", action: dismiss)
+                    .buttonStyle(.borderless)
             }
-            .padding(.vertical, 4)
         }
+        .cardRow()
     }
 }

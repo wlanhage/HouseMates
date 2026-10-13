@@ -157,33 +157,31 @@ struct CalendarView: View {
             if shareGuideHousehold == session.household?.id.uuidString, let title = calendar.linkedCalendar?.title {
                 ShareGuide(calendarTitle: title, partnerName: partnerName) { shareGuideHousehold = "" }
             }
-            Picker("Visa", selection: $showsMonth) {
-                Text("Lista").tag(false)
-                Text("Månad").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
+            PillTabs(selection: $showsMonth, options: [(false, "Lista"), (true, "Månad")])
+                .plainRow(top: 8, bottom: 8)
 
             if showsMonth {
                 MonthSections(calendar: calendar, assignees: assignees, chores: chores, edit: edit, editChore: { editingChore = $0 })
             } else {
                 let days = listDays
                 if days.isEmpty {
-                    Text("Inga händelser de kommande 60 dagarna.").foregroundStyle(.secondary)
+                    EmptyCard(emoji: "📅", text: "Inga händelser de kommande 60 dagarna.")
                 }
                 ForEach(days) { day in
-                    Section(dayTitle(day.id)) {
-                        ForEach(day.events, id: \.self) { event in
-                            EventButton(event: event, assignees: assignees, edit: edit)
-                        }
-                        ForEach(day.chores) { chore in
-                            ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editingChore = chore })
-                        }
+                    SectionTitle(dayTitle(day.id))
+                        .plainRow(top: 14, bottom: 4)
+                    ForEach(day.events, id: \.self) { event in
+                        EventButton(event: event, assignees: assignees, edit: edit)
+                            .cardRow(stripe: session.color(for: assignees.assignee(for: event.calendarItemExternalIdentifier)))
+                    }
+                    ForEach(day.chores) { chore in
+                        ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editingChore = chore })
+                            .cardRow(stripe: session.color(for: chore.assignee))
                     }
                 }
             }
         }
+        .listStyle(.plain)
         .refreshable {
             calendar.refresh()
             await assignees.sync()
@@ -290,7 +288,7 @@ private struct EventButton: View {
         Button { edit(event) } label: {
             EventRow(event: event, assignee: assignee)
         }
-        .foregroundStyle(.primary)
+        .buttonStyle(.plain)
         .contextMenu {
             if let uid = event.calendarItemExternalIdentifier {
                 Section("För vem?") {
@@ -320,6 +318,7 @@ private struct EventRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(event.title ?? "")
+                .foregroundStyle(Color.ink)
             HStack(spacing: 6) {
                 Text(timeLabel).monospacedDigit()
                 Text("·")
@@ -329,10 +328,11 @@ private struct EventRow: View {
                     Text(location).lineLimit(1)
                 }
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(.footnote)
+            .foregroundStyle(Color.inkMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     private var timeLabel: String {
@@ -359,13 +359,13 @@ private struct MonthSections: View {
         let today = LocalDay.string(from: .now)
         let days = calendar.eventsByDay(from: month.first, through: month.last)
         let choreDays = ChoreSchedule.byDueDay(chores.sorted)
-        Section {
+        Group {
             VStack(spacing: 12) {
                 HStack {
                     Button { show(month.adding(months: -1)) } label: { MonthArrow(systemName: "chevron.left") }
                         .accessibilityLabel("Föregående månad")
                     Spacer()
-                    Text(month.title).font(.headline)
+                    Text(month.title).font(.headline.weight(.heavy)).foregroundStyle(Color.ink)
                     Spacer()
                     Button { show(month.adding(months: 1)) } label: { MonthArrow(systemName: "chevron.right") }
                         .accessibilityLabel("Nästa månad")
@@ -376,8 +376,8 @@ private struct MonthSections: View {
                     HStack(spacing: 0) {
                         ForEach(MonthGrid.weekdays, id: \.self) { weekday in
                             Text(weekday)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.inkMuted)
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -388,6 +388,7 @@ private struct MonthSections: View {
                                     DayCell(
                                         day: day,
                                         isToday: day == today,
+                                        isPast: day < today,
                                         isSelected: day == selectedDay,
                                         colors: dotColors(days[day] ?? []),
                                         rings: ringColors(choreDays[day] ?? [])
@@ -401,19 +402,26 @@ private struct MonthSections: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
-        }
-        Section(LocalDay.label(selectedDay)) {
+            .padding(12)
+            .card(cornerRadius: 18)
+            .plainRow(top: 4, bottom: 8)
+
             let events = days[selectedDay] ?? []
             let dueChores = choreDays[selectedDay] ?? []
+            SectionTitle(LocalDay.label(selectedDay))
+                .plainRow(top: 12, bottom: 4)
             if events.isEmpty && dueChores.isEmpty {
-                Text("Inget inplanerat.").foregroundStyle(.secondary)
+                Text("Inget inplanerat.")
+                    .foregroundStyle(Color.inkMuted)
+                    .plainRow()
             }
             ForEach(events, id: \.self) { event in
                 EventButton(event: event, assignees: assignees, edit: edit)
+                    .cardRow(stripe: session.color(for: assignees.assignee(for: event.calendarItemExternalIdentifier)))
             }
             ForEach(dueChores) { chore in
                 ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editChore(chore) })
+                    .cardRow(stripe: session.color(for: chore.assignee))
             }
         }
     }
@@ -442,6 +450,7 @@ private struct MonthSections: View {
 private struct DayCell: View {
     let day: String
     let isToday: Bool
+    let isPast: Bool
     let isSelected: Bool
     let colors: [Color]
     let rings: [Color]
@@ -451,9 +460,11 @@ private struct DayCell: View {
             Text(String(Int(day.suffix(2)) ?? 0))
                 .font(.callout)
                 .fontWeight(isToday ? .bold : .regular)
-                .foregroundStyle(isSelected ? Color.white : isToday ? Color.accentColor : Color.primary)
+                .foregroundStyle(isSelected ? Color.onAccent : isToday ? Color.accentColor : Color.ink)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(isSelected ? Color.accentColor : Color.clear))
+                // Passerade dagar tonas ned, som i webbappen.
+                .opacity(isPast && !isSelected ? 0.45 : 1)
             HStack(spacing: 2) {
                 ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
                     Circle().fill(color).frame(width: 5, height: 5)
@@ -490,16 +501,23 @@ private struct ShareGuide: View {
     let done: () -> Void
 
     var body: some View {
-        Section("Dela med \(partnerName)") {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Dela med \(partnerName)")
+                .font(.headline)
+                .foregroundStyle(Color.ink)
+            Group {
                 Text("Om kalendern inte redan är delad:")
                 Text("1. Öppna Kalender-appen och tryck Kalendrar.")
                 Text("2. Tryck ⓘ vid \(calendarTitle).")
                 Text("3. Tryck Lägg till person, välj \(partnerName) och tryck Lägg till.")
             }
             .font(.subheadline)
+            .foregroundStyle(Color.inkMuted)
             Button("Klart", action: done)
+                .buttonStyle(SmallButtonStyle())
+                .padding(.top, 6)
         }
+        .cardRow()
     }
 }
 

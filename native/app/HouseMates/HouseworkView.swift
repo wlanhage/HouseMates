@@ -14,23 +14,14 @@ struct HouseworkView: View {
     var body: some View {
         NavigationStack {
             List {
-                Picker("Visa", selection: $part) {
-                    Text("Uppgifter").tag(Part.todos)
-                    Text("Städ").tag(Part.chores)
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
+                PillTabs(selection: $part, options: [(.todos, "Uppgifter"), (.chores, "Städ")])
+                    .plainRow(top: 8)
 
                 FilterPills(filter: $filter)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .plainRow(top: 6, bottom: 8)
 
                 if todos.isOffline || chores.isOffline {
-                    Section {
-                        OfflineNotice(hasPending: !todos.pending.isEmpty || !chores.pending.isEmpty)
-                    }
+                    OfflineNotice(hasPending: !todos.pending.isEmpty || !chores.pending.isEmpty)
                 }
 
                 switch part {
@@ -38,6 +29,7 @@ struct HouseworkView: View {
                 case .chores: ChoreSections(chores: chores, filter: filter) { editing = .chore($0) }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Att göra")
             .paperBackground()
             .onChange(of: session.partner?.id) { filter = .everyone }
@@ -92,19 +84,22 @@ private struct FilterPills: View {
     var body: some View {
         HStack(spacing: 8) {
             ForEach(filters, id: \.self) { option in
+                let isSelected = option == filter
                 Button {
                     filter = option
                 } label: {
                     Text(name(for: option))
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 15)
                         .padding(.vertical, 7)
-                        .foregroundStyle(option == filter ? Color.white : Color.primary)
-                        .background(option == filter ? color(for: option) : Color(.tertiarySystemFill), in: Capsule())
+                        .foregroundStyle(isSelected ? Color.onAccent : Color.inkMuted)
+                        .background(isSelected ? Color.accentColor : Color.surface, in: Capsule())
+                        .overlay { Capsule().strokeBorder(isSelected ? Color.accentColor : Color.hairline) }
+                        .shadow(color: .black.opacity(0.05), radius: 5, y: 2)
                 }
                 .buttonStyle(.plain)
-                .accessibilityAddTraits(option == filter ? .isSelected : [])
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
             Spacer(minLength: 0)
         }
@@ -118,13 +113,6 @@ private struct FilterPills: View {
         switch filter {
         case .everyone: "Alla"
         case let .person(id): id == session.me?.id ? "Du" : session.name(for: id)
-        }
-    }
-
-    private func color(for filter: AssigneeFilter) -> Color {
-        switch filter {
-        case .everyone: .accentColor
-        case let .person(id): session.color(for: id)
         }
     }
 }
@@ -149,33 +137,45 @@ private struct TodoSections: View {
     let todos: TodoList
     let filter: AssigneeFilter
     let edit: (Todo) -> Void
+    /// Klart är hopfällt från början, som i webbappen.
+    @State private var showsFinished = false
 
     var body: some View {
         let open = todos.open.filter { filter.includes($0.assignee) }
         let finished = todos.finished
-        Section {
-            if open.isEmpty {
-                Text(filter == .everyone ? "Inga öppna uppgifter." : "Inga öppna uppgifter här.")
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(open) { todo in
-                TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
-            }
-            .onDelete { offsets in todos.remove(offsets.map { open[$0] }) }
+        if open.isEmpty {
+            EmptyCard(emoji: "✅", text: filter == .everyone ? "Inga öppna uppgifter." : "Inga öppna uppgifter här.")
         }
+        ForEach(open) { todo in
+            TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
+                .cardRow()
+        }
+        .onDelete { offsets in todos.remove(offsets.map { open[$0] }) }
         if !finished.isEmpty {
-            Section {
+            SectionTitle("Klart · \(finished.count)") {
+                if showsFinished {
+                    Button("Rensa") { todos.clearFinished() }
+                        .buttonStyle(SmallButtonStyle())
+                }
+                Button {
+                    withAnimation { showsFinished.toggle() }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(showsFinished ? 90 : 0))
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(minWidth: 44, minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showsFinished ? "Dölj klara" : "Visa klara")
+            }
+            .plainRow(top: 14, bottom: 2)
+            if showsFinished {
                 ForEach(finished) { todo in
                     TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
+                        .cardRow()
                 }
                 .onDelete { offsets in todos.remove(offsets.map { finished[$0] }) }
-            } header: {
-                HStack {
-                    Text("Klart")
-                    Spacer()
-                    Button("Rensa") { todos.clearFinished() }
-                        .font(.subheadline)
-                }
             }
         }
     }
@@ -187,52 +187,42 @@ struct TodoRow: View {
     let edit: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: toggle) {
-                Image(systemName: todo.done ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(todo.done ? Color.green : Color.secondary)
-                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(todo.done ? "Markera \(todo.title) som inte klar" : "Markera \(todo.title) som klar")
+        HStack(spacing: 10) {
+            CheckButton(
+                isOn: todo.done,
+                accessibilityLabel: todo.done ? "Markera \(todo.title) som inte klar" : "Markera \(todo.title) som klar",
+                action: toggle
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(todo.title)
                     .strikethrough(todo.done)
-                    .foregroundStyle(todo.done ? .secondary : .primary)
+                    .foregroundStyle(todo.done ? Color.inkMuted : Color.ink)
                 if let notes = todo.notes {
                     Text(notes)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.inkMuted)
                         .lineLimit(1)
                 }
-                HStack(spacing: 6) {
-                    PersonLabel(assignee: todo.assignee)
-                    if let when {
-                        Text("·")
-                        Text(isOverdue ? "\(when) · försenad" : when)
-                            .foregroundStyle(isOverdue ? Color.red : Color.secondary)
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
             .tapToEdit(edit)
+
+            if let badge, !todo.done {
+                badge
+            }
+            PersonAvatar(assignee: todo.assignee)
         }
     }
 
-    private var isOverdue: Bool {
-        guard !todo.done, let due = todo.dueDate else { return false }
-        return (LocalDay.days(until: due) ?? 0) < 0
-    }
-
-    /// "Imorgon", eller "fre 10 okt–sön 12 okt" för en period.
-    private var when: String? {
-        guard let due = todo.dueDate else { return nil }
-        guard let start = todo.startDate else { return LocalDay.label(due) }
-        return "\(LocalDay.label(start))–\(LocalDay.label(due).lowercased())"
+    /// "Försenad", "Idag", "Imorgon", eller "fre 10 okt–sön 12 okt" för en period.
+    private var badge: DueBadge? {
+        guard let due = todo.dueDate, let daysLeft = LocalDay.days(until: due) else { return nil }
+        let kind = DueBadge.Kind(daysLeft: daysLeft)
+        if kind == .overdue {
+            return DueBadge(text: "Försenad", kind: kind)
+        }
+        guard let start = todo.startDate else { return DueBadge(text: LocalDay.label(due), kind: kind) }
+        return DueBadge(text: "\(LocalDay.label(start))–\(LocalDay.label(due).lowercased())", kind: kind)
     }
 }
 
@@ -345,21 +335,21 @@ private struct ChoreSections: View {
 
     var body: some View {
         let sorted = chores.sorted.filter { filter.includes($0.assignee) }
-        Section {
-            if chores.records.isEmpty {
-                Text("Inga städsysslor än. Lägg till det ni brukar göra, till exempel dammsuga varje vecka.")
-                    .foregroundStyle(.secondary)
-            } else if sorted.isEmpty {
-                Text("Inga städsysslor här.").foregroundStyle(.secondary)
-            }
-            ForEach(sorted) { chore in
-                ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { edit(chore) })
-            }
-            .onDelete { offsets in offsets.forEach { chores.remove(sorted[$0]) } }
-        } footer: {
-            if !sorted.isEmpty {
-                Text("Tryck på Klar när sysslan är gjord. Tryck på namnet för att ändra den.")
-            }
+        if chores.records.isEmpty {
+            EmptyCard(emoji: "🧽", text: "Inga städsysslor än. Lägg till det ni brukar göra med plusset, till exempel dammsuga varje vecka.")
+        } else if sorted.isEmpty {
+            EmptyCard(emoji: "🧽", text: "Inga städsysslor här.")
+        }
+        ForEach(sorted) { chore in
+            ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { edit(chore) })
+                .cardRow(stripe: session.color(for: chore.assignee))
+        }
+        .onDelete { offsets in offsets.forEach { chores.remove(sorted[$0]) } }
+        if !sorted.isEmpty {
+            Text("Tryck på bocken när sysslan är gjord. Tryck på namnet för att ändra den.")
+                .font(.footnote)
+                .foregroundStyle(Color.inkMuted)
+                .plainRow(top: 8)
         }
     }
 }
@@ -371,42 +361,35 @@ struct ChoreRow: View {
     let edit: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
+            CheckButton(isOn: isDoneToday, accessibilityLabel: "Markera \(chore.title) som gjord", action: markDone)
+                .disabled(isDoneToday)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(chore.title)
-                HStack(spacing: 6) {
-                    PersonLabel(assignee: chore.assignee)
-                    if let interval = chore.intervalDays {
-                        Text("·")
-                        Text(ChoreSchedule.intervalLabel(days: interval))
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(isOverdue ? Color.red : Color.secondary)
+                    .foregroundStyle(Color.ink)
+                Text(details)
+                    .font(.footnote)
+                    .foregroundStyle(Color.inkMuted)
             }
             .tapToEdit(edit)
 
-            Button("Klar", action: markDone)
-                .buttonStyle(.bordered)
-                .disabled(isDoneToday)
-                .accessibilityLabel("Markera \(chore.title) som gjord")
+            if let due = ChoreSchedule.dueLabel(chore), let daysLeft = ChoreSchedule.daysLeft(chore) {
+                DueBadge(text: due, kind: DueBadge.Kind(daysLeft: daysLeft))
+            }
         }
     }
 
     private var isDoneToday: Bool { ChoreSchedule.daysSinceDone(chore) == 0 }
 
-    private var isOverdue: Bool { (ChoreSchedule.daysLeft(chore) ?? 0) < 0 }
-
-    /// "Gjord igår av Anna · Om 6 dagar"
-    private var status: String {
+    /// "↻ varje vecka · Gjord igår av Anna", med personen sysslan är för.
+    private var details: String {
         var lastDone = ChoreSchedule.lastDoneLabel(chore)
         if chore.lastDoneAt != nil, let by = session.person(chore.lastDoneBy) {
             lastDone += " av \(by.name)"
         }
-        return [lastDone, ChoreSchedule.dueLabel(chore)].compactMap { $0 }.joined(separator: " · ")
+        let interval = chore.intervalDays.map { "↻ \(ChoreSchedule.intervalLabel(days: $0))" }
+        return [session.name(for: chore.assignee), interval, lastDone].compactMap { $0 }.joined(separator: " · ")
     }
 }
 

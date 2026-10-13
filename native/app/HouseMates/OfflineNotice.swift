@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Visas överst i en lista när servern inte går att nå.
+/// Visas överst i en lista när servern inte går att nå, som webbappens gula rad.
 struct OfflineNotice: View {
     let hasPending: Bool
 
@@ -11,7 +11,12 @@ struct OfflineNotice: View {
                 : "Ingen kontakt. Listan visar senast hämtade läge.",
             systemImage: "wifi.slash"
         )
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(Color.warningText)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.warningBackground, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .plainRow()
     }
 }

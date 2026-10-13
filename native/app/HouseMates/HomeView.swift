@@ -22,34 +22,46 @@ struct HomeView: View {
         let dayChores = ChoreSchedule.byDueDay(chores.sorted, overdueOn: today)[day] ?? []
         NavigationStack {
             List {
-                Section {
-                    Group {
-                        if dayEvents.isEmpty && dayTodos.isEmpty && dayChores.isEmpty {
-                            Text("Inget planerat \(LocalDay.label(day).lowercased()).").foregroundStyle(.secondary)
-                        }
-                        ForEach(dayEvents, id: \.self) { event in
-                            TodayEventRow(event: event, assignee: assignees.assignee(for: event.calendarItemExternalIdentifier))
-                        }
-                        ForEach(dayTodos) { todo in
-                            TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { editing = .todo(todo) })
-                        }
-                        ForEach(dayChores) { chore in
-                            ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editing = .chore(chore) })
-                        }
-                    }
-                    .simultaneousGesture(daySwipe)
-                } header: {
-                    DayHeader(day: day, offset: $dayOffset)
+                if shopping.isOffline || todos.isOffline || chores.isOffline {
+                    OfflineNotice(hasPending: !shopping.pending.isEmpty || !todos.pending.isEmpty || !chores.pending.isEmpty)
                 }
-                Section("Nyligen i inköp") {
-                    if feed.isEmpty {
-                        Text("Inget har hänt på listan än.").foregroundStyle(.secondary)
+                DayHeader(day: day, offset: $dayOffset)
+                    .plainRow(top: 6, bottom: 6)
+                Group {
+                    if dayEvents.isEmpty && dayTodos.isEmpty && dayChores.isEmpty {
+                        Text("Inget planerat \(LocalDay.label(day).lowercased()).")
+                            .foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .plainRow()
                     }
-                    ForEach(feed) { group in
-                        FeedRow(group: group)
+                    ForEach(dayEvents, id: \.self) { event in
+                        TodayEventRow(event: event, assignee: assignees.assignee(for: event.calendarItemExternalIdentifier))
+                            .cardRow()
                     }
+                    ForEach(dayTodos) { todo in
+                        TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { editing = .todo(todo) })
+                            .cardRow()
+                    }
+                    ForEach(dayChores) { chore in
+                        ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editing = .chore(chore) })
+                            .cardRow(stripe: session.color(for: chore.assignee))
+                    }
+                }
+                .simultaneousGesture(daySwipe)
+                SectionTitle("Nyligen i inköp")
+                    .plainRow(top: 20, bottom: 4)
+                if feed.isEmpty {
+                    Text("Inget har hänt på listan än.")
+                        .foregroundStyle(Color.inkMuted)
+                        .plainRow()
+                }
+                ForEach(feed) { group in
+                    FeedRow(group: group)
+                        .cardRow()
                 }
             }
+            .listStyle(.plain)
             .navigationTitle(greeting)
             .paperBackground()
             .toolbar { SettingsButton() }
@@ -136,50 +148,61 @@ private struct DayHeader: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(LocalDay.label(day))
-                    .font(.headline)
-                    .foregroundStyle(Color.primary)
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(Color.ink)
                 if offset != 0 {
                     Button("Till idag") { withAnimation { offset = 0 } }
-                        .font(.caption)
+                        .font(.caption.weight(.bold))
                 }
             }
             Spacer()
             arrow("chevron.right", label: "Nästa dag", step: 1)
         }
-        .textCase(nil)
         .buttonStyle(.borderless)
     }
 
+    /// En rund pil med tunn kant, som i webbappen, men med en träffyta stor nog för ett finger.
     private func arrow(_ systemName: String, label: String, step: Int) -> some View {
-        Button {
+        let isPossible = HomeDay.offsets.contains(offset + step)
+        return Button {
             withAnimation { offset += step }
         } label: {
             Image(systemName: systemName)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Color.inkMuted)
+                .frame(width: 34, height: 34)
+                .background(Color.surface, in: Circle())
+                .overlay { Circle().strokeBorder(Color.hairline) }
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
+                .opacity(isPossible ? 1 : 0.35)
         }
-        .disabled(!HomeDay.offsets.contains(offset + step))
+        .disabled(!isPossible)
         .accessibilityLabel(label)
     }
 }
 
+/// En prick i färgen hos den händelsen är för, titeln och tiden, som i webbappen.
 private struct TodayEventRow: View {
+    @Environment(AppSession.self) private var session
     let event: EKEvent
     let assignee: UUID?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.title ?? "")
-                PersonLabel(assignee: assignee)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(spacing: 11) {
+            Circle()
+                .fill(session.color(for: assignee))
+                .frame(width: 9, height: 9)
+            Text(event.title ?? "")
+                .foregroundStyle(Color.ink)
             Spacer()
             Text(event.isAllDay ? "Heldag" : event.startDate.formatted(date: .omitted, time: .shortened))
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(Color.inkMuted)
         }
+        .frame(minHeight: 28)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(session.name(for: assignee))
     }
 }
 
@@ -193,7 +216,10 @@ private struct FeedRow: View {
             DisclosureGroup {
                 ForEach(group.entries) { entry in
                     Text(entry.payload?.name ?? "")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 39)
+                        .padding(.top, 6)
                 }
             } label: {
                 summary
@@ -204,17 +230,23 @@ private struct FeedRow: View {
     }
 
     private var summary: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(session.color(for: group.actor))
-                .frame(width: 10, height: 10)
+        HStack(spacing: 11) {
+            PersonAvatar(assignee: group.actor)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(session.person(group.actor)?.name ?? "Någon") \(ShoppingFeed.describe(group))")
+                Text("\(actorName) \(ShoppingFeed.describe(group))")
+                    .foregroundStyle(Color.ink)
                 Text(Self.relative.localizedString(for: group.newest, relativeTo: .now))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(Color.inkMuted)
             }
         }
+    }
+
+    /// "Du" för det man gjort själv, som i webbappen.
+    private var actorName: String {
+        if group.actor == session.me?.id { return "Du" }
+        return session.person(group.actor)?.name ?? "Någon"
     }
 
     private static let relative: RelativeDateTimeFormatter = {
