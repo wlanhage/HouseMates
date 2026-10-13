@@ -16,6 +16,18 @@ struct ShoppingView: View {
     var body: some View {
         NavigationStack {
             List {
+                PageTitle("Inköp") {
+                    Button { showsFavorites = true } label: {
+                        Label("Middagar", systemImage: "fork.knife")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.accent.opacity(0.08), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Våra middagar")
+                }
                 if list.isOffline {
                     OfflineNotice(hasPending: !list.pending.isEmpty)
                 }
@@ -79,13 +91,9 @@ struct ShoppingView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("Inköp")
             .paperBackground()
-            .toolbar {
-                Button("Middagar", systemImage: "fork.knife") { showsFavorites = true }
-                    .labelStyle(.titleAndIcon)
-                SettingsButton()
-            }
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) { AppTopBar() }
             .sheet(isPresented: $showsFavorites) {
                 FavoritesView(favorites: favorites, shopping: list)
             }

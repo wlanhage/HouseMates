@@ -21,19 +21,9 @@ struct CalendarView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Kalender")
                 .paperBackground()
-                .toolbar {
-                    if calendar.state == .linked && !isChoosing {
-                        Menu {
-                            Button("Byt kalender") { isChoosing = true }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .accessibilityLabel("Fler val")
-                    }
-                    SettingsButton()
-                }
+                .toolbar(.hidden, for: .navigationBar)
+                .safeAreaInset(edge: .top, spacing: 0) { AppTopBar() }
                 .onChange(of: createsEvent, initial: true) { _, creates in
                     guard creates else { return }
                     createsEvent = false
@@ -154,6 +144,14 @@ struct CalendarView: View {
 
     private var events: some View {
         List {
+            PageTitle("Kalender") {
+                Menu {
+                    Button("Byt kalender") { isChoosing = true }
+                } label: {
+                    IconButtonLabel(systemImage: "ellipsis.circle")
+                }
+                .accessibilityLabel("Fler val")
+            }
             if shareGuideHousehold == session.household?.id.uuidString, let title = calendar.linkedCalendar?.title {
                 ShareGuide(calendarTitle: title, partnerName: partnerName) { shareGuideHousehold = "" }
             }

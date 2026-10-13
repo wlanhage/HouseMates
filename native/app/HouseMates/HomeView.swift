@@ -22,6 +22,10 @@ struct HomeView: View {
         let dayChores = ChoreSchedule.byDueDay(chores.sorted, overdueOn: today)[day] ?? []
         NavigationStack {
             List {
+                Text("\(greeting) 👋")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Color.ink)
+                    .plainRow(top: 4, bottom: 2)
                 if shopping.isOffline || todos.isOffline || chores.isOffline {
                     OfflineNotice(hasPending: !shopping.pending.isEmpty || !todos.pending.isEmpty || !chores.pending.isEmpty)
                 }
@@ -62,9 +66,9 @@ struct HomeView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle(greeting)
             .paperBackground()
-            .toolbar { SettingsButton() }
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) { AppTopBar() }
             .refreshable {
                 await todos.sync()
                 await chores.sync()

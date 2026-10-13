@@ -64,6 +64,10 @@ struct SettingsButton: View {
     @Environment(AppSession.self) private var session
 
     var body: some View {
-        Button("Inställningar", systemImage: "gearshape") { session.showsSettings = true }
+        Button { session.showsSettings = true } label: {
+            IconButtonLabel(systemImage: "gearshape")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Inställningar")
     }
 }

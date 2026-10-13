@@ -14,8 +14,9 @@ struct HouseworkView: View {
     var body: some View {
         NavigationStack {
             List {
+                PageTitle("Att göra")
                 PillTabs(selection: $part, options: [(.todos, "Uppgifter"), (.chores, "Städ")])
-                    .plainRow(top: 8)
+                    .plainRow(top: 4)
 
                 FilterPills(filter: $filter)
                     .plainRow(top: 6, bottom: 8)
@@ -30,10 +31,10 @@ struct HouseworkView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("Att göra")
             .paperBackground()
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) { AppTopBar() }
             .onChange(of: session.partner?.id) { filter = .everyone }
-            .toolbar { SettingsButton() }
             .refreshable {
                 await todos.sync()
                 await chores.sync()
