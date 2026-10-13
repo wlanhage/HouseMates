@@ -122,3 +122,17 @@ final class ChoreScheduleTests: XCTestCase {
         XCTAssertNil(chores[0].lastDoneBy)
     }
 }
+
+final class AssigneeFilterTests: XCTestCase {
+    private let me = UUID()
+    private let partner = UUID()
+
+    func testEachFilterShowsOnlyItsOwn() {
+        let assignees: [UUID?] = [me, partner, nil]
+
+        XCTAssertEqual(assignees.filter(AssigneeFilter.everyone.includes), assignees)
+        XCTAssertEqual(assignees.filter(AssigneeFilter.person(me).includes), [me])
+        XCTAssertEqual(assignees.filter(AssigneeFilter.person(partner).includes), [partner])
+        XCTAssertEqual(assignees.filter(AssigneeFilter.shared.includes), [nil])
+    }
+}

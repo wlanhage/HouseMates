@@ -78,6 +78,9 @@ Testerna:
   - En städsyssla har ett intervall. Nästa gång räknas från när den senast gjordes, samma regel
     som webbappen. Servern sätter vem som gjorde den och godtar inga datum i framtiden.
   - Klara uppgifter raderas efter 30 dagar (`cron.sql`).
+  - Filter överst: Alla, Du, partnern eller Gemensamt (`AssigneeFilter`). Det gäller öppna
+    uppgifter och städsysslor, inte Klart. En uppgift för någon som lämnat hushållet räknas som
+    gemensam, precis som dess etikett.
 - **Våra middagar:** `favorites`, öppnas från Inköp. Ingredienserna sparas som råa rader
   ("500 g köttfärs") och delas i vara och mängd (`Ingredient`, samma regler som webbappens
   `ingredients.ts`) först när de läggs på listan, som "Köttfärs · 500 g" (`shopping_items.qty`).

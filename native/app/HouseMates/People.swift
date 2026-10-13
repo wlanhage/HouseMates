@@ -41,6 +41,22 @@ struct AssigneeChoice: Identifiable {
     let name: String
 }
 
+/// Vems uppgifter och sysslor som visas: allas, en persons eller de gemensamma.
+enum AssigneeFilter: Hashable {
+    case everyone
+    case person(UUID)
+    case shared
+
+    /// `assignee` som `AppSession.person` ser den, så att någon som lämnat räknas som gemensamt.
+    func includes(_ assignee: UUID?) -> Bool {
+        switch self {
+        case .everyone: true
+        case let .person(id): assignee == id
+        case .shared: assignee == nil
+        }
+    }
+}
+
 /// Gemensamt, jag eller partnern.
 struct AssigneePicker: View {
     @Environment(AppSession.self) private var session

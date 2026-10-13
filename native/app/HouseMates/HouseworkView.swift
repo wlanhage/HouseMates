@@ -2,9 +2,11 @@ import SwiftUI
 
 /// Fliken Att göra: engångsuppgifter och återkommande städsysslor.
 struct HouseworkView: View {
+    @Environment(AppSession.self) private var session
     let todos: TodoList
     let chores: ChoreList
     @State private var part = Part.todos
+    @State private var filter = AssigneeFilter.everyone
     @State private var editing: Editing?
 
     enum Part { case todos, chores }
@@ -19,6 +21,11 @@ struct HouseworkView: View {
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+
+                FilterPills(filter: $filter)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
 
                 if todos.isOffline || chores.isOffline {
                     Section {
@@ -27,11 +34,12 @@ struct HouseworkView: View {
                 }
 
                 switch part {
-                case .todos: TodoSections(todos: todos) { editing = .todo($0) }
-                case .chores: ChoreSections(chores: chores) { editing = .chore($0) }
+                case .todos: TodoSections(todos: todos, filter: filter) { editing = .todo($0) }
+                case .chores: ChoreSections(chores: chores, filter: filter) { editing = .chore($0) }
                 }
             }
             .navigationTitle("Att göra")
+            .onChange(of: session.partner?.id) { filter = .everyone }
             .toolbar {
                 Button {
                     editing = part == .todos ? .todo(nil) : .chore(nil)
@@ -81,19 +89,68 @@ struct HouseworkView: View {
     }
 }
 
+/// Alla, Du, partnern eller Gemensamt, som i webbappen. Gäller öppna uppgifter och städsysslor.
+private struct FilterPills: View {
+    @Environment(AppSession.self) private var session
+    @Binding var filter: AssigneeFilter
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(filters, id: \.self) { option in
+                Button {
+                    filter = option
+                } label: {
+                    Text(name(for: option))
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(option == filter ? Color.white : Color.primary)
+                        .background(option == filter ? color(for: option) : Color(.tertiarySystemFill), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(option == filter ? .isSelected : [])
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var filters: [AssigneeFilter] {
+        [.everyone] + [session.me, session.partner].compactMap { $0 }.map { .person($0.id) } + [.shared]
+    }
+
+    private func name(for filter: AssigneeFilter) -> String {
+        switch filter {
+        case .everyone: "Alla"
+        case let .person(id): id == session.me?.id ? "Du" : session.name(for: id)
+        case .shared: "Gemensamt"
+        }
+    }
+
+    private func color(for filter: AssigneeFilter) -> Color {
+        switch filter {
+        case .everyone: .accentColor
+        case let .person(id): session.color(for: id)
+        case .shared: .shared
+        }
+    }
+}
+
 // MARK: Uppgifter
 
 private struct TodoSections: View {
     @Environment(AppSession.self) private var session
     let todos: TodoList
+    let filter: AssigneeFilter
     let edit: (Todo) -> Void
 
     var body: some View {
-        let open = todos.open
+        let open = todos.open.filter { filter.includes(session.person($0.assignee)?.id) }
         let finished = todos.finished
         Section {
             if open.isEmpty {
-                Text("Inga öppna uppgifter.").foregroundStyle(.secondary)
+                Text(filter == .everyone ? "Inga öppna uppgifter." : "Inga öppna uppgifter här.")
+                    .foregroundStyle(.secondary)
             }
             ForEach(open) { todo in
                 TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { edit(todo) })
@@ -270,14 +327,17 @@ struct TodoEditor: View {
 private struct ChoreSections: View {
     @Environment(AppSession.self) private var session
     let chores: ChoreList
+    let filter: AssigneeFilter
     let edit: (Chore) -> Void
 
     var body: some View {
-        let sorted = chores.sorted
+        let sorted = chores.sorted.filter { filter.includes(session.person($0.assignee)?.id) }
         Section {
-            if sorted.isEmpty {
+            if chores.records.isEmpty {
                 Text("Inga städsysslor än. Lägg till det ni brukar göra, till exempel dammsuga varje vecka.")
                     .foregroundStyle(.secondary)
+            } else if sorted.isEmpty {
+                Text("Inga städsysslor här.").foregroundStyle(.secondary)
             }
             ForEach(sorted) { chore in
                 ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { edit(chore) })
