@@ -124,6 +124,17 @@ enum ChoreSchedule {
         return LocalDay.adding(interval, to: LocalDay.string(from: chore.lastDoneAt ?? chore.createdAt))
     }
 
+    /// Sysslorna dag för dag ("2026-10-07") på sin sista dag, för kalendern. Med `today` visas
+    /// försenade sysslor på idag, som i webbappens lista. Sysslor utan intervall har ingen sista dag.
+    static func byDueDay(_ chores: [Chore], overdueOn today: String? = nil) -> [String: [Chore]] {
+        var days: [String: [Chore]] = [:]
+        for chore in chores {
+            guard let due = dueDay(for: chore) else { continue }
+            days[today.map { max(due, $0) } ?? due, default: []].append(chore)
+        }
+        return days
+    }
+
     /// Sysslor med sista dag först (försenade överst), sedan de som gjordes för längst sedan.
     static func sorted(_ chores: [Chore]) -> [Chore] {
         chores.sorted { a, b in

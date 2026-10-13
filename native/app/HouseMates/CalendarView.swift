@@ -7,7 +7,9 @@ struct CalendarView: View {
     @Environment(\.openURL) private var openURL
     let calendar: SharedCalendar
     let assignees: EventAssigneeList
+    let chores: ChoreList
     @State private var editing: EditRequest?
+    @State private var editingChore: Chore?
     @State private var isChoosing = false
     @State private var askingAssignee: AssigneeQuestion?
     @AppStorage("kalender-manadsvy") private var showsMonth = false
@@ -157,15 +159,19 @@ struct CalendarView: View {
             .listRowInsets(EdgeInsets())
 
             if showsMonth {
-                MonthSections(calendar: calendar, assignees: assignees, edit: edit)
+                MonthSections(calendar: calendar, assignees: assignees, chores: chores, edit: edit, editChore: { editingChore = $0 })
             } else {
-                if calendar.upcoming.isEmpty {
+                let days = listDays
+                if days.isEmpty {
                     Text("Inga händelser de kommande 60 dagarna.").foregroundStyle(.secondary)
                 }
-                ForEach(calendar.upcoming) { day in
-                    Section(dayTitle(day.day)) {
+                ForEach(days) { day in
+                    Section(dayTitle(day.id)) {
                         ForEach(day.events, id: \.self) { event in
                             EventButton(event: event, assignees: assignees, edit: edit)
+                        }
+                        ForEach(day.chores) { chore in
+                            ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editingChore = chore })
                         }
                     }
                 }
@@ -174,7 +180,28 @@ struct CalendarView: View {
         .refreshable {
             calendar.refresh()
             await assignees.sync()
+            await chores.sync()
         }
+        .undoBanner(for: chores)
+        .sheet(item: $editingChore) { chore in
+            ChoreEditor(chores: chores, chore: chore)
+        }
+    }
+
+    /// Händelser och städsysslor dag för dag de kommande 60 dagarna. Försenade sysslor visas på
+    /// idag, som i webbappen.
+    private var listDays: [ListDay] {
+        let today = LocalDay.string(from: .now)
+        let lastDay = LocalDay.adding(59, to: today) ?? today
+        var days: [String: ListDay] = [:]
+        for eventDay in calendar.upcoming {
+            let day = LocalDay.string(from: eventDay.day)
+            days[day, default: ListDay(id: day)].events = eventDay.events
+        }
+        for (day, dueChores) in ChoreSchedule.byDueDay(chores.sorted, overdueOn: today) where day <= lastDay {
+            days[day, default: ListDay(id: day)].chores = dueChores
+        }
+        return days.values.sorted { $0.id < $1.id }
     }
 
     private func edit(_ event: EKEvent) {
@@ -217,11 +244,19 @@ struct CalendarView: View {
         calendar.refresh()
     }
 
-    private func dayTitle(_ day: Date) -> String {
-        if Calendar.current.isDateInToday(day) { return "Idag" }
-        if Calendar.current.isDateInTomorrow(day) { return "Imorgon" }
-        return day.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    private func dayTitle(_ day: String) -> String {
+        guard let date = LocalDay.date(from: day) else { return day }
+        if Calendar.current.isDateInToday(date) { return "Idag" }
+        if Calendar.current.isDateInTomorrow(date) { return "Imorgon" }
+        return date.formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
+}
+
+/// En dag i listan ("2026-10-07").
+private struct ListDay: Identifiable {
+    let id: String
+    var events: [EKEvent] = []
+    var chores: [Chore] = []
 }
 
 private struct EditRequest: Identifiable {
@@ -301,18 +336,22 @@ private struct EventRow: View {
     }
 }
 
-/// Månadsvyn: ett rutnät med en prick per händelse i personens färg, och den valda dagens händelser.
+/// Månadsvyn: ett rutnät med en prick per händelse och en ring per städsyssla i personens färg, och
+/// den valda dagens händelser och sysslor.
 private struct MonthSections: View {
     @Environment(AppSession.self) private var session
     let calendar: SharedCalendar
     let assignees: EventAssigneeList
+    let chores: ChoreList
     let edit: (EKEvent) -> Void
+    let editChore: (Chore) -> Void
     @State private var month = MonthGrid(containing: LocalDay.string(from: .now))
     @State private var selectedDay = LocalDay.string(from: .now)
 
     var body: some View {
         let today = LocalDay.string(from: .now)
         let days = calendar.eventsByDay(from: month.first, through: month.last)
+        let choreDays = ChoreSchedule.byDueDay(chores.sorted)
         Section {
             VStack(spacing: 12) {
                 HStack {
@@ -343,7 +382,8 @@ private struct MonthSections: View {
                                         day: day,
                                         isToday: day == today,
                                         isSelected: day == selectedDay,
-                                        colors: dotColors(days[day] ?? [])
+                                        colors: dotColors(days[day] ?? []),
+                                        rings: ringColors(choreDays[day] ?? [])
                                     )
                                     .onTapGesture { selectedDay = day }
                                 } else {
@@ -358,11 +398,15 @@ private struct MonthSections: View {
         }
         Section(LocalDay.label(selectedDay)) {
             let events = days[selectedDay] ?? []
-            if events.isEmpty {
+            let dueChores = choreDays[selectedDay] ?? []
+            if events.isEmpty && dueChores.isEmpty {
                 Text("Inget inplanerat.").foregroundStyle(.secondary)
             }
             ForEach(events, id: \.self) { event in
                 EventButton(event: event, assignees: assignees, edit: edit)
+            }
+            ForEach(dueChores) { chore in
+                ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editChore(chore) })
             }
         }
     }
@@ -377,6 +421,15 @@ private struct MonthSections: View {
     private func dotColors(_ events: [EKEvent]) -> [Color] {
         events.prefix(3).map { session.color(for: assignees.assignee(for: $0.calendarItemExternalIdentifier)) }
     }
+
+    /// En ring per person som har städ den dagen, högst två, som i webbappen.
+    private func ringColors(_ chores: [Chore]) -> [Color] {
+        var assignees: [UUID?] = []
+        for chore in chores where !assignees.contains(chore.assignee) {
+            assignees.append(chore.assignee)
+        }
+        return assignees.prefix(2).map { session.color(for: $0) }
+    }
 }
 
 private struct DayCell: View {
@@ -384,6 +437,7 @@ private struct DayCell: View {
     let isToday: Bool
     let isSelected: Bool
     let colors: [Color]
+    let rings: [Color]
 
     var body: some View {
         VStack(spacing: 3) {
@@ -397,14 +451,17 @@ private struct DayCell: View {
                 ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
                     Circle().fill(color).frame(width: 5, height: 5)
                 }
+                ForEach(Array(rings.enumerated()), id: \.offset) { _, color in
+                    Circle().strokeBorder(color, lineWidth: 1.5).frame(width: 6, height: 6)
+                }
             }
-            .frame(height: 5)
+            .frame(height: 6)
         }
         .frame(maxWidth: .infinity, minHeight: 44)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(LocalDay.label(day))
-        .accessibilityValue(colors.isEmpty ? "" : "Har händelser")
+        .accessibilityValue([colors.isEmpty ? nil : "Har händelser", rings.isEmpty ? nil : "Har städ"].compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

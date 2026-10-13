@@ -84,7 +84,7 @@ struct MainTabs: View {
             HouseworkView(todos: todos, chores: chores)
                 .tabItem { Label("Att göra", systemImage: "checklist") }
                 .tag(AppTab.todos)
-            CalendarView(calendar: calendar, assignees: assignees)
+            CalendarView(calendar: calendar, assignees: assignees, chores: chores)
                 .tabItem { Label("Kalender", systemImage: "calendar") }
                 .tag(AppTab.calendar)
             SettingsView(calendar: calendar)

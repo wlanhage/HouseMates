@@ -115,6 +115,9 @@ Testerna:
     får personens färg på båda telefonerna. Håll inne på en händelse för att ändra.
   - Lista eller månad: månadsvyn visar en prick per händelse i personens färg och den valda
     dagens händelser under rutnätet (`MonthGrid`, samma regler som webbappens `monthGrid.ts`).
+  - Städ: sysslor med intervall syns på sin sista dag (`ChoreSchedule.byDueDay`), med samma rad
+    och Klar-knapp som under Att göra. I listan visas försenade sysslor på idag; i månadsvyn blir
+    de en ring i personens färg, som i webbappen.
 - **Hem:** dagens händelser, uppgifter med sista dag idag eller tidigare, städsysslor som ska
   göras, och "Nyligen i inköp" ur `activity_log`. Samma person och slag inom 30 minuter blir en
   rad, som i webbappens `activityFeed.ts`. Flödet hämtas om när inköpslistan ändras.

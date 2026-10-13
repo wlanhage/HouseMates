@@ -153,3 +153,25 @@ final class AssigneeFilterTests: XCTestCase {
         XCTAssertEqual(assignees.filter(AssigneeFilter.shared.includes), [nil])
     }
 }
+
+final class ChoreCalendarTests: XCTestCase {
+    private func chore(_ title: String, interval: Int?, lastDone: String) -> Chore {
+        Chore(
+            id: UUID(), title: title, assignee: nil, intervalDays: interval,
+            lastDoneAt: LocalDay.date(from: lastDone)!.addingTimeInterval(12 * 3600),
+            lastDoneBy: nil, createdAt: .distantPast
+        )
+    }
+
+    func testChoresAreOnTheirDueDayAndOverdueOnesOnToday() {
+        let vacuum = chore("Dammsuga", interval: 7, lastDone: "2026-10-01")      // sista dag 8 okt
+        let plants = chore("Vattna", interval: 3, lastDone: "2026-10-12")        // sista dag 15 okt
+        let windows = chore("Putsa fönster", interval: nil, lastDone: "2026-09-01")
+
+        let grid = ChoreSchedule.byDueDay([vacuum, plants, windows])
+        XCTAssertEqual(grid.mapValues { $0.map(\.title) }, ["2026-10-08": ["Dammsuga"], "2026-10-15": ["Vattna"]])
+
+        let list = ChoreSchedule.byDueDay([vacuum, plants, windows], overdueOn: "2026-10-13")
+        XCTAssertEqual(list.mapValues { $0.map(\.title) }, ["2026-10-13": ["Dammsuga"], "2026-10-15": ["Vattna"]])
+    }
+}
