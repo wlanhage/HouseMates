@@ -75,6 +75,7 @@ struct ShoppingView: View {
                 }
             }
             .navigationTitle("Inköp")
+            .paperBackground()
             .toolbar {
                 Button("Middagar", systemImage: "fork.knife") { showsFavorites = true }
                     .labelStyle(.titleAndIcon)
@@ -157,6 +158,7 @@ struct NewItemSheet: View {
                 }
             }
             .navigationTitle("Ny vara")
+            .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

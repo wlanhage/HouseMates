@@ -39,6 +39,7 @@ struct HouseworkView: View {
                 }
             }
             .navigationTitle("Att göra")
+            .paperBackground()
             .onChange(of: session.partner?.id) { filter = .everyone }
             .toolbar { SettingsButton() }
             .refreshable {
@@ -287,6 +288,7 @@ struct TodoEditor: View {
                 }
             }
             .navigationTitle(todo == nil ? "Ny uppgift" : "Ändra uppgift")
+            .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -471,6 +473,7 @@ struct ChoreEditor: View {
                 }
             }
             .navigationTitle(chore == nil ? "Ny städsyssla" : "Ändra städsyssla")
+            .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

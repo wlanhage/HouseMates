@@ -34,6 +34,7 @@ struct ForgotPasswordView: View {
                 }
             }
             .navigationTitle("Glömt lösenordet")
+            .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -78,6 +79,7 @@ struct NewPasswordView: View {
                 }
             }
             .navigationTitle("Nytt lösenord")
+            .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

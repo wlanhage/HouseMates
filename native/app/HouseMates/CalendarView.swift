@@ -22,6 +22,7 @@ struct CalendarView: View {
         NavigationStack {
             content
                 .navigationTitle("Kalender")
+                .paperBackground()
                 .toolbar {
                     if calendar.state == .linked && !isChoosing {
                         Menu {

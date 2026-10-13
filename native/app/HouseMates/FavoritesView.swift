@@ -34,6 +34,7 @@ struct FavoritesView: View {
                 }
             }
             .navigationTitle("Våra middagar")
+            .paperBackground()
             .navigationDestination(for: UUID.self) { id in
                 FavoriteDetailView(favorites: favorites, shopping: shopping, id: id) { dismiss() }
             }
@@ -180,6 +181,7 @@ private struct FavoriteDetailView: View {
             }
         }
         .navigationTitle(favorite.name)
+        .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             Button("Ändra") { isEditing = true }
@@ -331,6 +333,7 @@ private struct FavoriteEditor: View {
                 }
             }
             .navigationTitle(favorite == nil ? "Ny middag" : "Ändra middag")
+            .paperBackground()
             // Ett svep nedåt ska inte kasta en lång ingredienslista; Avbryt gör det med flit.
             .interactiveDismissDisabled(hasChanges)
             .navigationBarTitleDisplayMode(.inline)

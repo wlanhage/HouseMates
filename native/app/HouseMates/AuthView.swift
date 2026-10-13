@@ -69,6 +69,7 @@ struct AuthView: View {
                 }
             }
             .navigationTitle("HouseMates")
+            .paperBackground()
             .sheet(isPresented: $isResettingPassword) {
                 ForgotPasswordView(email: trimmedEmail)
             }
@@ -146,6 +147,7 @@ struct HouseholdSetupView: View {
             }
             .disabled(isWorking)
             .navigationTitle("Hej \(session.me?.name ?? "")!")
+            .paperBackground()
         }
     }
 

@@ -40,6 +40,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Inställningar")
+            .paperBackground()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Klar") { dismiss() }

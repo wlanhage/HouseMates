@@ -42,6 +42,7 @@ struct PolicyView: View {
             .padding()
         }
         .navigationTitle("Integritetspolicy")
+        .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
     }
 

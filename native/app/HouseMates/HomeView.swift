@@ -51,6 +51,7 @@ struct HomeView: View {
                 }
             }
             .navigationTitle(greeting)
+            .paperBackground()
             .toolbar { SettingsButton() }
             .refreshable {
                 await todos.sync()
