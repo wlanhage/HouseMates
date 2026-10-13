@@ -19,7 +19,9 @@ select cron.schedule(
       'x-cron-secret', '__CRON_SECRET__',
       'Content-Type', 'application/json'
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    -- Synken tar längre än pg_nets standardgräns på 5 s
+    timeout_milliseconds := 60000
   );
   $$
 );
