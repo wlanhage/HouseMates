@@ -8,7 +8,7 @@ import {
   serviceClient,
   jsonResponse,
   handleOptions,
-  requireMember,
+  requireHousehold,
   encryptSecret,
   HttpError
 } from '../_shared/util.ts';
@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
   try {
-    const username = await requireMember(req);
+    const { username, householdId } = await requireHousehold(req);
     const { appleId, appPassword, href } = await req.json();
     if (!appleId || !appPassword || !href) {
       throw new HttpError('validation', 'Uppgifter saknas.', 400);
@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     const { data: other } = await svc
       .from('caldav_accounts')
       .select('username, profiles(name)')
+      .eq('household_id', householdId)
       .neq('username', username)
       .maybeSingle();
     if (other) {
@@ -50,6 +51,7 @@ Deno.serve(async (req) => {
     }
     const { error } = await svc.from('caldav_accounts').upsert({
       username,
+      household_id: householdId,
       apple_id: appleId,
       password_enc: await encryptSecret(appPassword),
       calendar_href: href,

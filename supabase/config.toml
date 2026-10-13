@@ -420,3 +420,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.recipe-import]
 verify_jwt = false
+[functions.signup]
+verify_jwt = false

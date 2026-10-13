@@ -9,3 +9,6 @@ dev.db-*
 supabase/functions/.env
 .env*
 !.env.example
+
+# Datadumpar från produktion (personlig data)
+backups/

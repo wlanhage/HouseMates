@@ -26,7 +26,9 @@
 
   // Sökväg relativt basen (GitHub Pages serverar under en undermapp)
   const rel = $derived($page.url.pathname.slice(base.length) || '/');
-  const isLogin = $derived(rel === '/login');
+  const PUBLIC_ROUTES = ['/login', '/registrera'];
+  // Sidor utan appens ram: inloggning, registrering och val av hushåll
+  const isLogin = $derived(PUBLIC_ROUTES.includes(rel) || rel === '/hushall');
 
   // true när auth-status är avgjord (undviker login-flimmer vid uppstart)
   let authReady = $state(false);
@@ -43,8 +45,8 @@
       loggedIn = !!session;
       authReady = true;
       const relNow = window.location.pathname.slice(base.length) || '/';
-      if (!session && relNow !== '/login') void goto(`${base}/login`);
-      if (session && relNow === '/login') void goto(base || '/');
+      if (!session && !PUBLIC_ROUTES.includes(relNow)) void goto(`${base}/login`);
+      if (session && PUBLIC_ROUTES.includes(relNow)) void goto(base || '/');
     });
 
     return () => {
@@ -82,6 +84,13 @@
       stopRealtime();
       window.removeEventListener('online', onOnline);
     };
+  });
+
+  // Inloggad men inte med i något hushåll än → välj hushåll först.
+  $effect(() => {
+    if (!$me) return;
+    if (!$me.household && rel !== '/hushall') void goto(`${base}/hushall`);
+    if ($me.household && rel === '/hushall') void goto(base || '/');
   });
 
   async function replayThenRefresh() {

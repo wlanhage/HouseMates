@@ -278,6 +278,23 @@
   </div>
 {/if}
 
+<div class="section-title">Hushåll</div>
+<div class="card" style="padding:1rem;margin-bottom:1rem">
+  {#if $me?.partner}
+    <div style="font-weight:600">Du och {$me.partner.name}</div>
+    <div class="muted" style="font-size:0.85rem">Ni delar listor, städ, middagar och kalender.</div>
+  {:else if $me?.household}
+    <div style="font-weight:600;margin-bottom:0.25rem">Bjud in din partner</div>
+    <div class="muted" style="font-size:0.85rem;margin-bottom:0.6rem">
+      Din partner skapar ett konto och skriver in koden under "Gå med".
+    </div>
+    <div class="token-row">
+      <code class="token invite">{$me.household.inviteCode}</code>
+      <button class="btn" onclick={() => copyText($me!.household!.inviteCode, 'Koden')}>Kopiera</button>
+    </div>
+  {/if}
+</div>
+
 <div class="section-title">Kalendersynk</div>
 <div class="card" style="padding:1rem;margin-bottom:1rem">
   {#if connected}
@@ -443,6 +460,12 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+  }
+  .token.invite {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    text-align: center;
   }
   .token {
     flex: 1;

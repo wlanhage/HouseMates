@@ -4,12 +4,13 @@
  */
 import { supabase, type ProfileRow } from './supabase';
 import { user, me } from './stores';
+import { clearLocalData } from './mirror';
 import { PUBLIC_VAPID_KEY } from '$env/static/public';
 import type { MeResponse, User } from '$lib/types';
 
 const toUser = (p: ProfileRow): User => ({ id: p.username, name: p.name, color: p.color });
 
-/** De två profilerna (för loginväljaren – läsbar utan inloggning). */
+/** Min profil och partnerns (RLS visar bara det egna hushållet). */
 export async function fetchProfiles(): Promise<ProfileRow[]> {
   const { data, error } = await supabase
     .from('profiles')
@@ -39,10 +40,41 @@ export async function loginWithUsername(
   return login(`${u}@${LOGIN_EMAIL_DOMAIN}`, password);
 }
 
+/** Nytt konto; loggar in direkt. Returnerar ett felmeddelande eller null. */
+export async function signup(username: string, name: string, password: string): Promise<string | null> {
+  const { error } = await supabase.functions.invoke('signup', { body: { username, name, password } });
+  if (error) {
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx) return (await ctx.json())?.error?.message ?? 'Kunde inte skapa kontot.';
+    } catch {
+      /* standardtext nedan */
+    }
+    return 'Kunde inte skapa kontot.';
+  }
+  return loginWithUsername(username, password);
+}
+
+export async function createHousehold(): Promise<string | null> {
+  const { error } = await supabase.rpc('create_household');
+  if (error) return error.message;
+  await loadMe();
+  return null;
+}
+
+export async function joinHousehold(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('join_household', { p_code: code });
+  if (error) return error.message;
+  if (!data) return 'Hittade inget hushåll med den koden.';
+  await loadMe();
+  return null;
+}
+
 export async function logout(): Promise<void> {
   await supabase.auth.signOut();
   user.set(null);
   me.set(null);
+  await clearLocalData();
 }
 
 /** Bygg me-objektet (user, partner, prefs, syncstatus) från Supabase. */
@@ -60,14 +92,16 @@ export async function loadMe(): Promise<MeResponse | null> {
   if (!mine) return null;
   const partner = profiles.find((p) => p.id !== uid) ?? null;
 
-  const [{ data: prefs }, { data: sync }] = await Promise.all([
+  const [{ data: prefs }, { data: sync }, { data: household }] = await Promise.all([
     supabase.from('notification_prefs').select('*').eq('username', mine.username).maybeSingle(),
-    supabase.from('sync_state').select('*').eq('username', mine.username).maybeSingle()
+    supabase.from('sync_state').select('*').eq('username', mine.username).maybeSingle(),
+    supabase.from('households').select('invite_code').maybeSingle()
   ]);
 
   const meResponse: MeResponse = {
     user: toUser(mine),
     partner: partner ? toUser(partner) : null,
+    household: household ? { inviteCode: household.invite_code } : null,
     prefs: prefs
       ? {
           enabled: prefs.enabled,

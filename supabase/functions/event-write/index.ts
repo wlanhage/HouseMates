@@ -13,7 +13,8 @@ import {
   serviceClient,
   jsonResponse,
   handleOptions,
-  requireMember,
+  requireHousehold,
+  householdUsernames,
   decryptSecret,
   HttpError
 } from '../_shared/util.ts';
@@ -25,21 +26,15 @@ interface Creds {
   calendarHref: string;
 }
 
-/** Mitt konto, annars hushållets (kalendern kopplas via ETT Apple-ID). */
-async function credsFor(svc: ReturnType<typeof serviceClient>, username: string): Promise<Creds> {
-  const { data: own } = await svc.from('caldav_accounts').select('*').eq('username', username).maybeSingle();
-  const data = own ?? (await svc.from('caldav_accounts').select('*').order('updated_at').limit(1).maybeSingle()).data;
+/** Hushållets kopplade konto (kalendern kopplas via ETT Apple-ID per hushåll). */
+async function credsFor(svc: ReturnType<typeof serviceClient>, householdId: string): Promise<Creds> {
+  const { data } = await svc.from('caldav_accounts').select('*').eq('household_id', householdId).maybeSingle();
   if (!data) throw new HttpError('caldav_unavailable', 'Ingen kalender kopplad.', 502);
   return {
     appleId: data.apple_id,
     password: await decryptSecret(data.password_enc),
     calendarHref: data.calendar_href
   };
-}
-
-async function usernames(svc: ReturnType<typeof serviceClient>): Promise<string[]> {
-  const { data } = await svc.from('profiles').select('username');
-  return (data ?? []).map((p: { username: string }) => p.username);
 }
 
 async function logActivity(
@@ -64,7 +59,8 @@ async function readBackAndUpsert(
   creds: Creds,
   objectUrl: string,
   fallbackIcs: string,
-  users: string[]
+  users: string[],
+  householdId: string
 ): Promise<string | null> {
   const fresh = await getCalendarObject(objectUrl, creds.appleId, creds.password);
   return upsertResource(
@@ -72,7 +68,8 @@ async function readBackAndUpsert(
     fresh?.data ?? fallbackIcs,
     objectUrl,
     fresh?.etag ?? null,
-    users
+    users,
+    householdId
   );
 }
 
@@ -80,12 +77,12 @@ Deno.serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
   try {
-    const me = await requireMember(req);
+    const { username: me, householdId } = await requireHousehold(req);
     const body = await req.json();
     const action = body.action as string;
     const svc = serviceClient();
-    const users = await usernames(svc);
-    const creds = await credsFor(svc, me);
+    const users = await householdUsernames(svc, householdId);
+    const creds = await credsFor(svc, householdId);
     const joinUrl = (base: string, name: string) =>
       base.endsWith('/') ? base + name : base + '/' + name;
 
@@ -101,14 +98,19 @@ Deno.serve(async (req) => {
       const objectUrl = joinUrl(creds.calendarHref, `${uid}.ics`);
       const res = await putCalendarObject(objectUrl, creds.appleId, creds.password, ics, null);
       if (res.status >= 300) throw new HttpError('caldav_unavailable', 'Kunde inte spara i kalendern.', 502);
-      const id = await readBackAndUpsert(svc, creds, objectUrl, ics, users);
+      const id = await readBackAndUpsert(svc, creds, objectUrl, ics, users, householdId);
       if (!id) throw new HttpError('caldav_unavailable', 'Kunde inte läsa tillbaka.', 502);
       await logActivity(svc, 'event.created', me, id, { title: title.trim(), start });
       return jsonResponse({ event: await getEventRow(svc, id) });
     }
 
     // Övriga actions kräver ett befintligt cache-event.
-    const { data: row } = await svc.from('events').select('*').eq('id', body.id).maybeSingle();
+    const { data: row } = await svc
+      .from('events')
+      .select('*')
+      .eq('id', body.id)
+      .eq('household_id', householdId)
+      .maybeSingle();
     if (!row) throw new HttpError('not_found', 'Händelsen finns inte.', 404);
 
     if (action === 'update') {
@@ -129,13 +131,13 @@ Deno.serve(async (req) => {
       });
       const res = await putCalendarObject(row.caldav_href, creds.appleId, creds.password, newIcs, row.etag);
       if (res.status === 412) {
-        const freshId = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics, users);
+        const freshId = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics, users, householdId);
         throw new HttpError('caldav_conflict', 'Händelsen ändrades av någon annan.', 409, {
           current: freshId ? await getEventRow(svc, freshId) : null
         });
       }
       if (res.status >= 300) throw new HttpError('caldav_unavailable', 'Kunde inte spara.', 502);
-      const id = await readBackAndUpsert(svc, creds, row.caldav_href, newIcs, users);
+      const id = await readBackAndUpsert(svc, creds, row.caldav_href, newIcs, users, householdId);
       await logActivity(svc, 'event.updated', me, id ?? row.id, { title: body.title ?? row.title });
       return jsonResponse({ event: id ? await getEventRow(svc, id) : null });
     }
@@ -144,7 +146,7 @@ Deno.serve(async (req) => {
       if (!row.caldav_href) throw new HttpError('caldav_unavailable', 'Saknar resurs.', 502);
       const status = await deleteCalendarObject(row.caldav_href, creds.appleId, creds.password, row.etag);
       if (status === 412) {
-        const freshId = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics ?? '', users);
+        const freshId = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics ?? '', users, householdId);
         throw new HttpError('caldav_conflict', 'Händelsen ändrades av någon annan.', 409, {
           current: freshId ? await getEventRow(svc, freshId) : null
         });
@@ -156,6 +158,7 @@ Deno.serve(async (req) => {
       await svc
         .from('events')
         .update({ deleted_at: ts, deleted_by: me })
+        .eq('household_id', householdId)
         .eq('caldav_href', row.caldav_href);
       await logActivity(svc, 'event.deleted', me, row.id, { title: row.title });
       return jsonResponse({ ok: true });
@@ -167,7 +170,7 @@ Deno.serve(async (req) => {
       if (res.status >= 300 && res.status !== 412) {
         throw new HttpError('caldav_unavailable', 'Kunde inte återställa.', 502);
       }
-      const id = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics, users);
+      const id = await readBackAndUpsert(svc, creds, row.caldav_href, row.raw_ics, users, householdId);
       await logActivity(svc, 'event.restored', me, id ?? row.id, { title: row.title });
       return jsonResponse({ event: id ? await getEventRow(svc, id) : null });
     }

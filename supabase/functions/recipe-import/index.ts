@@ -12,7 +12,8 @@ import {
   serviceClient,
   jsonResponse,
   handleOptions,
-  requireMember,
+  requireHousehold,
+  householdOf,
   corsHeaders,
   HttpError
 } from '../_shared/util.ts';
@@ -116,12 +117,15 @@ Deno.serve(async (req) => {
   try {
     const svc = serviceClient();
     let me: string;
+    let householdId: string | null;
     if (viaShortcut) {
       const owner = await userFromToken(svc, token);
       if (!owner) throw new HttpError('unauthorized', 'Fel nyckel – kopiera den från Inställningar igen.', 401);
       me = owner;
+      householdId = await householdOf(svc, owner);
+      if (!householdId) throw new HttpError('forbidden', 'Du är inte med i något hushåll än.', 403);
     } else {
-      me = await requireMember(req);
+      ({ username: me, householdId } = await requireHousehold(req));
     }
 
     body = req.method === 'GET' ? { url: query.get('url') } : await req.json().catch(() => ({}));
@@ -149,6 +153,7 @@ Deno.serve(async (req) => {
     const { data: existing } = await svc
       .from('favorites')
       .select('id, name, items')
+      .eq('household_id', householdId)
       .eq('source_url', url)
       .is('deleted_at', null)
       .maybeSingle();
@@ -162,7 +167,7 @@ Deno.serve(async (req) => {
 
     const { error } = await svc
       .from('favorites')
-      .insert({ id: crypto.randomUUID(), ...recipe, created_by: me });
+      .insert({ id: crypto.randomUUID(), ...recipe, household_id: householdId, created_by: me });
     if (error) throw new HttpError('db', 'Kunde inte spara favoriten.', 500);
 
     const n = recipe.items.length;

@@ -10,7 +10,8 @@ import {
   jsonResponse,
   handleOptions,
   isServiceCall,
-  requireMember,
+  requireHousehold,
+  householdUsernames,
   decryptSecret,
   sanitize,
   HttpError
@@ -21,14 +22,14 @@ Deno.serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
   try {
-    if (!isServiceCall(req)) await requireMember(req);
+    // Cron synkar alla hushåll; en användare som drar för att uppdatera bara sitt eget.
+    const onlyHousehold = isServiceCall(req) ? null : (await requireHousehold(req)).householdId;
 
     const svc = serviceClient();
-    const { data: accounts } = await svc.from('caldav_accounts').select('*');
+    let query = svc.from('caldav_accounts').select('*');
+    if (onlyHousehold) query = query.eq('household_id', onlyHousehold);
+    const { data: accounts } = await query;
     if (!accounts?.length) return jsonResponse({ synced: 0, note: 'ingen kalender kopplad' });
-
-    const { data: profiles } = await svc.from('profiles').select('username');
-    const usernames = (profiles ?? []).map((p: { username: string }) => p.username);
 
     // En synkrunda per unik kalender-href; första fungerande kontot används.
     const byHref = new Map<string, typeof accounts>();
@@ -42,6 +43,7 @@ Deno.serve(async (req) => {
     for (const [href, group] of byHref) {
       let ok = false;
       for (const acc of group) {
+        const usernames = await householdUsernames(svc, acc.household_id);
         let secret = '';
         try {
           secret = await decryptSecret(acc.password_enc);
@@ -56,12 +58,16 @@ Deno.serve(async (req) => {
           for (const obj of objects) {
             const abs = obj.href.startsWith('http') ? obj.href : new URL(href).origin + obj.href;
             seen.push(abs);
-            await upsertResource(svc, obj.data, abs, obj.etag, usernames);
+            await upsertResource(svc, obj.data, abs, obj.etag, usernames, acc.household_id);
             total++;
           }
           // Hårdradera resurser som försvunnit externt (ingen ångra).
           const keep = seen.map((h) => `"${h}"`).join(',');
-          let del = svc.from('events').delete().like('caldav_href', `${href}%`);
+          let del = svc
+            .from('events')
+            .delete()
+            .eq('household_id', acc.household_id)
+            .like('caldav_href', `${href}%`);
           if (seen.length) del = del.not('caldav_href', 'in', `(${keep})`);
           await del;
           ok = true;

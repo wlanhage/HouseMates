@@ -26,7 +26,8 @@ export async function upsertResource(
   data: string,
   href: string,
   etag: string | null,
-  usernames: string[]
+  usernames: string[],
+  householdId: string
 ): Promise<string | null> {
   let rows;
   try {
@@ -39,6 +40,7 @@ export async function upsertResource(
   const ts = new Date().toISOString();
   const uid = rows[0].caldav_uid;
   const payload = rows.map((r) => ({
+    household_id: householdId,
     caldav_uid: r.caldav_uid,
     recurrence_id: r.recurrence_id,
     caldav_href: href,
@@ -62,7 +64,7 @@ export async function upsertResource(
 
   const { error } = await svc
     .from('events')
-    .upsert(payload, { onConflict: 'caldav_uid,recurrence_id' });
+    .upsert(payload, { onConflict: 'household_id,caldav_uid,recurrence_id' });
   if (error) throw error;
 
   // Städa förekomster som inte längre finns i resursen.
@@ -70,7 +72,7 @@ export async function upsertResource(
   // PostgREST in-lista – hantera den med neq separat.
   const nonEmpty = rows.map((r) => r.recurrence_id).filter((r) => r !== '');
   const keepsEmpty = rows.some((r) => r.recurrence_id === '');
-  let del = svc.from('events').delete().eq('caldav_uid', uid);
+  let del = svc.from('events').delete().eq('household_id', householdId).eq('caldav_uid', uid);
   if (nonEmpty.length) {
     const keep = nonEmpty.map((r) => `"${r.replaceAll('"', '')}"`).join(',');
     del = del.not('recurrence_id', 'in', `(${keep})`);
@@ -83,6 +85,7 @@ export async function upsertResource(
   const { data: row } = await svc
     .from('events')
     .select('id')
+    .eq('household_id', householdId)
     .eq('caldav_uid', master.caldav_uid)
     .eq('recurrence_id', master.recurrence_id)
     .maybeSingle();

@@ -57,6 +57,17 @@ function saveDebounced(key: MirrorKey, value: unknown): void {
   );
 }
 
+/** Vid utloggning: töm spegel, ändringskö och listor, så nästa person på enheten inte ser dem. */
+export async function clearLocalData(): Promise<void> {
+  for (const store of [shopping, todosOpen, todosDone, chores, favorites, activity, events]) store.set([]);
+  try {
+    const db = await getDB();
+    await Promise.all([db.clear('cache'), db.clear('outbox')]);
+  } catch {
+    /* IndexedDB saknas – inget att tömma */
+  }
+}
+
 /** Spegla varje storeändring till IndexedDB. Anropa EFTER hydrateFromMirror. */
 export function startMirrorSync(): () => void {
   const unsubs = [

@@ -76,4 +76,19 @@
       {busy ? 'Loggar in…' : 'Logga in'}
     </button>
   </form>
+
+  <p class="switch">Ny här? <a href="{base}/registrera">Skapa konto</a></p>
 </div>
+
+<style>
+  .switch {
+    text-align: center;
+    margin-top: 1.25rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .switch a {
+    color: var(--accent);
+    font-weight: 700;
+  }
+</style>

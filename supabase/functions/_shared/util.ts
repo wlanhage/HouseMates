@@ -70,6 +70,29 @@ export async function requireMember(req: Request): Promise<string> {
   return prof.username as string;
 }
 
+export interface Member {
+  username: string;
+  householdId: string;
+}
+
+export async function householdOf(svc: SupabaseClient, username: string): Promise<string | null> {
+  const { data } = await svc.rpc('household_of', { p_username: username });
+  return (data as string | null) ?? null;
+}
+
+export async function householdUsernames(svc: SupabaseClient, householdId: string): Promise<string[]> {
+  const { data } = await svc.rpc('household_usernames', { p_household: householdId });
+  return (data as string[] | null) ?? [];
+}
+
+/** Inloggad användare som är med i ett hushåll. */
+export async function requireHousehold(req: Request): Promise<Member> {
+  const username = await requireMember(req);
+  const householdId = await householdOf(serviceClient(), username);
+  if (!householdId) throw new HttpError('forbidden', 'Du är inte med i något hushåll.', 403);
+  return { username, householdId };
+}
+
 // ── AES-256-GCM (WebCrypto) för CalDAV-lösenord i vila ───────
 const b64ToBytes = (b64: string): Uint8Array =>
   Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));

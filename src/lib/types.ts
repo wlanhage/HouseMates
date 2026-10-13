@@ -22,6 +22,7 @@ export interface SyncStatus {
 export interface MeResponse {
   user: User;
   partner: User | null;
+  household: { inviteCode: string } | null; // null = inte med i något hushåll än
   prefs: NotificationPrefs;
   syncStatus: SyncStatus;
   vapidPublicKey: string;

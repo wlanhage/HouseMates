@@ -39,6 +39,9 @@ export function startRealtime(): () => void {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
       void refreshEvents();
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members' }, () => {
+      void loadMe(); // partnern gick med
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sync_state' }, () => {
       void loadMe();
     })

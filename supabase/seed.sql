@@ -1,6 +1,6 @@
 -- Seed för LOKAL utveckling (supabase db reset). Skapa aldrig prod-användare
 -- så här – i prod skapas de via dashboarden (Authentication → Add user).
--- Login lokalt: anna@housemates.local / devlosen (och erik@...).
+-- Login lokalt: användarnamn anna / devlosen (och erik).
 
 -- Två auth-användare (GoTrue-kompatibelt: bcrypt via pgcrypto)
 insert into auth.users (
@@ -37,12 +37,19 @@ insert into public.profiles (id, username, name, color, email) values
 insert into public.notification_prefs (username) values ('anna'), ('erik');
 insert into public.sync_state (username) values ('anna'), ('erik');
 
--- Lite testdata så vyerna inte är tomma
-insert into public.shopping_items (id, name, created_by) values
-  (gen_random_uuid(), 'Mjölk',  'anna'),
-  (gen_random_uuid(), 'Bröd',   'erik'),
-  (gen_random_uuid(), 'Kaffe',  'anna');
+-- Anna och Erik delar ett hushåll (kod ANNA22 för lokala tester)
+insert into public.households (id, invite_code) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 'ANNA22');
+insert into public.household_members (household_id, user_id) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', '22222222-2222-2222-2222-222222222222');
 
-insert into public.todos (id, title, assignee, due_date, created_by) values
-  (gen_random_uuid(), 'Boka bilbesiktning', 'erik', current_date + 7, 'anna'),
-  (gen_random_uuid(), 'Planera helgen',     'both', null,             'erik');
+-- Lite testdata så vyerna inte är tomma
+insert into public.shopping_items (id, household_id, name, created_by) values
+  (gen_random_uuid(), 'aaaaaaaa-0000-4000-8000-000000000001', 'Mjölk',  'anna'),
+  (gen_random_uuid(), 'aaaaaaaa-0000-4000-8000-000000000001', 'Bröd',   'erik'),
+  (gen_random_uuid(), 'aaaaaaaa-0000-4000-8000-000000000001', 'Kaffe',  'anna');
+
+insert into public.todos (id, household_id, title, assignee, due_date, created_by) values
+  (gen_random_uuid(), 'aaaaaaaa-0000-4000-8000-000000000001', 'Boka bilbesiktning', 'erik', current_date + 7, 'anna'),
+  (gen_random_uuid(), 'aaaaaaaa-0000-4000-8000-000000000001', 'Planera helgen',     'both', null,             'erik');
