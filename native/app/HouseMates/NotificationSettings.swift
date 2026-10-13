@@ -7,6 +7,7 @@ struct NotificationPrefs: Codable, Equatable {
     var quietFrom = "22:00"
     var quietTo = "07:00"
     var timeZone = TimeZone.current.identifier
+    var digestMinutes = 3
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
@@ -14,7 +15,11 @@ struct NotificationPrefs: Codable, Equatable {
         case quietFrom = "quiet_from"
         case quietTo = "quiet_to"
         case timeZone = "time_zone"
+        case digestMinutes = "digest_minutes"
     }
+
+    /// Valen för "Skicka när det varit tyst i"; servern tar 0–120 minuter.
+    static let digestChoices = [0, 1, 3, 5, 10, 15, 30, 60, 120]
 
     /// Tysta timmar gäller i telefonens tidszon; efter en resa flyttas de med.
     static func syncTimeZone() async {
@@ -28,7 +33,8 @@ struct NotificationPrefs: Codable, Equatable {
     }
 }
 
-/// Notisbehörighet och tysta timmar. Tysta timmar gäller på servern, som väntar med notisen tills de tar slut.
+/// Notisbehörighet, hur länge det ska vara tyst innan notisen går och tysta timmar. Båda gäller på
+/// servern, som väntar med notisen.
 struct NotificationSection: View {
     @Environment(\.openURL) private var openURL
     @State private var prefs: NotificationPrefs?
@@ -41,7 +47,12 @@ struct NotificationSection: View {
             switch push.authorization {
             case .authorized, .provisional, .ephemeral:
                 if let prefs {
-                    Toggle("Tysta timmar", isOn: binding(\.quietEnabled))
+                    Picker("Skicka när det varit tyst i", selection: binding(\.digestMinutes, empty: 3)) {
+                        ForEach(NotificationPrefs.digestChoices, id: \.self) { minutes in
+                            Text("\(minutes) min").tag(minutes)
+                        }
+                    }
+                    Toggle("Tysta timmar", isOn: binding(\.quietEnabled, empty: false))
                     if prefs.quietEnabled {
                         DatePicker("Från", selection: timeBinding(\.quietFrom), displayedComponents: .hourAndMinute)
                         DatePicker("Till", selection: timeBinding(\.quietTo), displayedComponents: .hourAndMinute)
@@ -61,11 +72,17 @@ struct NotificationSection: View {
         } footer: {
             if let errorMessage {
                 Text(errorMessage).foregroundStyle(.red)
-            } else if prefs?.quietEnabled == true {
-                Text("Notiser som kommer under tysta timmar skickas samlade när de tar slut.")
+            } else if let prefs, notificationsAreOn {
+                Text(prefs.quietEnabled
+                    ? "Ändringar i rad blir en samlad notis. Notiser under tysta timmar skickas när de tar slut."
+                    : "Ändringar i rad blir en samlad notis.")
             }
         }
         .task { await load() }
+    }
+
+    private var notificationsAreOn: Bool {
+        [.authorized, .provisional, .ephemeral].contains(push.authorization)
     }
 
     private func load() async {
@@ -73,7 +90,7 @@ struct NotificationSection: View {
         guard let userID = Backend.client.auth.currentUser?.id else { return }
         do {
             let saved: [NotificationPrefs] = try await Backend.client.from("notification_prefs")
-                .select("user_id, quiet_enabled, quiet_from, quiet_to, time_zone")
+                .select("user_id, quiet_enabled, quiet_from, quiet_to, time_zone, digest_minutes")
                 .eq("user_id", value: userID)
                 .execute()
                 .value
@@ -99,8 +116,8 @@ struct NotificationSection: View {
         }
     }
 
-    private func binding(_ field: WritableKeyPath<NotificationPrefs, Bool>) -> Binding<Bool> {
-        Binding(get: { prefs?[keyPath: field] ?? false }, set: { value in
+    private func binding<Value>(_ field: WritableKeyPath<NotificationPrefs, Value>, empty: Value) -> Binding<Value> {
+        Binding(get: { prefs?[keyPath: field] ?? empty }, set: { value in
             guard var updated = prefs else { return }
             updated[keyPath: field] = value
             save(updated)

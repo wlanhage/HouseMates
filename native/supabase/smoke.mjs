@@ -146,6 +146,19 @@ assert.ok((await erik.client.from('notification_prefs').upsert({ ...annasPrefs, 
 assert.ok((await anna.client.from('notification_prefs').upsert({ ...annasPrefs, quiet_from: '25:00' })).error);
 step('tysta timmar: sparas och ändras av ägaren, osynliga och oskrivbara för partnern, klockslag valideras');
 
+assert.ifError((await anna.client.from('notification_prefs').upsert({ ...annasPrefs, digest_minutes: 0 })).error);
+assert.ok((await anna.client.from('notification_prefs').upsert({ ...annasPrefs, digest_minutes: 121 })).error);
+const minutesUntilSent = async (user, name) => {
+  const id = randomUUID();
+  assert.ifError((await user.client.from('shopping_items').insert({ id, name })).error);
+  const { data: activity } = await service.from('activity_log').select('id').eq('entity_id', id).single();
+  const { data: queued } = await service.from('notification_queue').select('send_after').eq('activity_id', activity.id).single();
+  return (new Date(queued.send_after) - Date.now()) / 60_000;
+};
+assert.ok(await minutesUntilSent(erik, 'Te') < 0.5);
+assert.ok(await minutesUntilSent(anna, 'Honung') > 2.5);
+step('notisfördröjning per mottagare: Anna valt 0 minuter, Erik har standard 3 minuter');
+
 const { data: colors } = await anna.client.from('profiles').select('name, color').order('name');
 assert.deepEqual(colors, [{ name: 'Anna', color: '#378ADD' }, { name: 'Erik', color: '#D4537E' }]);
 step('den som skapar hushållet blir blå, den som går med rosa');

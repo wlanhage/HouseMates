@@ -57,6 +57,18 @@ final class ClockTimeTests: XCTestCase {
     }
 }
 
+final class NotificationPrefsTests: XCTestCase {
+    func testTheDelayIsSavedWithTheOtherSettings() throws {
+        let prefs = NotificationPrefs(userID: UUID())
+
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(prefs)) as? [String: Any]
+
+        XCTAssertEqual(json?["digest_minutes"] as? Int, 3)
+        XCTAssertTrue(NotificationPrefs.digestChoices.contains(prefs.digestMinutes))
+        XCTAssertTrue(NotificationPrefs.digestChoices.allSatisfy { (0...120).contains($0) })
+    }
+}
+
 final class MarkdownBlockTests: XCTestCase {
     func testThePolicyIsSplitIntoHeadingsBulletsAndParagraphs() {
         let blocks = MarkdownBlock.parse("""

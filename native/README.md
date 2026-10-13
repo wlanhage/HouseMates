@@ -124,8 +124,9 @@ Testerna:
 - **Notiser:** varje ändring skriver en rad i `activity_log` i samma transaktion (trigger). För
   kalendern rapporterar appen sina ändringar via `log_calendar_activity`. Raden köas till
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad
-  notis när det varit tyst i tre minuter. Det är samma digest som webbappen. Ett tryck på
-  notisen öppnar rätt flik.
+  notis när det varit tyst så länge mottagaren valt ("Skicka när det varit tyst i", 0–120
+  minuter i `notification_prefs.digest_minutes`, standard tre). Det är samma digest som
+  webbappen. Ett tryck på notisen öppnar rätt flik.
   - Raderna tas i samma anrop som de hämtas, så att två körningar aldrig skickar samma notis.
     Svarar inte Apple (eller för många anrop) släpps de och skickas nästa minut.
   - Ett token från ett Xcode-bygge (Apples testmiljö) och ett från TestFlight fungerar mot
