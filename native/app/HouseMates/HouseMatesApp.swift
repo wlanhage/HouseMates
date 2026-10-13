@@ -74,6 +74,7 @@ struct MainTabs: View {
     @State private var choosesNew = false
     @State private var creating: NewThing?
     @State private var createsEvent = false
+    @State private var isKeyboardVisible = false
     private let push = Push.shared
 
     /// Det plusset kan lägga till, utom händelser som skapas i Kalender-fliken.
@@ -84,22 +85,32 @@ struct MainTabs: View {
 
     var body: some View {
         @Bindable var session = session
-        TabView(selection: tabSelection) {
+        // Flikarna i webbappens ordning, med en egen flikrad (TabBar) i stället för iOS egen.
+        TabView(selection: $tab) {
             HomeView(todos: todos, chores: chores, shopping: shopping, calendar: calendar, assignees: assignees)
-                .tabItem { Label("Hem", systemImage: "house") }
                 .tag(AppTab.home)
-            ShoppingView(list: shopping, favorites: favorites)
-                .tabItem { Label("Inköp", systemImage: "cart") }
-                .tag(AppTab.shopping)
-            Color.clear
-                .tabItem { Label("Lägg till", systemImage: "plus.circle.fill") }
-                .tag(AppTab.create)
-            HouseworkView(todos: todos, chores: chores)
-                .tabItem { Label("Att göra", systemImage: "checklist") }
-                .tag(AppTab.todos)
+                .toolbar(.hidden, for: .tabBar)
             CalendarView(calendar: calendar, assignees: assignees, chores: chores, createsEvent: $createsEvent)
-                .tabItem { Label("Kalender", systemImage: "calendar") }
                 .tag(AppTab.calendar)
+                .toolbar(.hidden, for: .tabBar)
+            ShoppingView(list: shopping, favorites: favorites)
+                .tag(AppTab.shopping)
+                .toolbar(.hidden, for: .tabBar)
+            HouseworkView(todos: todos, chores: chores)
+                .tag(AppTab.todos)
+                .toolbar(.hidden, for: .tabBar)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Göms medan tangentbordet är uppe, som iOS egen flikrad.
+            if !isKeyboardVisible {
+                TabBar(selection: $tab) { choosesNew = true }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardVisible = false
         }
         .confirmationDialog("Lägg till", isPresented: $choosesNew) {
             Button("Ny händelse") {
@@ -173,16 +184,5 @@ struct MainTabs: View {
                 await assignees.stop()
             }
         }
-    }
-
-    /// Plusset byter inte flik: det öppnar "Lägg till" och den valda fliken ligger kvar.
-    private var tabSelection: Binding<AppTab> {
-        Binding(get: { tab }, set: { chosen in
-            if chosen == .create {
-                choosesNew = true
-            } else {
-                tab = chosen
-            }
-        })
     }
 }
