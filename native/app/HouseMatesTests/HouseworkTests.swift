@@ -18,10 +18,10 @@ final class LocalDayTests: XCTestCase {
     func testLabelSaysTodayTomorrowOrTheDate() {
         let today = LocalDay.date(from: "2026-10-07")!
 
-        XCTAssertEqual(LocalDay.label("2026-10-07", from: today), "Idag")
-        XCTAssertEqual(LocalDay.label("2026-10-08", from: today), "Imorgon")
-        XCTAssertEqual(LocalDay.label("2026-10-06", from: today), "Igår")
-        XCTAssertEqual(LocalDay.label("2026-10-09", from: today), "fre 9 okt")
+        XCTAssertEqual(LocalDay.label("2026-10-07", from: today, in: .swedish), "Idag")
+        XCTAssertEqual(LocalDay.label("2026-10-08", from: today, in: .swedish), "Imorgon")
+        XCTAssertEqual(LocalDay.label("2026-10-06", from: today, in: .swedish), "Igår")
+        XCTAssertEqual(LocalDay.label("2026-10-09", from: today, in: .swedish), "fre 9 okt")
     }
 }
 
@@ -108,23 +108,23 @@ final class ChoreScheduleTests: XCTestCase {
     }
 
     func testIntervalLabels() {
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 7), "varje vecka")
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 14), "varannan vecka")
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 21), "var 3:e vecka")
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 1), "varje dag")
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 10), "var 10:e dag")
-        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 147), "var 21:a vecka")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 7, in: .swedish), "varje vecka")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 14, in: .swedish), "varannan vecka")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 21, in: .swedish), "var 3:e vecka")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 1, in: .swedish), "varje dag")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 10, in: .swedish), "var 10:e dag")
+        XCTAssertEqual(ChoreSchedule.intervalLabel(days: 147, in: .swedish), "var 21:a vecka")
     }
 
     func testLabelsForWhenItWasDoneAndWhenItIsDue() {
         let doneYesterday = chore(interval: 7, lastDone: "2026-10-06")
         let late = chore(interval: 7, lastDone: "2026-09-28")
 
-        XCTAssertEqual(ChoreSchedule.lastDoneLabel(doneYesterday, today: today), "Gjord igår")
-        XCTAssertEqual(ChoreSchedule.dueLabel(doneYesterday, today: today), "Om 6 dagar")
-        XCTAssertEqual(ChoreSchedule.lastDoneLabel(late, today: today), "Gjord för 9 dagar sedan")
-        XCTAssertEqual(ChoreSchedule.dueLabel(late, today: today), "Försenad 2 dagar")
-        XCTAssertEqual(ChoreSchedule.lastDoneLabel(chore(interval: 7, lastDone: nil), today: today), "Aldrig gjord")
+        XCTAssertEqual(ChoreSchedule.lastDoneLabel(doneYesterday, today: today, in: .swedish), "Gjord igår")
+        XCTAssertEqual(ChoreSchedule.dueLabel(doneYesterday, today: today, in: .swedish), "Om 6 dagar")
+        XCTAssertEqual(ChoreSchedule.lastDoneLabel(late, today: today, in: .swedish), "Gjord för 9 dagar sedan")
+        XCTAssertEqual(ChoreSchedule.dueLabel(late, today: today, in: .swedish), "Försenad 2 dagar")
+        XCTAssertEqual(ChoreSchedule.lastDoneLabel(chore(interval: 7, lastDone: nil), today: today, in: .swedish), "Aldrig gjord")
     }
 
     func testUndoingClearsWhoDidIt() {

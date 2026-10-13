@@ -33,7 +33,7 @@ struct TabBar: View {
 
     private var myColor: Color { session.color(for: session.me?.id) }
 
-    private func item(_ tab: AppTab, title: String, systemImage: String) -> some View {
+    private func item(_ tab: AppTab, title: LocalizedStringKey, systemImage: String) -> some View {
         let isSelected = selection == tab
         return Button {
             selection = tab
@@ -105,7 +105,7 @@ struct CreateMenu: View {
         .presentationBackground(Color.surface)
     }
 
-    private func row(_ emoji: String, _ title: String, _ choice: Choice) -> some View {
+    private func row(_ emoji: String, _ title: LocalizedStringKey, _ choice: Choice) -> some View {
         Button {
             chosen = choice
             dismiss()

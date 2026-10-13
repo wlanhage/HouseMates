@@ -1,0 +1,18 @@
+{
+  "sourceLanguage" : "sv",
+  "strings" : {
+    "NSCalendarsFullAccessUsageDescription" : {
+      "comment" : "Frågan om kalenderåtkomst. Den svenska texten står i project.yml.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HouseMates shows and creates events in the calendar you choose to share. No other calendars are used."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

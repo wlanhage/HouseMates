@@ -21,10 +21,11 @@ struct AboutSection: View {
     }
 }
 
-/// Visar integritetspolicyn.md, samma text som publiceras på webben för App Store.
+/// Visar integritetspolicyn, samma text som publiceras på webben för App Store: integritetspolicy.md
+/// på svenska och privacy-policy.md på engelska.
 struct PolicyView: View {
     private let blocks = MarkdownBlock.parse(
-        Bundle.main.url(forResource: "integritetspolicy", withExtension: "md")
+        Bundle.main.url(forResource: AppLanguage.current == .english ? "privacy-policy" : "integritetspolicy", withExtension: "md")
             .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
     )
 
@@ -35,7 +36,7 @@ struct PolicyView: View {
                     switch block.kind {
                     case .title: Text(block.text).font(.title2.bold())
                     case .heading: Text(block.text).font(.headline).padding(.top, 8)
-                    case .bullet: Text("•  ") + Text(markdown(block.text))
+                    case .bullet: Text(verbatim: "•  ") + Text(markdown(block.text))
                     case .paragraph: Text(markdown(block.text))
                     }
                 }

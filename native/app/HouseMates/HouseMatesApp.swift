@@ -17,6 +17,7 @@ struct HouseMatesApp: App {
 struct RootView: View {
     @Environment(AppSession.self) private var session
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(AppLanguage.storageKey) private var savedLanguage: String?
 
     var body: some View {
         @Bindable var session = session
@@ -38,6 +39,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await session.reload() } }
         }
+        // Alla vyer översätter sina texter efter det här, så att ett nytt språk syns direkt.
+        .environment(\.locale, AppLanguage(saved: savedLanguage).locale)
     }
 
     private var linkErrorIsShown: Binding<Bool> {
@@ -76,6 +79,7 @@ struct MainTabs: View {
     @State private var creating: NewThing?
     @State private var createsEvent = false
     @State private var isKeyboardVisible = false
+    @AppStorage(AppLanguage.storageKey) private var savedLanguage: String?
     private let push = Push.shared
 
     /// Formulären som öppnas som ark efter menyn. En ny händelse skapas i Kalender-fliken.
@@ -101,6 +105,8 @@ struct MainTabs: View {
                 .tag(AppTab.todos)
                 .toolbar(.hidden, for: .tabBar)
         }
+        // Flikarna byggs om när språket byts, så att också text som byggs i koden får det nya språket.
+        .id(savedLanguage)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Göms medan tangentbordet är uppe, som iOS egen flikrad.
             if !isKeyboardVisible {

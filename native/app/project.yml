@@ -35,7 +35,7 @@ targets:
     preBuildScripts:
       - name: Stoppa ofärdigt release-bygge
         basedOnDependencyAnalysis: false
-        inputFiles: [$(SRCROOT)/HouseMates/integritetspolicy.md]
+        inputFiles: [$(SRCROOT)/HouseMates/integritetspolicy.md, $(SRCROOT)/HouseMates/privacy-policy.md]
         script: |
           # Ett bygge för TestFlight och App Store får inte peka på den lokala databasen
           # eller visa platshållare i integritetspolicyn.
@@ -45,6 +45,9 @@ targets:
           [ -n "$SUPPORT_EMAIL" ] || { echo "error: Fyll i SUPPORT_EMAIL i Config/Release.xcconfig"; exit 1; }
           if grep -q -e '\[NAMN\]' -e '\[E-POST\]' "$SRCROOT/HouseMates/integritetspolicy.md"; then
             echo "error: Byt [NAMN] och [E-POST] i HouseMates/integritetspolicy.md"; exit 1
+          fi
+          if grep -q -e '\[NAME\]' -e '\[EMAIL\]' "$SRCROOT/HouseMates/privacy-policy.md"; then
+            echo "error: Byt [NAME] och [EMAIL] i HouseMates/privacy-policy.md"; exit 1
           fi
     info:
       path: HouseMates/Info.plist
@@ -68,6 +71,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: se.housemates.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Texterna i koden samlas i Localizable.xcstrings, där översättningarna finns.
+        SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
@@ -94,6 +99,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: se.housemates.app.share
+        SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic

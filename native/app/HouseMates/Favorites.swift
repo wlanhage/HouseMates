@@ -30,8 +30,8 @@ struct Favorite: Codable, Identifiable, Equatable {
 }
 
 /// "1 vara", "8 varor"
-func itemCountLabel(_ count: Int) -> String {
-    count == 1 ? "1 vara" : "\(count) varor"
+func itemCountLabel(_ count: Int, in language: AppLanguage = .current) -> String {
+    String(appLocalized: count == 1 ? "1 vara" : "\(count) varor", in: language)
 }
 
 /// "ica.se" ur "https://www.ica.se/recept/…"

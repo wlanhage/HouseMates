@@ -112,8 +112,8 @@ private struct FilterPills: View {
 
     private func name(for filter: AssigneeFilter) -> String {
         switch filter {
-        case .everyone: "Alla"
-        case let .person(id): id == session.me?.id ? "Du" : session.name(for: id)
+        case .everyone: String(appLocalized: "Alla")
+        case let .person(id): id == session.me?.id ? String(appLocalized: "Du") : session.name(for: id)
         }
     }
 }
@@ -191,7 +191,7 @@ struct TodoRow: View {
         HStack(spacing: 10) {
             CheckButton(
                 isOn: todo.done,
-                accessibilityLabel: todo.done ? "Markera \(todo.title) som inte klar" : "Markera \(todo.title) som klar",
+                accessibilityLabel: todo.done ? Text("Markera \(todo.title) som inte klar") : Text("Markera \(todo.title) som klar"),
                 action: toggle
             )
 
@@ -220,10 +220,10 @@ struct TodoRow: View {
         guard let due = todo.dueDate, let daysLeft = LocalDay.days(until: due) else { return nil }
         let kind = DueBadge.Kind(daysLeft: daysLeft)
         if kind == .overdue {
-            return DueBadge(text: "Försenad", kind: kind)
+            return DueBadge(text: String(appLocalized: "Försenad"), kind: kind)
         }
         guard let start = todo.startDate else { return DueBadge(text: LocalDay.label(due), kind: kind) }
-        return DueBadge(text: "\(LocalDay.label(start))–\(LocalDay.label(due).lowercased())", kind: kind)
+        return DueBadge(text: LocalDay.period(from: start, to: due), kind: kind)
     }
 }
 
@@ -366,7 +366,7 @@ struct ChoreRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            CheckButton(isOn: isDoneToday, accessibilityLabel: "Markera \(chore.title) som gjord", action: markDone)
+            CheckButton(isOn: isDoneToday, accessibilityLabel: Text("Markera \(chore.title) som gjord"), action: markDone)
                 .disabled(isDoneToday)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -388,10 +388,7 @@ struct ChoreRow: View {
 
     /// "↻ varje vecka · Gjord igår av Anna", med personen sysslan är för.
     private var details: String {
-        var lastDone = ChoreSchedule.lastDoneLabel(chore)
-        if chore.lastDoneAt != nil, let by = session.person(chore.lastDoneBy) {
-            lastDone += " av \(by.name)"
-        }
+        let lastDone = ChoreSchedule.lastDoneLabel(chore, by: session.person(chore.lastDoneBy)?.name)
         let interval = chore.intervalDays.map { "↻ \(ChoreSchedule.intervalLabel(days: $0))" }
         return [session.name(for: chore.assignee), interval, lastDone].compactMap { $0 }.joined(separator: " · ")
     }
@@ -412,9 +409,15 @@ struct ChoreEditor: View {
     @State private var lastDone = Date.now
     @FocusState private var titleIsFocused: Bool
 
-    enum IntervalUnit: String, CaseIterable {
-        case weeks = "veckor"
-        case days = "dagar"
+    enum IntervalUnit: CaseIterable {
+        case weeks, days
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .weeks: "veckor"
+            case .days: "dagar"
+            }
+        }
     }
 
     var body: some View {
@@ -434,7 +437,7 @@ struct ChoreEditor: View {
                     if repeats {
                         Stepper(intervalText, value: $count, in: 1...52)
                         Picker("Enhet", selection: $unit) {
-                            ForEach(IntervalUnit.allCases, id: \.self) { Text($0.rawValue) }
+                            ForEach(IntervalUnit.allCases, id: \.self) { Text($0.title) }
                         }
                         .pickerStyle(.segmented)
                     }

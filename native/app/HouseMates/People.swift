@@ -26,12 +26,12 @@ extension AppSession {
     }
 
     func name(for assignee: UUID?) -> String {
-        person(assignee)?.name ?? "Gemensamt"
+        person(assignee)?.name ?? String(appLocalized: "Gemensamt")
     }
 
     /// Vem något kan vara för: gemensamt, jag eller partnern.
     var assigneeChoices: [AssigneeChoice] {
-        [AssigneeChoice(id: nil, name: "Gemensamt")]
+        [AssigneeChoice(id: nil, name: String(appLocalized: "Gemensamt"))]
             + [me, partner].compactMap { $0 }.map { AssigneeChoice(id: $0.id, name: $0.name) }
     }
 }

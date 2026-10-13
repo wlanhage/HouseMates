@@ -111,8 +111,8 @@ final class SyncedTable<Change: TableChange> {
 
     /// Visar "Ångra" i sex sekunder, som i webbappen. Ändringarna tar tillbaka det som just gjordes
     /// och går genom kön som alla andra, så att ångra fungerar även utan nät.
-    func offerUndo(_ message: String, by changes: [Change]) {
-        undo = UndoOffer(message: message)
+    func offerUndo(_ message: LocalizedStringResource, by changes: [Change]) {
+        undo = UndoOffer(message: String(appLocalized: message))
         undoChanges = changes
         undoExpiry?.cancel()
         undoExpiry = Task { [weak self] in
@@ -190,8 +190,8 @@ final class SyncedTable<Change: TableChange> {
     }
 
     private nonisolated static func rejectionMessage(_ error: Error) -> String {
-        if let error = error as? PostgrestError, error.code == "P0001" { return error.message }
-        return "En ändring kunde inte sparas och har tagits bort."
+        if let error = error as? PostgrestError, error.code == "P0001" { return AppLanguage.current.translated(error.message) }
+        return String(appLocalized: "En ändring kunde inte sparas och har tagits bort.")
     }
 
     /// Ändringarna ligger kvar och skickas igen om en stund.
@@ -214,7 +214,7 @@ final class SyncedTable<Change: TableChange> {
             isOffline = false
             save()
         } catch let error where Self.isRejected(error) {
-            errorMessage = "Listan kunde inte hämtas. Försök igen senare."
+            errorMessage = String(appLocalized: "Listan kunde inte hämtas. Försök igen senare.")
         } catch {
             waitForServer(after: error)
         }

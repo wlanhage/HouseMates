@@ -127,7 +127,7 @@ struct AuthView: View {
             if isCreatingAccount {
                 if try await session.signUp(name: trimmedName, email: trimmedEmail, password: password) {
                     isCreatingAccount = false
-                    notice = "Vi har skickat ett mejl till \(trimmedEmail). Bekräfta adressen och logga sedan in."
+                    notice = String(appLocalized: "Vi har skickat ett mejl till \(trimmedEmail). Bekräfta adressen och logga sedan in.")
                 }
             } else {
                 try await session.signIn(email: trimmedEmail, password: password)
@@ -223,7 +223,7 @@ private struct LoginLogo: View {
                 dot(Color(hex: "#378ADD"))
             }
             .accessibilityHidden(true)
-            Text("HouseMates")
+            Text(verbatim: "HouseMates")
                 .font(.largeTitle.weight(.heavy))
                 .foregroundStyle(Color.ink)
             Text("Er gemensamma planering")
@@ -264,10 +264,10 @@ private struct LoginBackground: View {
 
 /// Etikett över ett fält, som i webbappens formulär.
 private struct LabeledField<Content: View>: View {
-    let label: String
+    let label: LocalizedStringKey
     let content: Content
 
-    init(_ label: String, @ViewBuilder content: () -> Content) {
+    init(_ label: LocalizedStringKey, @ViewBuilder content: () -> Content) {
         self.label = label
         self.content = content()
     }

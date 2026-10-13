@@ -1,0 +1,86 @@
+{
+  "sourceLanguage" : "sv",
+  "strings" : {
+    "Dela en receptsida från Safari för att spara den." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share a recipe page from Safari to save it."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dela en receptsida från Safari för att spara den."
+          }
+        }
+      }
+    },
+    "Hittade ingen länk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No link found"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hittade ingen länk"
+          }
+        }
+      }
+    },
+    "Klart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klart"
+          }
+        }
+      }
+    },
+    "Receptet hämtas nästa gång du öppnar HouseMates." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The recipe is fetched the next time you open HouseMates."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receptet hämtas nästa gång du öppnar HouseMates."
+          }
+        }
+      }
+    },
+    "Sparas i Våra middagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving to Our dinners"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sparas i Våra middagar"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

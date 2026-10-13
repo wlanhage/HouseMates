@@ -148,13 +148,20 @@ enum ChoreSchedule {
     }
 
     /// "varje vecka", "varannan vecka", "var 3:e vecka", "var 10:e dag"
-    static func intervalLabel(days: Int) -> String {
-        let (count, unit) = days % 7 == 0 ? (days / 7, "vecka") : (days, "dag")
-        switch count {
-        case 1: return "varje \(unit)"
-        case 2: return "varannan \(unit)"
-        default: return "var \(ordinal(count)) \(unit)"
+    static func intervalLabel(days: Int, in language: AppLanguage = .current) -> String {
+        let isWeeks = days % 7 == 0
+        let count = isWeeks ? days / 7 : days
+        // Svenskans ordningstal: 1:a, 2:a, 3:e, 11:e, 12:e, 21:a. På engelska blir båda "every 21 days".
+        let endsInA = [1, 2].contains(count % 10) && ![11, 12].contains(count % 100)
+        let label: LocalizedStringResource = switch (isWeeks, count) {
+        case (true, 1): "varje vecka"
+        case (true, 2): "varannan vecka"
+        case (true, _): endsInA ? "var \(count):a vecka" : "var \(count):e vecka"
+        case (false, 1): "varje dag"
+        case (false, 2): "varannan dag"
+        case (false, _): endsInA ? "var \(count):a dag" : "var \(count):e dag"
         }
+        return String(appLocalized: label, in: language)
     }
 
     /// Dagar sedan sysslan senast gjordes: 0 idag, 1 igår.
@@ -168,33 +175,35 @@ enum ChoreSchedule {
         dueDay(for: chore).flatMap { LocalDay.days(until: $0, from: today) }
     }
 
-    /// "Gjord idag", "Gjord igår", "Gjord för 5 dagar sedan", "Aldrig gjord"
-    static func lastDoneLabel(_ chore: Chore, today: Date = .now) -> String {
-        guard let days = daysSinceDone(chore, today: today) else { return "Aldrig gjord" }
-        switch days {
-        case ...0: return "Gjord idag"
-        case 1: return "Gjord igår"
-        default: return "Gjord för \(days) dagar sedan"
+    /// "Gjord idag", "Gjord igår av Anna", "Gjord för 5 dagar sedan", "Aldrig gjord"
+    static func lastDoneLabel(
+        _ chore: Chore, by name: String? = nil, today: Date = .now, in language: AppLanguage = .current
+    ) -> String {
+        guard let days = daysSinceDone(chore, today: today) else {
+            return String(appLocalized: "Aldrig gjord", in: language)
         }
+        let label: LocalizedStringResource = switch (days, name) {
+        case (...0, nil): "Gjord idag"
+        case (...0, let name?): "Gjord idag av \(name)"
+        case (1, nil): "Gjord igår"
+        case (1, let name?): "Gjord igår av \(name)"
+        case (_, nil): "Gjord för \(days) dagar sedan"
+        case (_, let name?): "Gjord för \(days) dagar sedan av \(name)"
+        }
+        return String(appLocalized: label, in: language)
     }
 
     /// "Idag", "Imorgon", "Om 3 dagar", "Försenad 2 dagar"
-    static func dueLabel(_ chore: Chore, today: Date = .now) -> String? {
+    static func dueLabel(_ chore: Chore, today: Date = .now, in language: AppLanguage = .current) -> String? {
         guard let days = daysLeft(chore, today: today) else { return nil }
-        switch days {
-        case 0: return "Idag"
-        case 1: return "Imorgon"
-        case 2...: return "Om \(days) dagar"
-        case -1: return "Försenad 1 dag"
-        default: return "Försenad \(-days) dagar"
+        let label: LocalizedStringResource = switch days {
+        case 0: "Idag"
+        case 1: "Imorgon"
+        case 2...: "Om \(days) dagar"
+        case -1: "Försenad 1 dag"
+        default: "Försenad \(-days) dagar"
         }
-    }
-
-    /// 1:a, 2:a, 3:e, 11:e, 21:a
-    private static func ordinal(_ n: Int) -> String {
-        let lastTwo = n % 100
-        let suffix = [1, 2].contains(n % 10) && lastTwo != 11 && lastTwo != 12 ? "a" : "e"
-        return "\(n):\(suffix)"
+        return String(appLocalized: label, in: language)
     }
 }
 

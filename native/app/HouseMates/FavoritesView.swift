@@ -14,7 +14,7 @@ struct FavoritesView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     if favorites.records.isEmpty {
                         VStack(spacing: 14) {
-                            Text("🍽️")
+                            Text(verbatim: "🍽️")
                                 .font(.title)
                                 .frame(width: 62, height: 62)
                                 .background(Color.surfaceSecondary, in: Circle())
@@ -119,7 +119,7 @@ private struct DishImage: View {
         } placeholder: {
             ZStack {
                 Color.surfaceSecondary
-                Text("🍽️").font(.title)
+                Text(verbatim: "🍽️").font(.title)
             }
         }
     }
@@ -160,7 +160,7 @@ private struct FavoriteDetailView: View {
             HStack(spacing: 6) {
                 Text(itemCountLabel(favorite.items.count))
                 if let source = favorite.sourceURL, let url = URL(string: source) {
-                    Text("·")
+                    Text(verbatim: "·")
                     Link("Öppna på \(hostLabel(source)) ↗", destination: url)
                 }
             }
@@ -401,7 +401,7 @@ private struct FavoriteEditor: View {
                 imageURL = recipe.imageURL
                 sourceURL = recipe.sourceURL
                 if recipe.items.isEmpty {
-                    message = "Hittade inga ingredienser. Fyll i dem själv."
+                    message = String(appLocalized: "Hittade inga ingredienser. Fyll i dem själv.")
                 }
             } catch {
                 message = userMessage(for: error)
@@ -413,7 +413,7 @@ private struct FavoriteEditor: View {
         if let favorite {
             favorites.update(favorite, name: trimmedName, items: items)
         } else if let sourceURL, favorites.contains(sourceURL: sourceURL) {
-            message = "Det receptet finns redan sparat."
+            message = String(appLocalized: "Det receptet finns redan sparat.")
             return
         } else {
             favorites.add(name: trimmedName, items: items, imageURL: imageURL, sourceURL: sourceURL)

@@ -34,16 +34,23 @@ enum LocalDay {
         return Calendar.current.dateComponents([.day], from: start, to: target).day
     }
 
-    /// "Idag", "Imorgon", "Igår" eller "ons 9 okt".
-    static func label(_ day: String, from today: Date = .now) -> String {
+    /// "Idag", "Imorgon", "Igår" eller "ons 9 okt" ("Wed 9 Oct" på engelska).
+    static func label(_ day: String, from today: Date = .now, in language: AppLanguage = .current) -> String {
         switch days(until: day, from: today) {
-        case 0: return "Idag"
-        case 1: return "Imorgon"
-        case -1: return "Igår"
+        case 0: return String(appLocalized: "Idag", in: language)
+        case 1: return String(appLocalized: "Imorgon", in: language)
+        case -1: return String(appLocalized: "Igår", in: language)
         default:
             guard let date = date(from: day) else { return day }
-            return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(Locale(identifier: "sv_SE")))
+            return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(language.locale))
                 .replacingOccurrences(of: ".", with: "")
         }
+    }
+
+    /// En period, som "fre 10 okt–sön 12 okt" eller "idag–imorgon". Svenskan skriver den andra
+    /// dagen med liten bokstav, som mitt i en mening; engelskan behåller stor.
+    static func period(from start: String, to end: String, today: Date = .now, in language: AppLanguage = .current) -> String {
+        let last = label(end, from: today, in: language)
+        return "\(label(start, from: today, in: language))–\(language == .swedish ? last.lowercased() : last)"
     }
 }

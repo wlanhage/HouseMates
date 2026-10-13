@@ -9,9 +9,11 @@ final class ShareViewController: UIViewController {
         Task {
             let link = await sharedLink()
             if let link { RecipeInbox.add(link) }
+            // Samma språk som appen, också om telefonen har ett annat.
             show(SharedLinkView(saved: link != nil) { [weak self] in
                 self?.extensionContext?.completeRequest(returningItems: nil)
-            })
+            }
+            .environment(\.locale, AppLanguage.current.locale))
         }
     }
 

@@ -232,13 +232,13 @@ private struct ItemRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        CheckButton(isOn: item.checked, accessibilityLabel: item.qty.map { "\(item.name), \($0)" } ?? item.name, action: toggle) {
+        CheckButton(isOn: item.checked, accessibilityLabel: Text(verbatim: item.qty.map { "\(item.name), \($0)" } ?? item.name), action: toggle) {
             HStack {
                 Text(item.name)
                     .strikethrough(item.checked)
                     .foregroundStyle(item.checked ? Color.inkMuted : Color.ink)
                 if let qty = item.qty {
-                    Text("· \(qty)").foregroundStyle(Color.inkMuted)
+                    Text(verbatim: "· \(qty)").foregroundStyle(Color.inkMuted)
                 }
                 Spacer()
                 if item.checked, let buyer = session.person(item.checkedBy) {
@@ -268,7 +268,7 @@ private struct NotificationCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Få en notis när \(partnerName ?? "din partner") ändrar listorna eller kalendern.")
+            Text("Få en notis när \(partnerName ?? String(appLocalized: "din partner")) ändrar listorna eller kalendern.")
                 .foregroundStyle(Color.ink)
             HStack(spacing: 14) {
                 Button("Slå på notiser") { Task { await Push.shared.requestPermission() } }

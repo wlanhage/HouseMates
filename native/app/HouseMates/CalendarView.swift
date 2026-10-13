@@ -38,7 +38,7 @@ struct CalendarView: View {
                         .ignoresSafeArea()
                 }
                 .confirmationDialog(
-                    askingAssignee.map { "För vem är \($0.title)?" } ?? "",
+                    askingAssignee.map { Text("För vem är \($0.title)?") } ?? Text(verbatim: ""),
                     isPresented: askingIsShown,
                     titleVisibility: .visible,
                     presenting: askingAssignee
@@ -55,7 +55,7 @@ struct CalendarView: View {
         }
     }
 
-    private var partnerName: String { session.partner?.name ?? "din partner" }
+    private var partnerName: String { session.partner?.name ?? String(appLocalized: "din partner") }
 
     @ViewBuilder
     private var content: some View {
@@ -166,7 +166,7 @@ struct CalendarView: View {
                     EmptyCard(emoji: "📅", text: "Inga händelser de kommande 60 dagarna.")
                 }
                 ForEach(days) { day in
-                    SectionTitle(dayTitle(day.id))
+                    SectionTitle(verbatim: dayTitle(day.id))
                         .plainRow(top: 14, bottom: 4)
                     ForEach(day.events, id: \.self) { event in
                         EventButton(event: event, assignees: assignees, edit: edit)
@@ -249,9 +249,9 @@ struct CalendarView: View {
 
     private func dayTitle(_ day: String) -> String {
         guard let date = LocalDay.date(from: day) else { return day }
-        if Calendar.current.isDateInToday(date) { return "Idag" }
-        if Calendar.current.isDateInTomorrow(date) { return "Imorgon" }
-        return date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        if Calendar.current.isDateInToday(date) { return String(appLocalized: "Idag") }
+        if Calendar.current.isDateInTomorrow(date) { return String(appLocalized: "Imorgon") }
+        return date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(AppLanguage.current.locale))
     }
 }
 
@@ -319,10 +319,10 @@ private struct EventRow: View {
                 .foregroundStyle(Color.ink)
             HStack(spacing: 6) {
                 Text(timeLabel).monospacedDigit()
-                Text("·")
+                Text(verbatim: "·")
                 PersonLabel(assignee: assignee)
                 if let location = event.location, !location.isEmpty {
-                    Text("·")
+                    Text(verbatim: "·")
                     Text(location).lineLimit(1)
                 }
             }
@@ -334,7 +334,7 @@ private struct EventRow: View {
     }
 
     private var timeLabel: String {
-        if event.isAllDay { return "Heldag" }
+        if event.isAllDay { return String(appLocalized: "Heldag") }
         let start = event.startDate.formatted(date: .omitted, time: .shortened)
         let end = event.endDate.formatted(date: .omitted, time: .shortened)
         return "\(start)–\(end)"
@@ -372,7 +372,7 @@ private struct MonthSections: View {
                 // Fasta rader i stället för LazyVGrid, som inne i en listrad gav en layoutloop.
                 VStack(spacing: 4) {
                     HStack(spacing: 0) {
-                        ForEach(MonthGrid.weekdays, id: \.self) { weekday in
+                        ForEach(MonthGrid.weekdays(in: month.language), id: \.self) { weekday in
                             Text(weekday)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(Color.inkMuted)
@@ -406,7 +406,7 @@ private struct MonthSections: View {
 
             let events = days[selectedDay] ?? []
             let dueChores = choreDays[selectedDay] ?? []
-            SectionTitle(LocalDay.label(selectedDay))
+            SectionTitle(verbatim: LocalDay.label(selectedDay))
                 .plainRow(top: 12, bottom: 4)
             if events.isEmpty && dueChores.isEmpty {
                 Text("Inget inplanerat.")

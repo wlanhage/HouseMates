@@ -2,10 +2,10 @@ import SwiftUI
 
 /// Knapp för något som inte går att ångra: frågar först och visar felet om det inte gick.
 struct ConfirmedActionButton: View {
-    let title: String
-    let question: String
-    let consequences: String
-    let confirmLabel: String
+    let title: LocalizedStringKey
+    let question: LocalizedStringKey
+    let consequences: LocalizedStringKey
+    let confirmLabel: LocalizedStringKey
     let action: () async throws -> Void
 
     @State private var isConfirming = false

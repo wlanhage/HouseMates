@@ -95,11 +95,17 @@ extension View {
 
 /// "NYLIGEN I INKÖP" med en kort grön linje före, som webbappens rubriker över listor.
 struct SectionTitle<Trailing: View>: View {
-    let title: String
+    let title: Text
     let trailing: Trailing
 
-    init(_ title: String, @ViewBuilder trailing: () -> Trailing) {
-        self.title = title
+    init(_ titleKey: LocalizedStringKey, @ViewBuilder trailing: () -> Trailing) {
+        self.title = Text(titleKey)
+        self.trailing = trailing()
+    }
+
+    /// För text som redan är färdig, som "Idag" eller ett datum.
+    init(verbatim title: String, @ViewBuilder trailing: () -> Trailing) {
+        self.title = Text(title)
         self.trailing = trailing()
     }
 
@@ -108,7 +114,8 @@ struct SectionTitle<Trailing: View>: View {
             Capsule()
                 .fill(Color.accentColor.opacity(0.55))
                 .frame(width: 16, height: 3)
-            Text(title.uppercased())
+            title
+                .textCase(.uppercase)
                 .font(.caption.weight(.heavy))
                 .tracking(1)
                 .foregroundStyle(Color.inkMuted)
@@ -120,8 +127,12 @@ struct SectionTitle<Trailing: View>: View {
 }
 
 extension SectionTitle where Trailing == EmptyView {
-    init(_ title: String) {
-        self.init(title) { EmptyView() }
+    init(_ titleKey: LocalizedStringKey) {
+        self.init(titleKey) { EmptyView() }
+    }
+
+    init(verbatim title: String) {
+        self.init(verbatim: title) { EmptyView() }
     }
 }
 
@@ -165,12 +176,12 @@ struct PrimaryButtonStyle: ButtonStyle {
 /// den bockades av. `label` gör hela raden tryckbar, som på inköpslistan.
 struct CheckButton<Label: View>: View {
     let isOn: Bool
-    let accessibilityLabel: String
+    let accessibilityLabel: Text
     let action: () -> Void
     let label: Label
     @State private var isChecking = false
 
-    init(isOn: Bool, accessibilityLabel: String, action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
+    init(isOn: Bool, accessibilityLabel: Text, action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
         self.isOn = isOn
         self.accessibilityLabel = accessibilityLabel
         self.action = action
@@ -209,7 +220,7 @@ struct CheckButton<Label: View>: View {
 }
 
 extension CheckButton where Label == EmptyView {
-    init(isOn: Bool, accessibilityLabel: String, action: @escaping () -> Void) {
+    init(isOn: Bool, accessibilityLabel: Text, action: @escaping () -> Void) {
         self.init(isOn: isOn, accessibilityLabel: accessibilityLabel, action: action) { EmptyView() }
     }
 }
@@ -275,7 +286,7 @@ struct PersonAvatar: View {
             }
             .foregroundStyle(.white)
             .accessibilityElement()
-            .accessibilityLabel(person.map { "För \($0.name)" } ?? "Gemensamt")
+            .accessibilityLabel(person.map { Text("För \($0.name)") } ?? Text("Gemensamt"))
     }
 }
 
@@ -324,7 +335,7 @@ struct DueBadge: View {
 /// "Att göra | Städ".
 struct PillTabs<Value: Hashable>: View {
     @Binding var selection: Value
-    let options: [(value: Value, title: String)]
+    let options: [(value: Value, title: LocalizedStringKey)]
 
     var body: some View {
         HStack(spacing: 0) {
@@ -359,9 +370,9 @@ struct PillTabs<Value: Hashable>: View {
 
 /// Etikett över ett fält eller en grupp i ett formulär, som webbappens "Vem gör det?".
 struct FieldLabel: View {
-    let text: String
+    let text: LocalizedStringKey
 
-    init(_ text: String) {
+    init(_ text: LocalizedStringKey) {
         self.text = text
     }
 
@@ -376,7 +387,7 @@ struct FieldLabel: View {
 /// Tomt läge som ett kort med en emoji, som i webbappen.
 struct EmptyCard: View {
     let emoji: String
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         VStack(spacing: 12) {

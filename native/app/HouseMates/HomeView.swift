@@ -22,7 +22,7 @@ struct HomeView: View {
         let dayChores = ChoreSchedule.byDueDay(chores.sorted, overdueOn: today)[day] ?? []
         NavigationStack {
             List {
-                Text("\(greeting) 👋")
+                Text(verbatim: "\(greeting) 👋")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Color.ink)
                     .plainRow(top: 4, bottom: 2)
@@ -33,7 +33,7 @@ struct HomeView: View {
                     .plainRow(top: 6, bottom: 6)
                 Group {
                     if dayEvents.isEmpty && dayTodos.isEmpty && dayChores.isEmpty {
-                        Text("Inget planerat \(LocalDay.label(day).lowercased()).")
+                        nothingPlanned(on: day)
                             .foregroundStyle(Color.inkMuted)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 20)
@@ -90,13 +90,23 @@ struct HomeView: View {
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: .now)
-        let hello = switch hour {
-        case ..<5: "God natt"
-        case ..<10: "God morgon"
-        case ..<18: "Hej"
-        default: "God kväll"
+        let name = session.me?.name ?? ""
+        let greeting: LocalizedStringResource = switch hour {
+        case ..<5: "God natt, \(name)"
+        case ..<10: "God morgon, \(name)"
+        case ..<18: "Hej, \(name)"
+        default: "God kväll, \(name)"
         }
-        return session.me.map { "\(hello), \($0.name)" } ?? hello
+        return String(appLocalized: greeting)
+    }
+
+    private func nothingPlanned(on day: String) -> Text {
+        switch LocalDay.days(until: day) {
+        case 0: Text("Inget planerat idag.")
+        case 1: Text("Inget planerat imorgon.")
+        case -1: Text("Inget planerat igår.")
+        default: Text("Inget planerat \(LocalDay.label(day)).")
+        }
     }
 
     /// Ett svep åt vänster visar nästa dag, åt höger dagen före, som i webbappen.
@@ -166,7 +176,7 @@ private struct DayHeader: View {
     }
 
     /// En rund pil med tunn kant, som i webbappen, men med en träffyta stor nog för ett finger.
-    private func arrow(_ systemName: String, label: String, step: Int) -> some View {
+    private func arrow(_ systemName: String, label: LocalizedStringKey, step: Int) -> some View {
         let isPossible = HomeDay.offsets.contains(offset + step)
         return Button {
             withAnimation { offset += step }
@@ -200,7 +210,7 @@ private struct TodayEventRow: View {
             Text(event.title ?? "")
                 .foregroundStyle(Color.ink)
             Spacer()
-            Text(event.isAllDay ? "Heldag" : event.startDate.formatted(date: .omitted, time: .shortened))
+            Text(event.isAllDay ? String(appLocalized: "Heldag") : event.startDate.formatted(date: .omitted, time: .shortened))
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(Color.inkMuted)
         }
@@ -238,9 +248,9 @@ private struct FeedRow: View {
             PersonAvatar(assignee: group.actor)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(actorName) \(ShoppingFeed.describe(group))")
+                Text(ShoppingFeed.describe(group, actor: actorName))
                     .foregroundStyle(Color.ink)
-                Text(Self.relative.localizedString(for: group.newest, relativeTo: .now))
+                Text(Self.relative(in: AppLanguage.current).localizedString(for: group.newest, relativeTo: .now))
                     .font(.footnote)
                     .foregroundStyle(Color.inkMuted)
             }
@@ -249,14 +259,15 @@ private struct FeedRow: View {
 
     /// "Du" för det man gjort själv, som i webbappen.
     private var actorName: String {
-        if group.actor == session.me?.id { return "Du" }
-        return session.person(group.actor)?.name ?? "Någon"
+        if group.actor == session.me?.id { return String(appLocalized: "Du") }
+        return session.person(group.actor)?.name ?? String(appLocalized: "Någon")
     }
 
-    private static let relative: RelativeDateTimeFormatter = {
+    /// "för 5 minuter sedan", "5 minutes ago"
+    private static func relative(in language: AppLanguage) -> RelativeDateTimeFormatter {
         let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.locale = language.locale
         formatter.dateTimeStyle = .named
         return formatter
-    }()
+    }
 }

@@ -5,7 +5,7 @@ import XCTest
 /// Samma fall som webbappens tests/monthGrid.test.ts.
 final class MonthGridTests: XCTestCase {
     func testSeptember2026StartsOnATuesday() {
-        let month = MonthGrid(year: 2026, month: 9)
+        let month = MonthGrid(year: 2026, month: 9, language: .swedish)
 
         XCTAssertEqual(month.title, "September 2026")
         XCTAssertEqual(month.first, "2026-09-01")
@@ -68,13 +68,13 @@ final class ShoppingFeedTests: XCTestCase {
         let groups = ShoppingFeed.groups(feed)
 
         XCTAssertEqual(groups.count, 2)
-        XCTAssertEqual(groups.map(ShoppingFeed.describe), ["la till 3 varor", "bockade av 2 varor"])
+        XCTAssertEqual(groups.map { ShoppingFeed.describe($0, actor: "Anna", in: .swedish) }, ["Anna la till 3 varor", "Anna bockade av 2 varor"])
     }
 
     func testASingleItemIsNamed() {
         let groups = ShoppingFeed.groups([activity("shopping.added", "Mjölk", minutesAgo: 2)])
 
-        XCTAssertEqual(groups.map(ShoppingFeed.describe), ["la till Mjölk"])
+        XCTAssertEqual(groups.map { ShoppingFeed.describe($0, actor: "Anna", in: .swedish) }, ["Anna la till Mjölk"])
     }
 
     func testMoreThanHalfAnHourApartAreSeparateRows() {

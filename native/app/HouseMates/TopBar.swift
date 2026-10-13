@@ -9,7 +9,7 @@ struct AppTopBar: View {
         HStack {
             HStack(spacing: 9) {
                 PairDots()
-                Text("HouseMates")
+                Text(verbatim: "HouseMates")
                     .font(.headline.weight(.heavy))
                     .foregroundStyle(Color.ink)
             }
@@ -48,10 +48,10 @@ private struct PairDots: View {
 
 /// Sidans rubrik under toppbaren, som webbappens "Inköp", med plats för en knapp till höger.
 struct PageTitle<Trailing: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let trailing: Trailing
 
-    init(_ title: String, @ViewBuilder trailing: () -> Trailing) {
+    init(_ title: LocalizedStringKey, @ViewBuilder trailing: () -> Trailing) {
         self.title = title
         self.trailing = trailing()
     }
@@ -70,7 +70,7 @@ struct PageTitle<Trailing: View>: View {
 }
 
 extension PageTitle where Trailing == EmptyView {
-    init(_ title: String) {
+    init(_ title: LocalizedStringKey) {
         self.init(title) { EmptyView() }
     }
 }

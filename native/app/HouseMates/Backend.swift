@@ -34,21 +34,22 @@ struct UserFacingError: LocalizedError {
     var errorDescription: String? { message }
 }
 
-/// Felet som text för användaren, alltid på svenska. Text från servern visas bara när den kommer
-/// från våra egna funktioner (de är skrivna på svenska); allt annat får en svensk text här.
+/// Felet som text för användaren, på appens språk. Text från servern visas bara när den kommer
+/// från våra egna funktioner; den är skriven på svenska och översätts om den finns i
+/// Localizable.xcstrings. Allt annat får en egen text här.
 func userMessage(for error: Error) -> String {
     if let error = error as? UserFacingError { return error.message }
-    if let error = error as? AuthError { return authMessage(for: error) }
-    if let error = error as? PostgrestError, error.code == "P0001" { return error.message }
+    if let error = error as? AuthError { return String(appLocalized: authMessage(for: error)) }
+    if let error = error as? PostgrestError, error.code == "P0001" { return AppLanguage.current.translated(error.message) }
     if case let FunctionsError.httpError(_, data) = error,
        let reply = try? JSONDecoder().decode(FunctionErrorReply.self, from: data) {
-        return reply.error.message
+        return AppLanguage.current.translated(reply.error.message)
     }
-    if error is URLError { return "Ingen kontakt med servern. Kontrollera nätet och försök igen." }
-    return "Något gick fel. Försök igen."
+    if error is URLError { return String(appLocalized: "Ingen kontakt med servern. Kontrollera nätet och försök igen.") }
+    return String(appLocalized: "Något gick fel. Försök igen.")
 }
 
-private func authMessage(for error: AuthError) -> String {
+private func authMessage(for error: AuthError) -> LocalizedStringResource {
     if case .sessionMissing = error { return "Logga in igen." }
     switch error.errorCode {
     case .invalidCredentials: return "Fel e-post eller lösenord."

@@ -31,7 +31,6 @@ struct ActivityGroup: Identifiable, Equatable {
 enum ShoppingFeed {
     static let types = ["shopping.added", "shopping.checked"]
     private static let window: TimeInterval = 30 * 60
-    private static let verbs = ["shopping.added": "la till", "shopping.checked": "bockade av"]
 
     /// Samma person och typ inom 30 minuter blir en rad, även om andra rader ligger emellan.
     /// Raderna kommer med den senaste först.
@@ -53,10 +52,19 @@ enum ShoppingFeed {
         return groups
     }
 
-    /// "la till Mjölk", "bockade av 3 varor"
-    static func describe(_ group: ActivityGroup) -> String {
-        let verb = verbs[group.type] ?? "ändrade"
-        guard group.entries.count == 1 else { return "\(verb) \(group.entries.count) varor" }
-        return "\(verb) \(group.entries[0].payload?.name ?? "en vara")"
+    /// "Anna la till Mjölk", "Du bockade av 3 varor". Hela meningen översätts, så att ordföljden
+    /// kan vara en annan på engelska.
+    static func describe(_ group: ActivityGroup, actor: String, in language: AppLanguage = .current) -> String {
+        let count = group.entries.count
+        let name = group.entries[0].payload?.name ?? String(appLocalized: "en vara", in: language)
+        let sentence: LocalizedStringResource = switch (group.type, count) {
+        case ("shopping.added", 1): "\(actor) la till \(name)"
+        case ("shopping.added", _): "\(actor) la till \(count) varor"
+        case ("shopping.checked", 1): "\(actor) bockade av \(name)"
+        case ("shopping.checked", _): "\(actor) bockade av \(count) varor"
+        case (_, 1): "\(actor) ändrade \(name)"
+        default: "\(actor) ändrade \(count) varor"
+        }
+        return String(appLocalized: sentence, in: language)
     }
 }

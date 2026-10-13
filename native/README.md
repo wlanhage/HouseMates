@@ -47,6 +47,20 @@ Testerna:
 
 ## Hur det hänger ihop
 
+- **Språk:** svenska och engelska, valt under Inställningar → Språk. Utan eget val följer appen
+  telefonens språk. Texterna skrivs på svenska i koden och översättningarna finns i
+  `Localizable.xcstrings` (String Catalog). Vyerna översätter sig själva efter `\.locale`, som
+  `RootView` sätter, så ett nytt språk syns direkt. Text som byggs i koden, som "Tog bort Mjölk",
+  översätts med `String(appLocalized:)` (`Shared/Language.swift`).
+  - Fel som servern skickar på svenska slås upp i katalogen (`AppLanguage.translated`) och ligger
+    där som manuella nycklar. Notiser och mejl skickas fortfarande på svenska.
+  - Valet sparas också som iOS språkval för appen (`AppleLanguages`), så att Apples delar, som
+    kalenderformuläret och frågan om kalenderåtkomst (`InfoPlist.xcstrings`), följer med nästa gång
+    appen startar. Delningstillägget läser valet ur App Group och har en egen katalog.
+  - Ny text: skriv den på svenska och bygg i Xcode, så hamnar den i katalogen; lägg sedan till
+    engelskan där. Från terminalen: `xcrun xcstringstool sync app/HouseMates/Localizable.xcstrings
+    --stringsdata <bygget>/HouseMates.build/Objects-normal/arm64/*.stringsdata`.
+  - Integritetspolicyn finns på engelska i `privacy-policy.md`, som en översättning av den svenska.
 - **Utseende:** samma som webbappen (`src/app.css`), utan komponentbibliotek. Färgerna och
   byggstenarna finns i `Theme.swift`: papperston och granngrön accent med mörkt läge, kort med
   tunn kant och mjuk skugga, rund bock som ritas, initial i personens färg, etiketter för
@@ -244,9 +258,10 @@ Testerna:
         visa `Loading config override: [remotes.produktion]`; kontrollera sedan Authentication →
         SMTP i projektet.
    - Fyll i `Config/Release.xcconfig` med projektets adress och nyckel, och `SUPPORT_EMAIL`.
-     Ett release-bygge stoppas tills de är ifyllda och `[NAMN]`/`[E-POST]` är bytta i policyn.
+     Ett release-bygge stoppas tills de är ifyllda och platshållarna är bytta i båda policyerna.
 3. **Fyll i och publicera integritetspolicyn.**
-   - Byt `[NAMN]` och `[E-POST]` i `app/HouseMates/integritetspolicy.md`.
+   - Byt `[NAMN]` och `[E-POST]` i `app/HouseMates/integritetspolicy.md` och `[NAME]` och
+     `[EMAIL]` i den engelska `app/HouseMates/privacy-policy.md`.
    - Publicera samma text på en webbadress. Den adressen och en support-adress behövs i App
      Store Connect.
 4. **App Store Connect:** texter, granskningsanteckningar och integritetssvar finns i

@@ -68,7 +68,7 @@ final class SharedCalendar {
         do {
             _ = try await store.requestFullAccessToEvents()
         } catch {
-            errorMessage = "Kunde inte be om åtkomst till kalendern."
+            errorMessage = String(appLocalized: "Kunde inte be om åtkomst till kalendern.")
         }
         refresh()
     }
@@ -122,7 +122,7 @@ final class SharedCalendar {
             try store.saveCalendar(calendar, commit: true)
             return calendar
         } catch {
-            errorMessage = "Kunde inte skapa kalendern. Kontrollera att iCloud är påslaget för Kalender i telefonens inställningar."
+            errorMessage = String(appLocalized: "Kunde inte skapa kalendern. Kontrollera att iCloud är påslaget för Kalender i telefonens inställningar.")
             return nil
         }
     }
@@ -137,7 +137,7 @@ final class SharedCalendar {
             store.calendarItems(withExternalIdentifier: uid).contains { $0.calendar?.calendarIdentifier == calendar.calendarIdentifier }
         }
         if !isSame {
-            errorMessage = "\(calendar.title) innehåller inga av hushållets händelser och är troligen fel kalender. Har du accepterat inbjudan?"
+            errorMessage = String(appLocalized: "\(calendar.title) innehåller inga av hushållets händelser och är troligen fel kalender. Har du accepterat inbjudan?")
         }
         remember(calendar, uids: uids)
         refresh()
@@ -268,17 +268,17 @@ final class SharedCalendar {
     private func markerUID(in calendar: EKCalendar) -> String? {
         let marker = EKEvent(eventStore: store)
         marker.calendar = calendar
-        marker.title = "HouseMates är kopplad"
+        marker.title = String(appLocalized: "HouseMates är kopplad")
         marker.isAllDay = true
         marker.startDate = Calendar.current.startOfDay(for: .now)
         marker.endDate = marker.startDate
         marker.url = Self.markerURL
-        marker.notes = "Skapad av HouseMates så att din partners telefon hittar kalendern. Raderas automatiskt."
+        marker.notes = String(appLocalized: "Skapad av HouseMates så att din partners telefon hittar kalendern. Raderas automatiskt.")
         do {
             try store.save(marker, span: .thisEvent, commit: true)
             return marker.calendarItemExternalIdentifier
         } catch {
-            errorMessage = "Kunde inte förbereda kalendern. Försök igen."
+            errorMessage = String(appLocalized: "Kunde inte förbereda kalendern. Försök igen.")
             return nil
         }
     }

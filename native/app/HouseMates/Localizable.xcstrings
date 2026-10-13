@@ -1,0 +1,2942 @@
+{
+  "sourceLanguage" : "sv",
+  "strings" : {
+    "%@ bockade av %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ checked off %2$@"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ bockade av %2$@"
+          }
+        }
+      }
+    },
+    "%@ bockade av %lld varor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ checked off %2$lld items"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ bockade av %2$lld varor"
+          }
+        }
+      }
+    },
+    "%@ innehåller inga av hushållets händelser och är troligen fel kalender. Har du accepterat inbjudan?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has none of the household's events and is probably the wrong calendar. Have you accepted the invitation?"
+          }
+        }
+      }
+    },
+    "%@ la till %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ added %2$@"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ la till %2$@"
+          }
+        }
+      }
+    },
+    "%@ la till %lld varor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ added %2$lld items"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ la till %2$lld varor"
+          }
+        }
+      }
+    },
+    "%@ ändrade %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ changed %2$@"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ ändrade %2$@"
+          }
+        }
+      }
+    },
+    "%@ ändrade %lld varor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ changed %2$lld items"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ ändrade %2$lld varor"
+          }
+        }
+      }
+    },
+    "%lld min" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min"
+          }
+        }
+      }
+    },
+    "%lld varor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
+    "1 vara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 item"
+          }
+        }
+      }
+    },
+    "1. Öppna Kalender-appen och tryck Kalendrar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Open the Calendar app and tap Calendars."
+          }
+        }
+      }
+    },
+    "2. Tryck ⓘ vid %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Tap ⓘ next to %@."
+          }
+        }
+      }
+    },
+    "3. Tryck Lägg till person, välj %@ och tryck Lägg till." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Tap Add Person, choose %@ and tap Add."
+          }
+        }
+      }
+    },
+    "500 g köttfärs\nTortillas\nSalsa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "500 g minced beef\nTortillas\nSalsa"
+          }
+        }
+      }
+    },
+    "Aldrig gjord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never done"
+          }
+        }
+      }
+    },
+    "Alla" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "Antal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qty"
+          }
+        }
+      }
+    },
+    "Antal (valfritt)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quantity (optional)"
+          }
+        }
+      }
+    },
+    "Anteckningar (valfritt)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes (optional)"
+          }
+        }
+      }
+    },
+    "Att göra" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To do"
+          }
+        }
+      }
+    },
+    "Avbryt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "Avmarkera alla" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deselect all"
+          }
+        }
+      }
+    },
+    "Bekräfta din e-postadress först. Länken finns i mejlet vi skickade." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm your email address first. The link is in the email we sent you."
+          }
+        }
+      }
+    },
+    "Bjud in din partner" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite your partner"
+          }
+        }
+      }
+    },
+    "Bocka ur det ni redan har hemma." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Untick what you already have at home."
+          }
+        }
+      }
+    },
+    "Byt kalender" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change calendar"
+          }
+        }
+      }
+    },
+    "Byt kalender för hushållet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change the household's calendar"
+          }
+        }
+      }
+    },
+    "Byt lösenord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change password"
+          }
+        }
+      }
+    },
+    "Datum" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "Dela med %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share with %@"
+          }
+        }
+      }
+    },
+    "Delad kalender" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared calendar"
+          }
+        }
+      }
+    },
+    "Den här middagen finns inte längre" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This dinner no longer exists"
+          }
+        }
+      }
+    },
+    "Det finns redan ett konto med den e-postadressen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is already an account with that email address."
+          }
+        }
+      }
+    },
+    "Det receptet finns redan sparat." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That recipe is already saved."
+          }
+        }
+      }
+    },
+    "Din partner" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your partner"
+          }
+        }
+      }
+    },
+    "Dina kalendrar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your calendars"
+          }
+        }
+      }
+    },
+    "Ditt konto och ditt namn raderas. Det går inte att ångra." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account and your name will be deleted. This can't be undone."
+          }
+        }
+      }
+    },
+    "Ditt konto, ditt namn och din historik raderas. Hushållets listor och middagar raderas också. Kalendern i Apple Kalender påverkas inte. Det går inte att ångra." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account, your name and your history will be deleted. The household's lists and dinners will be deleted too. The calendar in Apple Calendar is not affected. This can't be undone."
+          }
+        }
+      }
+    },
+    "Ditt konto, ditt namn och din historik raderas. Listorna och middagarna finns kvar för %@. Kalendern i Apple Kalender påverkas inte. Det går inte att ångra." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account, your name and your history will be deleted. The lists and dinners stay for %@. The calendar in Apple Calendar is not affected. This can't be undone."
+          }
+        }
+      }
+    },
+    "Ditt namn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your name"
+          }
+        }
+      }
+    },
+    "Du" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You"
+          }
+        }
+      }
+    },
+    "Du kan också dela en receptsida från Safari till HouseMates." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can also share a recipe page from Safari to HouseMates."
+          }
+        }
+      }
+    },
+    "Du är ensam i hushållet, så hushållet med listor och middagar raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're the only one in the household, so the household and its lists and dinners will be deleted. Then you can create a new household or join another one."
+          }
+        }
+      }
+    },
+    "Du är inte inloggad" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're not signed in"
+          }
+        }
+      }
+    },
+    "Du är inte inloggad." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're not signed in."
+          }
+        }
+      }
+    },
+    "Du är inte med i något hushåll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're not in a household"
+          }
+        }
+      }
+    },
+    "Du är inte med i något hushåll." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're not in a household."
+          }
+        }
+      }
+    },
+    "Du är redan med i ett hushåll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're already in a household"
+          }
+        }
+      }
+    },
+    "Dölj klara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide completed"
+          }
+        }
+      }
+    },
+    "E-post" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        }
+      }
+    },
+    "Eller välj kalendern själv" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Or choose the calendar yourself"
+          }
+        }
+      }
+    },
+    "En ändring kunde inte sparas och har tagits bort." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A change couldn't be saved and has been removed."
+          }
+        }
+      }
+    },
+    "Enhet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unit"
+          }
+        }
+      }
+    },
+    "Er gemensamma kalender" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your shared calendar"
+          }
+        }
+      }
+    },
+    "Er gemensamma planering" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your shared planner"
+          }
+        }
+      }
+    },
+    "Ett hushåll delar listor, middagar och kalender. Den ena skapar hushållet och skickar koden till den andra." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A household shares lists, dinners and a calendar. One of you creates the household and sends the code to the other."
+          }
+        }
+      }
+    },
+    "Fel e-post eller lösenord." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wrong email or password."
+          }
+        }
+      }
+    },
+    "Finns redan på listan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already on the list"
+          }
+        }
+      }
+    },
+    "Fler val" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More options"
+          }
+        }
+      }
+    },
+    "Fortsätt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "Från" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From"
+          }
+        }
+      }
+    },
+    "Från %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From %@"
+          }
+        }
+      }
+    },
+    "Från en receptsida" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From a recipe page"
+          }
+        }
+      }
+    },
+    "Få en notis när %@ ändrar listorna eller kalendern." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get a notification when %@ changes the lists or the calendar."
+          }
+        }
+      }
+    },
+    "För %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For %@"
+          }
+        }
+      }
+    },
+    "För många felaktiga koder. Vänta en timme och försök igen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many wrong codes. Wait an hour and try again."
+          }
+        }
+      }
+    },
+    "För många försök just nu. Vänta en stund och försök igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many attempts right now. Wait a moment and try again."
+          }
+        }
+      }
+    },
+    "För många händelser i kopplingen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many events in the calendar link"
+          }
+        }
+      }
+    },
+    "För uppgifter som kan göras när som helst under en period, till exempel en helg." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For tasks that can be done any time during a period, such as a weekend."
+          }
+        }
+      }
+    },
+    "För vem" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For whom"
+          }
+        }
+      }
+    },
+    "För vem är %@?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Who is %@ for?"
+          }
+        }
+      }
+    },
+    "För vem?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For whom?"
+          }
+        }
+      }
+    },
+    "Föregående dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous day"
+          }
+        }
+      }
+    },
+    "Föregående månad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous month"
+          }
+        }
+      }
+    },
+    "Förnamn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First name"
+          }
+        }
+      }
+    },
+    "Försenad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overdue"
+          }
+        }
+      }
+    },
+    "Försenad %lld dagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld days overdue"
+          }
+        }
+      }
+    },
+    "Försenad 1 dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 day overdue"
+          }
+        }
+      }
+    },
+    "Försök igen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        }
+      }
+    },
+    "Gemensamt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared"
+          }
+        }
+      }
+    },
+    "Gjord för %lld dagar sedan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done %lld days ago"
+          }
+        }
+      }
+    },
+    "Gjord för %lld dagar sedan av %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done %1$lld days ago by %2$@"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gjord för %1$lld dagar sedan av %2$@"
+          }
+        }
+      }
+    },
+    "Gjord idag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done today"
+          }
+        }
+      }
+    },
+    "Gjord idag av %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done today by %@"
+          }
+        }
+      }
+    },
+    "Gjord igår" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done yesterday"
+          }
+        }
+      }
+    },
+    "Gjord igår av %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done yesterday by %@"
+          }
+        }
+      }
+    },
+    "Gjort: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done: %@"
+          }
+        }
+      }
+    },
+    "Glömt lösenordet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forgot password"
+          }
+        }
+      }
+    },
+    "Glömt lösenordet?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forgot your password?"
+          }
+        }
+      }
+    },
+    "God kväll, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good evening, %@"
+          }
+        }
+      }
+    },
+    "God morgon, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good morning, %@"
+          }
+        }
+      }
+    },
+    "God natt, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good night, %@"
+          }
+        }
+      }
+    },
+    "Gå med" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Join"
+          }
+        }
+      }
+    },
+    "Gå med i vårt hushåll i HouseMates med koden %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Join our household in HouseMates with the code %@"
+          }
+        }
+      }
+    },
+    "Handlat · %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bought · %lld"
+          }
+        }
+      }
+    },
+    "Har du fått en kod?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Got a code?"
+          }
+        }
+      }
+    },
+    "Har gjorts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has been done"
+          }
+        }
+      }
+    },
+    "Hej %@! 👋" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hi %@! 👋"
+          }
+        }
+      }
+    },
+    "Hej, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hi, %@"
+          }
+        }
+      }
+    },
+    "Heldag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All day"
+          }
+        }
+      }
+    },
+    "Hem" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        }
+      }
+    },
+    "Hittade inga ingredienser. Fyll i dem själv." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No ingredients found. Fill them in yourself."
+          }
+        }
+      }
+    },
+    "Hittade inget hushåll med den koden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No household found with that code"
+          }
+        }
+      }
+    },
+    "Hittade inget hushåll med den koden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No household found with that code."
+          }
+        }
+      }
+    },
+    "HouseMates visar kalendern du och %@ delar och lägger in händelser i den. Andra kalendrar används inte." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HouseMates shows the calendar you and %@ share and adds events to it. No other calendars are used."
+          }
+        }
+      }
+    },
+    "HouseMates är kopplad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HouseMates is connected"
+          }
+        }
+      }
+    },
+    "Hur ofta?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How often?"
+          }
+        }
+      }
+    },
+    "Hushåll" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Household"
+          }
+        }
+      }
+    },
+    "Hushållet använder kalendern %@. Har du fått en inbjudan till den? Öppna den (notis eller Kalender → Inkorg) och tryck Gå med. Appen hittar kalendern själv när du kommer tillbaka." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The household uses the calendar %@. Have you received an invitation to it? Open it (notification or Calendar → Inbox) and tap Join. The app finds the calendar by itself when you come back."
+          }
+        }
+      }
+    },
+    "Hushållet har redan två medlemmar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The household already has two members"
+          }
+        }
+      }
+    },
+    "Hämta" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fetch"
+          }
+        }
+      }
+    },
+    "Idag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
+    "Igår" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yesterday"
+          }
+        }
+      }
+    },
+    "Imorgon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
+          }
+        }
+      }
+    },
+    "Inbjudningskod" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite code"
+          }
+        }
+      }
+    },
+    "Inga händelser de kommande 60 dagarna." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No events in the next 60 days."
+          }
+        }
+      }
+    },
+    "Inga middagar sparade än. Spara rätter ni gillar, så lägger ett tryck varorna på inköpslistan." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No dinners saved yet. Save dishes you like, and one tap puts the ingredients on the shopping list."
+          }
+        }
+      }
+    },
+    "Inga städsysslor här." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No chores here."
+          }
+        }
+      }
+    },
+    "Inga städsysslor än. Lägg till det ni brukar göra med plusset, till exempel dammsuga varje vecka." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No chores yet. Add what you usually do with the plus button, such as vacuuming every week."
+          }
+        }
+      }
+    },
+    "Inga varor sparade för den här rätten. Tryck på Ändra för att lägga till dem." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No ingredients saved for this dish. Tap Edit to add them."
+          }
+        }
+      }
+    },
+    "Inga öppna uppgifter här." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No open tasks here."
+          }
+        }
+      }
+    },
+    "Inga öppna uppgifter." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No open tasks."
+          }
+        }
+      }
+    },
+    "Ingen kontakt med servern. Kontrollera nätet och försök igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't reach the server. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "Ingen kontakt med servern. Öppna länken igen när du har nät." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't reach the server. Open the link again when you're online."
+          }
+        }
+      }
+    },
+    "Ingen kontakt. Dina ändringar skickas när nätet är tillbaka." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connection. Your changes will be sent when you're back online."
+          }
+        }
+      }
+    },
+    "Ingen kontakt. Listan visar senast hämtade läge." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connection. The list shows what was last loaded."
+          }
+        }
+      }
+    },
+    "Ingen åtkomst till kalendern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No access to the calendar"
+          }
+        }
+      }
+    },
+    "Inget har hänt på listan än." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing has happened on the list yet."
+          }
+        }
+      }
+    },
+    "Inget inplanerat." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned."
+          }
+        }
+      }
+    },
+    "Inget planerat %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned on %@."
+          }
+        }
+      }
+    },
+    "Inget planerat idag." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned today."
+          }
+        }
+      }
+    },
+    "Inget planerat igår." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned yesterday."
+          }
+        }
+      }
+    },
+    "Inget planerat imorgon." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned tomorrow."
+          }
+        }
+      }
+    },
+    "Ingredienser" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredients"
+          }
+        }
+      }
+    },
+    "Ingredienser, en per rad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredients, one per line"
+          }
+        }
+      }
+    },
+    "Inköp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shopping"
+          }
+        }
+      }
+    },
+    "Inloggningen fungerade inte. Försök igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing in didn't work. Try again."
+          }
+        }
+      }
+    },
+    "Inställningar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "Inte nu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "Inte vald" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not chosen"
+          }
+        }
+      }
+    },
+    "Integritetspolicy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy policy"
+          }
+        }
+      }
+    },
+    "Kalender" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar"
+          }
+        }
+      }
+    },
+    "Kalendern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar"
+          }
+        }
+      }
+    },
+    "Kan göras från" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can be done from"
+          }
+        }
+      }
+    },
+    "Klar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "Klar: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done: %@"
+          }
+        }
+      }
+    },
+    "Klart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "Klart · %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done · %lld"
+          }
+        }
+      }
+    },
+    "Klistra in länken" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste the link"
+          }
+        }
+      }
+    },
+    "Kod, t.ex. K7M2QXPA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code, e.g. K7M2QXPA"
+          }
+        }
+      }
+    },
+    "Kontakta oss" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contact us"
+          }
+        }
+      }
+    },
+    "Konto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        }
+      }
+    },
+    "Kontrollera e-postadressen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the email address."
+          }
+        }
+      }
+    },
+    "Kunde inte be om åtkomst till kalendern." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't ask for access to the calendar."
+          }
+        }
+      }
+    },
+    "Kunde inte förbereda kalendern. Försök igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare the calendar. Try again."
+          }
+        }
+      }
+    },
+    "Kunde inte hämta sidan." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't fetch the page."
+          }
+        }
+      }
+    },
+    "Kunde inte skapa kalendern. Kontrollera att iCloud är påslaget för Kalender i telefonens inställningar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create the calendar. Check that iCloud is turned on for Calendar in your phone's settings."
+          }
+        }
+      }
+    },
+    "Lista" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "List"
+          }
+        }
+      }
+    },
+    "Listan kunde inte hämtas. Försök igen senare." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The list couldn't be loaded. Try again later."
+          }
+        }
+      }
+    },
+    "Listan är tom. Lägg till något ovan." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The list is empty. Add something above."
+          }
+        }
+      }
+    },
+    "Listorna och middagarna blir kvar för %@. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat. Kalendern ni delar i Apple Kalender påverkas inte; sluta dela den i Kalender-appen om du vill." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The lists and dinners stay for %@. Then you can create a new household or join another one. The calendar you share in Apple Calendar is not affected; stop sharing it in the Calendar app if you want to."
+          }
+        }
+      }
+    },
+    "Logga in" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in"
+          }
+        }
+      }
+    },
+    "Logga in igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in again."
+          }
+        }
+      }
+    },
+    "Logga ut" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out"
+          }
+        }
+      }
+    },
+    "Lägg %@ på listan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add %@ to the list"
+          }
+        }
+      }
+    },
+    "Lägg till" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "Lägg till den första" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add the first one"
+          }
+        }
+      }
+    },
+    "Lägg till vara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add item"
+          }
+        }
+      }
+    },
+    "Lägger till på listan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds it to the list"
+          }
+        }
+      }
+    },
+    "Lämna" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave"
+          }
+        }
+      }
+    },
+    "Lämna hushållet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave household"
+          }
+        }
+      }
+    },
+    "Lämna hushållet?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave the household?"
+          }
+        }
+      }
+    },
+    "Länken fungerade inte" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link didn't work"
+          }
+        }
+      }
+    },
+    "Länken har gått ut eller redan använts. Be om en ny." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link has expired or has already been used. Ask for a new one."
+          }
+        }
+      }
+    },
+    "Länken har gått ut, redan använts eller öppnats på en annan telefon än den som bad om den. Be om en ny." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link has expired, has already been used or was opened on a different phone than the one that asked for it. Ask for a new one."
+          }
+        }
+      }
+    },
+    "Lösenord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        }
+      }
+    },
+    "Lösenordet är för svagt. Använd minst 8 tecken." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password is too weak. Use at least 8 characters."
+          }
+        }
+      }
+    },
+    "Markera %@ som gjord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark %@ as done"
+          }
+        }
+      }
+    },
+    "Markera %@ som inte klar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark %@ as not done"
+          }
+        }
+      }
+    },
+    "Markera %@ som klar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark %@ as done"
+          }
+        }
+      }
+    },
+    "Middagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dinners"
+          }
+        }
+      }
+    },
+    "Minst 8 tecken." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least 8 characters."
+          }
+        }
+      }
+    },
+    "Minst 8 tecken. Ditt namn syns för din partner." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least 8 characters. Your partner sees your name."
+          }
+        }
+      }
+    },
+    "Månad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Month"
+          }
+        }
+      }
+    },
+    "Notiser" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "Notiser och mejl är än så länge på svenska." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications and emails are in Swedish for now."
+          }
+        }
+      }
+    },
+    "Ny händelse" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New event"
+          }
+        }
+      }
+    },
+    "Ny här?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New here?"
+          }
+        }
+      }
+    },
+    "Ny middag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New dinner"
+          }
+        }
+      }
+    },
+    "Ny städsyssla" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New chore"
+          }
+        }
+      }
+    },
+    "Ny uppgift" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New task"
+          }
+        }
+      }
+    },
+    "Ny vara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New item"
+          }
+        }
+      }
+    },
+    "Nyligen i inköp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent shopping"
+          }
+        }
+      }
+    },
+    "Nytt lösenord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password"
+          }
+        }
+      }
+    },
+    "Nästa dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next day"
+          }
+        }
+      }
+    },
+    "Nästa gång räknas från när sysslan senast gjordes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next time counts from when the chore was last done."
+          }
+        }
+      }
+    },
+    "Nästa månad" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next month"
+          }
+        }
+      }
+    },
+    "Någon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Someone"
+          }
+        }
+      }
+    },
+    "Något gick fel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something went wrong"
+          }
+        }
+      }
+    },
+    "Något gick fel." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something went wrong."
+          }
+        }
+      }
+    },
+    "Något gick fel. Försök igen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something went wrong. Try again."
+          }
+        }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Ogiltig länk." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid link."
+          }
+        }
+      }
+    },
+    "Ogiltig notisadress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid notification address"
+          }
+        }
+      }
+    },
+    "Om %lld dagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %lld days"
+          }
+        }
+      }
+    },
+    "Om HouseMates" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About HouseMates"
+          }
+        }
+      }
+    },
+    "Om det finns ett konto för %@ har vi skickat en länk dit. Öppna mejlet på den här telefonen och tryck på länken för att välja ett nytt lösenord." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If there is an account for %@, we've sent a link there. Open the email on this phone and tap the link to choose a new password."
+          }
+        }
+      }
+    },
+    "Om kalendern har raderats eller slutat delas. Kalendern du väljer används sedan av er båda." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the calendar has been deleted or is no longer shared. The calendar you choose is then used by both of you."
+          }
+        }
+      }
+    },
+    "Om kalendern inte redan är delad:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the calendar isn't shared yet:"
+          }
+        }
+      }
+    },
+    "Radera" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "Radera konto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete account"
+          }
+        }
+      }
+    },
+    "Radera kontot?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete the account?"
+          }
+        }
+      }
+    },
+    "Rensa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "Rensade %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cleared %@"
+          }
+        }
+      }
+    },
+    "Rensade %lld klara uppgifter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cleared %lld completed tasks"
+          }
+        }
+      }
+    },
+    "Rensade 1 klar uppgift" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cleared 1 completed task"
+          }
+        }
+      }
+    },
+    "Rätt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dish"
+          }
+        }
+      }
+    },
+    "Senast gjord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last done"
+          }
+        }
+      }
+    },
+    "Sidan skickade vidare för många gånger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The page redirected too many times."
+          }
+        }
+      }
+    },
+    "Sista dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due date"
+          }
+        }
+      }
+    },
+    "Skapa hushåll" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create household"
+          }
+        }
+      }
+    },
+    "Skapa konto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create account"
+          }
+        }
+      }
+    },
+    "Skapa ny HouseMates-kalender" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a new HouseMates calendar"
+          }
+        }
+      }
+    },
+    "Skapad av HouseMates så att din partners telefon hittar kalendern. Raderas automatiskt." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Created by HouseMates so that your partner's phone finds the calendar. Deleted automatically."
+          }
+        }
+      }
+    },
+    "Skicka länk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send link"
+          }
+        }
+      }
+    },
+    "Skicka när det varit tyst i" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send after a quiet period of"
+          }
+        }
+      }
+    },
+    "Slå på notiser" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on notifications"
+          }
+        }
+      }
+    },
+    "Slå på notiser i Inställningar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on notifications in Settings"
+          }
+        }
+      }
+    },
+    "Spara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "Språk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        }
+      }
+    },
+    "Städ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chores"
+          }
+        }
+      }
+    },
+    "Stäng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "Står redan på listan." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already on the list."
+          }
+        }
+      }
+    },
+    "Står redan på listan: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already on the list: %@"
+          }
+        }
+      }
+    },
+    "Så hanterar vi dina uppgifter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How we handle your data"
+          }
+        }
+      }
+    },
+    "T.ex. byta sängkläder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E.g. change the bed linen"
+          }
+        }
+      }
+    },
+    "T.ex. tacos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E.g. tacos"
+          }
+        }
+      }
+    },
+    "Ta bort" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "Ta bort %@?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@?"
+          }
+        }
+      }
+    },
+    "Ta bort från Våra middagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Our dinners"
+          }
+        }
+      }
+    },
+    "Ta bort städsysslan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete chore"
+          }
+        }
+      }
+    },
+    "Ta bort uppgiften" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete task"
+          }
+        }
+      }
+    },
+    "Till" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To"
+          }
+        }
+      }
+    },
+    "Till idag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to today"
+          }
+        }
+      }
+    },
+    "Tips: dela en receptsida från Safari till HouseMates, så hamnar den här." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tip: share a recipe page from Safari to HouseMates and it ends up here."
+          }
+        }
+      }
+    },
+    "Tog bort %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed %@"
+          }
+        }
+      }
+    },
+    "Tog bort %lld uppgifter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed %lld tasks"
+          }
+        }
+      }
+    },
+    "Tryck på bocken när sysslan är gjord. Tryck på namnet för att ändra den." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the check mark when the chore is done. Tap the name to edit it."
+          }
+        }
+      }
+    },
+    "Tryck Öppna Inställningar, välj Kalendrar och sedan Fullständig åtkomst. Inköpslistan fungerar som vanligt under tiden." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap Open Settings, choose Calendars and then Full Access. The shopping list works as usual in the meantime."
+          }
+        }
+      }
+    },
+    "Tysta timmar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours"
+          }
+        }
+      }
+    },
+    "Uppgifter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
+          }
+        }
+      }
+    },
+    "Utan intervall visar listan bara när det gjordes senast och av vem." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without an interval, the list only shows when it was last done and by whom."
+          }
+        }
+      }
+    },
+    "Vad ska göras?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What needs doing?"
+          }
+        }
+      }
+    },
+    "Vara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item"
+          }
+        }
+      }
+    },
+    "Vem gör det?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Who does it?"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "Vi har skickat ett mejl till %@. Bekräfta adressen och logga sedan in." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We've sent an email to %@. Confirm the address and then sign in."
+          }
+        }
+      }
+    },
+    "Vi skickar en länk där du väljer ett nytt lösenord." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We'll send you a link where you choose a new password."
+          }
+        }
+      }
+    },
+    "Visa klara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show completed"
+          }
+        }
+      }
+    },
+    "Välj alla" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select all"
+          }
+        }
+      }
+    },
+    "Välj en kalender ni redan delar, eller skapa en ny som du sedan delar med %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a calendar you already share, or create a new one that you then share with %@."
+          }
+        }
+      }
+    },
+    "Välj ett annat lösenord än det du har nu." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a different password from your current one."
+          }
+        }
+      }
+    },
+    "Välj varor att lägga till" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose items to add"
+          }
+        }
+      }
+    },
+    "Väntar på kalendern" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for the calendar"
+          }
+        }
+      }
+    },
+    "Våra middagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Our dinners"
+          }
+        }
+      }
+    },
+    "dagar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "days"
+          }
+        }
+      }
+    },
+    "din partner" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your partner"
+          }
+        }
+      }
+    },
+    "en vara" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "an item"
+          }
+        }
+      }
+    },
+    "var %lld:a dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every %lld days"
+          }
+        }
+      }
+    },
+    "var %lld:a vecka" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every %lld weeks"
+          }
+        }
+      }
+    },
+    "var %lld:e dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every %lld days"
+          }
+        }
+      }
+    },
+    "var %lld:e vecka" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every %lld weeks"
+          }
+        }
+      }
+    },
+    "varannan dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every other day"
+          }
+        }
+      }
+    },
+    "varannan vecka" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every other week"
+          }
+        }
+      }
+    },
+    "varje dag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every day"
+          }
+        }
+      }
+    },
+    "varje vecka" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "every week"
+          }
+        }
+      }
+    },
+    "veckor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "weeks"
+          }
+        }
+      }
+    },
+    "Ändra" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "Ändra här om sysslan bockades av av misstag." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change this if the chore was checked off by mistake."
+          }
+        }
+      }
+    },
+    "Ändra middag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit dinner"
+          }
+        }
+      }
+    },
+    "Ändra städsyssla" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit chore"
+          }
+        }
+      }
+    },
+    "Ändra uppgift" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit task"
+          }
+        }
+      }
+    },
+    "Ändringar i rad blir en samlad notis." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changes in a row become one combined notification."
+          }
+        }
+      }
+    },
+    "Ändringar i rad blir en samlad notis. Notiser under tysta timmar skickas när de tar slut." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changes in a row become one combined notification. Notifications during quiet hours are sent when they end."
+          }
+        }
+      }
+    },
+    "Ångra" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo"
+          }
+        }
+      }
+    },
+    "Återkommer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeats"
+          }
+        }
+      }
+    },
+    "Öppna Inställningar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "Öppna på %@ ↗" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open on %@ ↗"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

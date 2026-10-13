@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     let calendar: SharedCalendar
     @State private var changesPassword = false
+    @AppStorage(AppLanguage.storageKey) private var savedLanguage: String?
 
     var body: some View {
         NavigationStack {
@@ -15,7 +16,7 @@ struct SettingsView: View {
                         LabeledContent("Din partner", value: partner.name)
                     } else if let code = session.household?.inviteCode {
                         LabeledContent("Inbjudningskod", value: code)
-                        ShareLink("Bjud in din partner", item: "Gå med i vårt hushåll i HouseMates med koden \(code)")
+                        ShareLink("Bjud in din partner", item: String(appLocalized: "Gå med i vårt hushåll i HouseMates med koden \(code)"))
                     }
                     ConfirmedActionButton(
                         title: "Lämna hushållet",
@@ -29,11 +30,30 @@ struct SettingsView: View {
                     SectionTitle("Hushåll")
                 }
                 Section {
-                    LabeledContent("Delad kalender", value: calendar.linkedCalendar?.title ?? "Inte vald")
+                    LabeledContent("Delad kalender") {
+                        if let title = calendar.linkedCalendar?.title {
+                            Text(title)
+                        } else {
+                            Text("Inte vald")
+                        }
+                    }
                 } header: {
                     SectionTitle("Kalender")
                 }
                 NotificationSection()
+                Section {
+                    Picker("Språk", selection: language) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(verbatim: language.name).tag(language)
+                        }
+                    }
+                } header: {
+                    SectionTitle("Språk")
+                } footer: {
+                    if AppLanguage(saved: savedLanguage) != .swedish {
+                        Text("Notiser och mejl är än så länge på svenska.")
+                    }
+                }
                 Section {
                     Button("Byt lösenord") { changesPassword = true }
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
@@ -58,7 +78,11 @@ struct SettingsView: View {
         }
     }
 
-    private var leaveConsequences: String {
+    private var language: Binding<AppLanguage> {
+        Binding(get: { AppLanguage(saved: savedLanguage) }, set: { AppLanguage.choose($0) })
+    }
+
+    private var leaveConsequences: LocalizedStringKey {
         guard let partner = session.partner else {
             return "Du är ensam i hushållet, så hushållet med listor och middagar raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat."
         }

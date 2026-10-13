@@ -53,10 +53,10 @@ final class AppSession {
             try await client.auth.session(from: url)
             needsNewPassword = url.host() == Self.newPasswordLink.host()
         } catch is URLError {
-            linkError = "Ingen kontakt med servern. Öppna länken igen när du har nät."
+            linkError = String(appLocalized: "Ingen kontakt med servern. Öppna länken igen när du har nät.")
         } catch {
             // Servern säger sällan varför; det vanliga är en gammal länk eller en annan telefon.
-            linkError = "Länken har gått ut, redan använts eller öppnats på en annan telefon än den som bad om den. Be om en ny."
+            linkError = String(appLocalized: "Länken har gått ut, redan använts eller öppnats på en annan telefon än den som bad om den. Be om en ny.")
         }
     }
 
@@ -89,6 +89,8 @@ final class AppSession {
         if let bundleID = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: bundleID)
         }
+        // Språkvalet försvinner med resten, också delningstilläggets kopia.
+        UserDefaults(suiteName: RecipeInbox.appGroup)?.removeObject(forKey: AppLanguage.storageKey)
         try? await client.auth.signOut()
         await load(signedIn: false)
     }
@@ -106,7 +108,7 @@ final class AppSession {
 
     func joinHousehold(code: String) async throws {
         let joined: Bool = try await client.rpc("join_household", params: ["p_code": code]).execute().value
-        guard joined else { throw UserFacingError(message: "Hittade inget hushåll med den koden.") }
+        guard joined else { throw UserFacingError(message: String(appLocalized: "Hittade inget hushåll med den koden.")) }
         await reload()
     }
 
