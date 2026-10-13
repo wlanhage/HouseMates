@@ -250,8 +250,10 @@ struct TodoEditor: View {
                     TextField("Anteckningar (valfritt)", text: $notes, axis: .vertical)
                         .lineLimit(1...6)
                 }
-                Section("Vem gör det?") {
+                Section {
                     AssigneePicker(assignee: $assignee)
+                } header: {
+                    FieldLabel("Vem gör det?")
                 }
                 Section {
                     Toggle("Sista dag", isOn: $hasDueDate.animation())
@@ -275,6 +277,7 @@ struct TodoEditor: View {
                             todos.remove([todo])
                             dismiss()
                         }
+                        .foregroundStyle(Color.danger)
                     }
                 }
             }
@@ -421,8 +424,10 @@ struct ChoreEditor: View {
                     TextField("T.ex. byta sängkläder", text: $title)
                         .focused($titleIsFocused)
                 }
-                Section("Vem gör det?") {
+                Section {
                     AssigneePicker(assignee: $assignee)
+                } header: {
+                    FieldLabel("Vem gör det?")
                 }
                 Section {
                     Toggle("Återkommer", isOn: $repeats.animation())
@@ -434,7 +439,7 @@ struct ChoreEditor: View {
                         .pickerStyle(.segmented)
                     }
                 } header: {
-                    Text("Hur ofta?")
+                    FieldLabel("Hur ofta?")
                 } footer: {
                     Text(repeats
                         ? "Nästa gång räknas från när sysslan senast gjordes."
@@ -447,12 +452,13 @@ struct ChoreEditor: View {
                             DatePicker("Datum", selection: $lastDone, in: ...Date.now, displayedComponents: .date)
                         }
                     } header: {
-                        Text("Senast gjord")
+                        FieldLabel("Senast gjord")
                     } footer: {
                         Text("Ändra här om sysslan bockades av av misstag.")
                     }
                     Section {
                         Button("Ta bort städsysslan", role: .destructive, action: remove)
+                            .foregroundStyle(Color.danger)
                     }
                 }
             }

@@ -4,12 +4,14 @@ struct AboutSection: View {
     private let info = Bundle.main.infoDictionary ?? [:]
 
     var body: some View {
-        Section("Om HouseMates") {
+        Section {
             NavigationLink("Integritetspolicy") { PolicyView() }
             if let supportEmail, let url = URL(string: "mailto:\(supportEmail)") {
                 Link("Kontakta oss", destination: url)
             }
             LabeledContent("Version", value: "\(info["CFBundleShortVersionString"] ?? "") (\(info["CFBundleVersion"] ?? ""))")
+        } header: {
+            SectionTitle("Om HouseMates")
         }
     }
 

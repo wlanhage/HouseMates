@@ -10,28 +10,38 @@ struct FavoritesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if favorites.records.isEmpty {
-                    Section {
-                        VStack(alignment: .leading, spacing: 12) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if favorites.records.isEmpty {
+                        VStack(spacing: 14) {
+                            Text("🍽️")
+                                .font(.title)
+                                .frame(width: 62, height: 62)
+                                .background(Color.surfaceSecondary, in: Circle())
                             Text("Inga middagar sparade än. Spara rätter ni gillar, så lägger ett tryck varorna på inköpslistan.")
+                                .foregroundStyle(Color.inkMuted)
+                                .multilineTextAlignment(.center)
                             Button("Lägg till den första") { isAdding = true }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(PrimaryButtonStyle())
                         }
-                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity)
+                        .padding(28)
+                        .card(cornerRadius: 18)
                     }
-                }
-                Section {
-                    let sorted = favorites.byName
-                    ForEach(sorted) { favorite in
-                        NavigationLink(value: favorite.id) {
-                            FavoriteRow(favorite: favorite)
+                    // Två kolumner med bild, som i webbappen. En rätt tas bort inifrån rätten.
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        ForEach(favorites.byName) { favorite in
+                            NavigationLink(value: favorite.id) {
+                                FavoriteCard(favorite: favorite)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .onDelete { offsets in offsets.forEach { favorites.remove(sorted[$0]) } }
-                } footer: {
                     Text("Tips: dela en receptsida från Safari till HouseMates, så hamnar den här.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.inkMuted)
                 }
+                .padding(18)
             }
             .navigationTitle("Våra middagar")
             .paperBackground()
@@ -65,22 +75,30 @@ struct FavoritesView: View {
     }
 }
 
-private struct FavoriteRow: View {
+/// Rättens bild överst och namnet under, som webbappens kort.
+private struct FavoriteCard: View {
     let favorite: Favorite
 
     var body: some View {
-        HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             DishImage(address: favorite.imageURL)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 2) {
+                .frame(maxWidth: .infinity)
+                .frame(height: 112)
+                .clipped()
+            VStack(alignment: .leading, spacing: 3) {
                 Text(favorite.name)
-                    .lineLimit(2)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(2, reservesSpace: true)
                 Text(details)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.inkMuted)
+                    .lineLimit(1)
             }
+            .padding(10)
         }
+        .card(cornerRadius: 18)
+        .accessibilityElement(children: .combine)
     }
 
     /// "8 varor · ica.se"
@@ -100,8 +118,8 @@ private struct DishImage: View {
             image.resizable().scaledToFill()
         } placeholder: {
             ZStack {
-                Color.secondary.opacity(0.15)
-                Image(systemName: "fork.knife").foregroundStyle(.secondary)
+                Color.surfaceSecondary
+                Text("🍽️").font(.title)
             }
         }
     }
@@ -135,51 +153,49 @@ private struct FavoriteDetailView: View {
             if favorite.imageURL != nil {
                 DishImage(address: favorite.imageURL)
                     .frame(height: 200)
-                    .clipped()
-                    .listRowInsets(EdgeInsets())
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .plainRow(top: 8)
             }
-            Section {
-                HStack(spacing: 6) {
-                    Text(itemCountLabel(favorite.items.count))
-                    if let source = favorite.sourceURL, let url = URL(string: source) {
-                        Text("·")
-                        Link("Öppna på \(hostLabel(source))", destination: url)
-                    }
+            HStack(spacing: 6) {
+                Text(itemCountLabel(favorite.items.count))
+                if let source = favorite.sourceURL, let url = URL(string: source) {
+                    Text("·")
+                    Link("Öppna på \(hostLabel(source)) ↗", destination: url)
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
             }
+            .font(.subheadline)
+            .foregroundStyle(Color.inkMuted)
+            .plainRow()
             if favorite.items.isEmpty {
-                Section {
-                    Text("Inga varor sparade för den här rätten. Tryck på Ändra för att lägga till dem.")
-                        .foregroundStyle(.secondary)
-                }
+                EmptyCard(emoji: "📝", text: "Inga varor sparade för den här rätten. Tryck på Ändra för att lägga till dem.")
             } else {
-                Section {
-                    ForEach(Array(favorite.items.enumerated()), id: \.offset) { _, line in
-                        IngredientRow(
-                            line: line,
-                            isSelected: selected.contains(line),
-                            isOnList: isOnList(line)
-                        ) { toggle(line) }
+                SectionTitle("Ingredienser") {
+                    Button(selected.count == Set(favorite.items).count ? "Avmarkera alla" : "Välj alla") {
+                        selected = selected.count == Set(favorite.items).count ? [] : Set(favorite.items)
                     }
-                } header: {
-                    HStack {
-                        Text("Ingredienser")
-                        Spacer()
-                        Button(selected.count == Set(favorite.items).count ? "Avmarkera alla" : "Välj alla") {
-                            selected = selected.count == Set(favorite.items).count ? [] : Set(favorite.items)
-                        }
-                        .font(.subheadline)
-                    }
-                } footer: {
-                    Text("Bocka ur det ni redan har hemma.")
+                    .buttonStyle(SmallButtonStyle())
+                }
+                .plainRow(top: 14, bottom: 2)
+                Text("Bocka ur det ni redan har hemma.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.inkMuted)
+                    .plainRow(top: 0, bottom: 4)
+                ForEach(Array(favorite.items.enumerated()), id: \.offset) { _, line in
+                    IngredientRow(
+                        line: line,
+                        isSelected: selected.contains(line),
+                        isOnList: isOnList(line)
+                    ) { toggle(line) }
+                    .cardRow()
                 }
             }
-            Section {
-                Button("Ta bort från Våra middagar", role: .destructive) { confirmsRemoval = true }
-            }
+            Button("Ta bort från Våra middagar", role: .destructive) { confirmsRemoval = true }
+                .foregroundStyle(Color.danger)
+                .frame(maxWidth: .infinity)
+                .plainRow(top: 16)
         }
+        .listStyle(.plain)
         .navigationTitle(favorite.name)
         .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
@@ -195,10 +211,10 @@ private struct FavoriteDetailView: View {
                     Text(selected.isEmpty ? "Välj varor att lägga till" : "Lägg \(itemCountLabel(selected.count)) på listan")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(PrimaryButtonStyle())
                 .disabled(selected.isEmpty)
-                .padding()
+                .padding(.horizontal, 18)
+                .padding(.bottom, 8)
             }
         }
         // Förval: allt utom det som redan står på listan. Görs om när rätten ändras.
@@ -238,22 +254,22 @@ private struct IngredientRow: View {
     var body: some View {
         Button(action: toggle) {
             HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                CheckMark(isOn: isSelected)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(line)
-                        .foregroundStyle(isOnList && !isSelected ? .secondary : .primary)
+                        .foregroundStyle(isOnList && !isSelected ? Color.inkMuted : Color.ink)
                     if isOnList {
                         Text("Finns redan på listan")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.inkMuted)
                     }
                 }
+                Spacer(minLength: 0)
             }
+            .contentShape(Rectangle())
         }
-        .foregroundStyle(.primary)
+        .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

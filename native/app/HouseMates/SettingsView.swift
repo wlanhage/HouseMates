@@ -9,7 +9,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Hushåll") {
+                Section {
                     LabeledContent("Du", value: session.me?.name ?? "")
                     if let partner = session.partner {
                         LabeledContent("Din partner", value: partner.name)
@@ -25,14 +25,21 @@ struct SettingsView: View {
                     ) {
                         try await session.leaveHousehold()
                     }
+                } header: {
+                    SectionTitle("Hushåll")
                 }
-                Section("Kalender") {
+                Section {
                     LabeledContent("Delad kalender", value: calendar.linkedCalendar?.title ?? "Inte vald")
+                } header: {
+                    SectionTitle("Kalender")
                 }
                 NotificationSection()
-                Section("Konto") {
+                Section {
                     Button("Byt lösenord") { changesPassword = true }
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
+                        .foregroundStyle(Color.danger)
+                } header: {
+                    SectionTitle("Konto")
                 }
                 AboutSection()
                 Section {

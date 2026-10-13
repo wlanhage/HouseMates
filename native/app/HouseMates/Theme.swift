@@ -214,7 +214,8 @@ extension CheckButton where Label == EmptyView {
     }
 }
 
-private struct CheckMark: View {
+/// Den runda bocken, också för val som inte flyttar raden, som ingredienser.
+struct CheckMark: View {
     let isOn: Bool
 
     var body: some View {
@@ -353,6 +354,22 @@ struct PillTabs<Value: Hashable>: View {
         }
         .padding(3)
         .background(Color.surfaceSecondary, in: Capsule())
+    }
+}
+
+/// Etikett över ett fält eller en grupp i ett formulär, som webbappens "Vem gör det?".
+struct FieldLabel: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.footnote.weight(.bold))
+            .foregroundStyle(Color.inkMuted)
+            .textCase(nil)
     }
 }
 

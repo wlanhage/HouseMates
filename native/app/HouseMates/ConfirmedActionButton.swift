@@ -14,6 +14,7 @@ struct ConfirmedActionButton: View {
 
     var body: some View {
         Button(title, role: .destructive) { isConfirming = true }
+            .foregroundStyle(Color.danger)
             .disabled(isWorking)
             .alert(question, isPresented: $isConfirming) {
                 Button(confirmLabel, role: .destructive) { Task { await run() } }

@@ -68,7 +68,7 @@ struct NotificationSection: View {
                 Button("Slå på notiser") { Task { await push.requestPermission() } }
             }
         } header: {
-            Text("Notiser")
+            SectionTitle("Notiser")
         } footer: {
             if let errorMessage {
                 Text(errorMessage).foregroundStyle(.red)

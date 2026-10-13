@@ -47,10 +47,16 @@ Testerna:
 
 ## Hur det hänger ihop
 
-- **Navigering:** flikarna Hem, Inköp, Lägg till, Att göra och Kalender, som i webbappen med
-  plusset i mitten. Plusset byter inte flik utan öppnar Ny händelse, Ny vara, Ny uppgift eller Ny
-  städsyssla (en ny händelse skapas i Kalender-fliken). Inställningar öppnas som ett ark från
-  kugghjulet uppe till höger på varje flik.
+- **Utseende:** samma som webbappen (`src/app.css`), utan komponentbibliotek. Färgerna och
+  byggstenarna finns i `Theme.swift`: papperston och granngrön accent med mörkt läge, kort med
+  tunn kant och mjuk skugga, rund bock som ritas, initial i personens färg, etiketter för
+  Försenad/Idag och rubriker i versaler. Accenten ligger i Assets (`AccentColor`), så att också
+  Apples egna vyer blir gröna. Händelseformuläret och systemdialogerna är Apples.
+- **Navigering:** en egen flytande flikrad (`TabBar.swift`) i webbappens ordning: Hem, Kalender,
+  ett runt grönt plus, Inköp och Att göra. Vald flik får ens egen färg. Plusset byter inte flik
+  utan öppnar ett ark med Ny händelse, Ny vara, Ny uppgift eller Ny städsyssla (en ny händelse
+  skapas i Kalender-fliken). Överst ligger webbappens toppbar (`TopBar.swift`) med era två
+  prickar, namnet och kugghjulet, som öppnar Inställningar som ett ark.
 - **Inloggning:** e-post och lösenord (Supabase Auth). Namnet sparas i `profiles`.
   - Glömt lösenordet: mejlet innehåller en länk som öppnar appen (`housemates://nytt-losenord`),
     som frågar efter ett nytt lösenord. Länken fungerar bara på telefonen som bad om den,

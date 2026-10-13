@@ -72,12 +72,13 @@ struct MainTabs: View {
     @State private var calendar = SharedCalendar()
     @State private var tab: AppTab = .home
     @State private var choosesNew = false
+    @State private var chosen: CreateMenu.Choice?
     @State private var creating: NewThing?
     @State private var createsEvent = false
     @State private var isKeyboardVisible = false
     private let push = Push.shared
 
-    /// Det plusset kan lägga till, utom händelser som skapas i Kalender-fliken.
+    /// Formulären som öppnas som ark efter menyn. En ny händelse skapas i Kalender-fliken.
     enum NewThing: Identifiable {
         case item, todo, chore
         var id: Self { self }
@@ -112,14 +113,9 @@ struct MainTabs: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isKeyboardVisible = false
         }
-        .confirmationDialog("Lägg till", isPresented: $choosesNew) {
-            Button("Ny händelse") {
-                tab = .calendar
-                createsEvent = true
-            }
-            Button("Ny vara") { creating = .item }
-            Button("Ny uppgift") { creating = .todo }
-            Button("Ny städsyssla") { creating = .chore }
+        // Menyn stängs först; det valda öppnas sedan, eftersom bara ett ark kan visas åt gången.
+        .sheet(isPresented: $choosesNew, onDismiss: openChosen) {
+            CreateMenu(chosen: $chosen)
         }
         .sheet(item: $creating) { thing in
             switch thing {
@@ -184,5 +180,18 @@ struct MainTabs: View {
                 await assignees.stop()
             }
         }
+    }
+
+    private func openChosen() {
+        switch chosen {
+        case .event:
+            tab = .calendar
+            createsEvent = true
+        case .item: creating = .item
+        case .todo: creating = .todo
+        case .chore: creating = .chore
+        case nil: break
+        }
+        chosen = nil
     }
 }

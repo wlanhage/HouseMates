@@ -54,18 +54,32 @@ enum AssigneeFilter: Hashable {
     }
 }
 
-/// Gemensamt, jag eller partnern.
+/// Gemensamt, jag eller partnern. Det valda fylls med personens färg, som i webbappen.
 struct AssigneePicker: View {
     @Environment(AppSession.self) private var session
     @Binding var assignee: UUID?
 
     var body: some View {
-        Picker("För vem", selection: $assignee) {
+        HStack(spacing: 6) {
             ForEach(session.assigneeChoices) { choice in
-                Text(choice.name).tag(choice.id)
+                let isSelected = choice.id == assignee
+                Button {
+                    assignee = choice.id
+                } label: {
+                    Text(choice.name)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .foregroundStyle(isSelected ? Color.white : Color.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(isSelected ? session.color(for: choice.id) : Color.surfaceSecondary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
-        .pickerStyle(.segmented)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("För vem")
     }
 }
 

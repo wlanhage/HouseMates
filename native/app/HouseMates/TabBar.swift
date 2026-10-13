@@ -82,3 +82,48 @@ struct TabBar: View {
         .accessibilityLabel("Lägg till")
     }
 }
+
+/// Webbappens meny bakom plusset, som ett ark nedifrån: händelse, vara, uppgift eller städsyssla.
+struct CreateMenu: View {
+    enum Choice { case event, item, todo, chore }
+
+    @Environment(\.dismiss) private var dismiss
+    @Binding var chosen: Choice?
+
+    var body: some View {
+        VStack(spacing: 6) {
+            row("📅", "Ny händelse", .event)
+            row("🛒", "Ny vara", .item)
+            row("✅", "Ny uppgift", .todo)
+            row("🧽", "Ny städsyssla", .chore)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 26)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.height(320)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.surface)
+    }
+
+    private func row(_ emoji: String, _ title: String, _ choice: Choice) -> some View {
+        Button {
+            chosen = choice
+            dismiss()
+        } label: {
+            HStack(spacing: 14) {
+                Text(emoji)
+                    .font(.title3)
+                    .frame(width: 42, height: 42)
+                    .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.ink)
+                Spacer()
+            }
+            .padding(8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
