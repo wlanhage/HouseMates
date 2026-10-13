@@ -162,10 +162,13 @@ assert.ifError((await erik.client.from('todos').update({ title: 'Boka tvättstug
 const { data: renamedTodo } = await anna.client.from('todos').select('created_by, done_by').eq('id', todo).single();
 assert.deepEqual(renamedTodo, { created_by: erik.id, done_by: anna.id });
 assert.ok((await anna.client.from('todos').insert({ id: randomUUID(), title: 'Fel period', start_date: '2026-10-12', due_date: '2026-10-10' })).error);
+assert.ifError((await anna.client.from('todos').update({ notes: 'Tvättstuga 2, efter 18' }).eq('id', todo)).error);
+assert.equal((await erik.client.from('todos').select('notes').eq('id', todo).single()).data.notes, 'Tvättstuga 2, efter 18');
+assert.ok((await anna.client.from('todos').update({ notes: 'x'.repeat(1001) }).eq('id', todo)).error);
 assert.equal((await eva.client.from('todos').select('id')).data.length, 0);
 assert.ifError((await anna.client.from('todos').update({ deleted_at: new Date().toISOString() }).eq('id', todo)).error);
 assert.deepEqual(await activityTypes(todo), ['todo.created', 'todo.done']);
-step('uppgift: aktörer sätts på servern och går inte att ändra, perioden valideras, Eva ser inget, att rensa en klar uppgift ger ingen notis');
+step('uppgift: aktörer sätts på servern och går inte att ändra, perioden valideras, anteckningar högst 1 000 tecken, Eva ser inget, att rensa en klar uppgift ger ingen notis');
 
 const chore = randomUUID();
 assert.ifError((await erik.client.from('chores').insert({ id: chore, title: 'Dammsuga', interval_days: 7, last_done_at: '2020-01-01T00:00:00Z' })).error);

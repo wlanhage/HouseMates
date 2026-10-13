@@ -197,6 +197,12 @@ struct TodoRow: View {
                     Text(todo.title)
                         .strikethrough(todo.done)
                         .foregroundStyle(todo.done ? .secondary : .primary)
+                    if let notes = todo.notes {
+                        Text(notes)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     HStack(spacing: 6) {
                         PersonLabel(assignee: todo.assignee)
                         if let when {
@@ -234,6 +240,7 @@ struct TodoEditor: View {
     let todo: Todo?
 
     @State private var title = ""
+    @State private var notes = ""
     @State private var assignee: UUID?
     @State private var hasDueDate = false
     @State private var dueDate = Date.now
@@ -247,6 +254,8 @@ struct TodoEditor: View {
                 Section {
                     TextField("Vad ska göras?", text: $title)
                         .focused($titleIsFocused)
+                    TextField("Anteckningar (valfritt)", text: $notes, axis: .vertical)
+                        .lineLimit(1...6)
                 }
                 Section("Vem gör det?") {
                     AssigneePicker(assignee: $assignee)
@@ -299,6 +308,7 @@ struct TodoEditor: View {
             return
         }
         title = todo.title
+        notes = todo.notes ?? ""
         assignee = todo.assignee
         if let due = todo.dueDate.flatMap(LocalDay.date(from:)) {
             hasDueDate = true
@@ -314,9 +324,9 @@ struct TodoEditor: View {
         let due = hasDueDate ? LocalDay.string(from: dueDate) : nil
         let start = hasDueDate && hasStartDate ? LocalDay.string(from: min(startDate, dueDate)) : nil
         if let todo {
-            todos.update(todo, title: trimmedTitle, assignee: assignee, startDate: start, dueDate: due)
+            todos.update(todo, title: trimmedTitle, notes: notes, assignee: assignee, startDate: start, dueDate: due)
         } else {
-            todos.add(title: trimmedTitle, assignee: assignee, startDate: start, dueDate: due)
+            todos.add(title: trimmedTitle, notes: notes, assignee: assignee, startDate: start, dueDate: due)
         }
         dismiss()
     }

@@ -28,7 +28,7 @@ final class LocalDayTests: XCTestCase {
 final class TodoChangeTests: XCTestCase {
     private let me = UUID()
     private let paint = Todo(
-        id: UUID(), title: "Måla staketet", assignee: nil, startDate: nil, dueDate: nil,
+        id: UUID(), title: "Måla staketet", notes: nil, assignee: nil, startDate: nil, dueDate: nil,
         done: false, doneAt: nil, doneBy: nil, createdAt: .distantPast
     )
 
@@ -44,16 +44,33 @@ final class TodoChangeTests: XCTestCase {
         XCTAssertNil(todos[0].doneAt)
     }
 
-    func testAnUpdateCanRemoveTheDates() {
+    func testAnUpdateCanRemoveTheDatesAndNotes() {
         var todos = [paint]
-        TodoChange.update(id: paint.id, title: "Måla", assignee: me, startDate: "2026-10-10", dueDate: "2026-10-12")
-            .apply(to: &todos)
+        TodoChange.update(
+            id: paint.id, title: "Måla", notes: "Vit färg i förrådet", assignee: me, startDate: "2026-10-10", dueDate: "2026-10-12"
+        ).apply(to: &todos)
+        XCTAssertEqual(todos[0].notes, "Vit färg i förrådet")
 
-        TodoChange.update(id: paint.id, title: "Måla", assignee: me, startDate: nil, dueDate: nil).apply(to: &todos)
+        TodoChange.update(id: paint.id, title: "Måla", notes: nil, assignee: me, startDate: nil, dueDate: nil).apply(to: &todos)
 
+        XCTAssertNil(todos[0].notes)
         XCTAssertNil(todos[0].startDate)
         XCTAssertNil(todos[0].dueDate)
         XCTAssertEqual(todos[0].assignee, me)
+    }
+
+    func testEmptyNotesAreNoNotes() {
+        XCTAssertNil(TodoList.limited(notes: "  \n "))
+        XCTAssertEqual(TodoList.limited(notes: " Ring före 12 \n"), "Ring före 12")
+        XCTAssertEqual(TodoList.limited(notes: String(repeating: "a", count: 1200))?.count, 1000)
+    }
+
+    func testAQueueSavedBeforeNotesStillReadsBack() throws {
+        let saved = #"[{"update":{"id":"\#(paint.id)","title":"Måla"}}]"#
+
+        let decoded = try JSONDecoder().decode([TodoChange].self, from: Data(saved.utf8))
+
+        XCTAssertEqual(decoded, [.update(id: paint.id, title: "Måla", notes: nil, assignee: nil, startDate: nil, dueDate: nil)])
     }
 
     func testTheQueueSurvivesBeingSavedAndReadBack() throws {

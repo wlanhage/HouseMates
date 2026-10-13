@@ -81,6 +81,7 @@ Testerna:
 - **Att göra:** `todos` för engångsuppgifter och `chores` för återkommande städsysslor.
   - En uppgift kan ha sista dag och en period ("kan göras från"). Datumen är rena dagar i
     telefonens tidszon (`LocalDay`), aldrig midnatt i UTC.
+  - Anteckningar (valfritt, högst 1 000 tecken) i `todos.notes`. Listan visar första raden.
   - En städsyssla har ett intervall. Nästa gång räknas från när den senast gjordes, samma regel
     som webbappen. Servern sätter vem som gjorde den och godtar inga datum i framtiden.
   - Klara uppgifter raderas efter 30 dagar (`cron.sql`).
