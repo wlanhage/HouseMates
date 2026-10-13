@@ -136,6 +136,19 @@ private struct FilterPills: View {
     }
 }
 
+private extension View {
+    /// Ett tryck öppnar redigeringen. Ingen knapp, eftersom en knapp utlöses också när fingret
+    /// sveper över raden, som när man byter dag på Hem.
+    func tapToEdit(_ edit: @escaping () -> Void) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: edit)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { edit() }
+    }
+}
+
 // MARK: Uppgifter
 
 private struct TodoSections: View {
@@ -192,32 +205,28 @@ struct TodoRow: View {
             .buttonStyle(.borderless)
             .accessibilityLabel(todo.done ? "Markera \(todo.title) som inte klar" : "Markera \(todo.title) som klar")
 
-            Button(action: edit) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(todo.title)
-                        .strikethrough(todo.done)
-                        .foregroundStyle(todo.done ? .secondary : .primary)
-                    if let notes = todo.notes {
-                        Text(notes)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    HStack(spacing: 6) {
-                        PersonLabel(assignee: todo.assignee)
-                        if let when {
-                            Text("·")
-                            Text(isOverdue ? "\(when) · försenad" : when)
-                                .foregroundStyle(isOverdue ? Color.red : Color.secondary)
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(todo.title)
+                    .strikethrough(todo.done)
+                    .foregroundStyle(todo.done ? .secondary : .primary)
+                if let notes = todo.notes {
+                    Text(notes)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                HStack(spacing: 6) {
+                    PersonLabel(assignee: todo.assignee)
+                    if let when {
+                        Text("·")
+                        Text(isOverdue ? "\(when) · försenad" : when)
+                            .foregroundStyle(isOverdue ? Color.red : Color.secondary)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
+            .tapToEdit(edit)
         }
     }
 
@@ -369,26 +378,22 @@ struct ChoreRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: edit) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(chore.title)
-                    HStack(spacing: 6) {
-                        PersonLabel(assignee: chore.assignee)
-                        if let interval = chore.intervalDays {
-                            Text("·")
-                            Text(ChoreSchedule.intervalLabel(days: interval))
-                        }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(chore.title)
+                HStack(spacing: 6) {
+                    PersonLabel(assignee: chore.assignee)
+                    if let interval = chore.intervalDays {
+                        Text("·")
+                        Text(ChoreSchedule.intervalLabel(days: interval))
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    Text(status)
-                        .font(.caption)
-                        .foregroundStyle(isOverdue ? Color.red : Color.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(isOverdue ? Color.red : Color.secondary)
             }
-            .buttonStyle(.plain)
+            .tapToEdit(edit)
 
             Button("Klar", action: markDone)
                 .buttonStyle(.bordered)

@@ -21,7 +21,7 @@ final class LocalDayTests: XCTestCase {
         XCTAssertEqual(LocalDay.label("2026-10-07", from: today), "Idag")
         XCTAssertEqual(LocalDay.label("2026-10-08", from: today), "Imorgon")
         XCTAssertEqual(LocalDay.label("2026-10-06", from: today), "Igår")
-        XCTAssertTrue(LocalDay.label("2026-10-09", from: today).contains("9 okt"))
+        XCTAssertEqual(LocalDay.label("2026-10-09", from: today), "fre 9 okt")
     }
 }
 

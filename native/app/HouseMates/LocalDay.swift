@@ -43,6 +43,7 @@ enum LocalDay {
         default:
             guard let date = date(from: day) else { return day }
             return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(Locale(identifier: "sv_SE")))
+                .replacingOccurrences(of: ".", with: "")
         }
     }
 }

@@ -118,9 +118,13 @@ Testerna:
   - Städ: sysslor med intervall syns på sin sista dag (`ChoreSchedule.byDueDay`), med samma rad
     och Klar-knapp som under Att göra. I listan visas försenade sysslor på idag; i månadsvyn blir
     de en ring i personens färg, som i webbappen.
-- **Hem:** dagens händelser, uppgifter med sista dag idag eller tidigare, städsysslor som ska
-  göras, och "Nyligen i inköp" ur `activity_log`. Samma person och slag inom 30 minuter blir en
-  rad, som i webbappens `activityFeed.ts`. Flödet hämtas om när inköpslistan ändras.
+- **Hem:** en dag i taget, idag först: händelser, uppgifter med sista dag den dagen (idag också
+  försenade; en period syns på sin sista dag) och städsysslor (`HomeDay`, samma regler som
+  webbappen). Pilar eller svep byter dag, en vecka bakåt och sex framåt, och "Till idag" tar en
+  tillbaka. Raderna öppnar redigeringen med ett tryck, inte en knapp, så att ett svep inte räknas
+  som ett tryck. Under dagen "Nyligen i inköp" ur `activity_log`. Samma person och slag inom 30
+  minuter blir en rad, som i webbappens `activityFeed.ts`. Flödet hämtas om när inköpslistan
+  ändras.
 - **Notiser:** varje ändring skriver en rad i `activity_log` i samma transaktion (trigger). För
   kalendern rapporterar appen sina ändringar via `log_calendar_activity`. Raden köas till
   partnern. Edge function `notify` körs varje minut (`supabase/cron.sql`) och skickar EN samlad

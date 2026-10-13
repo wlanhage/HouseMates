@@ -134,3 +134,32 @@ final class EventAssigneeTests: XCTestCase {
         XCTAssertNil(rows[0].assignee)
     }
 }
+
+/// Samma regler som webbappens dagsbläddring på hemskärmen.
+final class HomeDayTests: XCTestCase {
+    private func todo(_ title: String, start: String? = nil, due: String?) -> Todo {
+        Todo(
+            id: UUID(), title: title, notes: nil, assignee: nil, startDate: start, dueDate: due,
+            done: false, doneAt: nil, doneBy: nil, createdAt: .distantPast
+        )
+    }
+
+    func testTodayAlsoShowsOverdueButOtherDaysOnlyTheirOwn() {
+        let open = [
+            todo("Försenad", due: "2026-10-10"),
+            todo("Idag", due: "2026-10-13"),
+            todo("Helgen", start: "2026-10-17", due: "2026-10-18"),
+            todo("Någon gång", due: nil)
+        ]
+
+        XCTAssertEqual(HomeDay.todos(open, on: "2026-10-13", today: "2026-10-13").map(\.title), ["Försenad", "Idag"])
+        XCTAssertEqual(HomeDay.todos(open, on: "2026-10-10", today: "2026-10-13").map(\.title), ["Försenad"])
+        XCTAssertEqual(HomeDay.todos(open, on: "2026-10-17", today: "2026-10-13").map(\.title), [])
+        XCTAssertEqual(HomeDay.todos(open, on: "2026-10-18", today: "2026-10-13").map(\.title), ["Helgen"])
+    }
+
+    func testBrowsingGoesAWeekBackAndSixWeeksAhead() {
+        XCTAssertEqual(HomeDay.offsets.lowerBound, -7)
+        XCTAssertEqual(HomeDay.offsets.upperBound, 42)
+    }
+}

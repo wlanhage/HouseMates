@@ -1,7 +1,7 @@
 import EventKit
 import SwiftUI
 
-/// Hem: det som gäller idag, och vad som hänt på inköpslistan.
+/// Hem: en dag i taget (idag först), och vad som hänt på inköpslistan.
 struct HomeView: View {
     @Environment(AppSession.self) private var session
     let todos: TodoList
@@ -11,25 +11,35 @@ struct HomeView: View {
     let assignees: EventAssigneeList
     @State private var feed: [ActivityGroup] = []
     @State private var editing: HouseworkView.Editing?
+    /// Dagar från idag, inom `HomeDay.offsets`.
+    @State private var dayOffset = 0
 
     var body: some View {
+        let today = LocalDay.string(from: .now)
+        let day = LocalDay.adding(dayOffset, to: today) ?? today
+        let dayEvents = calendar.eventsByDay(from: day, through: day)[day] ?? []
+        let dayTodos = HomeDay.todos(todos.open, on: day, today: today)
+        let dayChores = ChoreSchedule.byDueDay(chores.sorted, overdueOn: today)[day] ?? []
         NavigationStack {
             List {
                 Section {
-                    if todayEvents.isEmpty && todayTodos.isEmpty && todayChores.isEmpty {
-                        Text("Inget planerat idag.").foregroundStyle(.secondary)
+                    Group {
+                        if dayEvents.isEmpty && dayTodos.isEmpty && dayChores.isEmpty {
+                            Text("Inget planerat \(LocalDay.label(day).lowercased()).").foregroundStyle(.secondary)
+                        }
+                        ForEach(dayEvents, id: \.self) { event in
+                            TodayEventRow(event: event, assignee: assignees.assignee(for: event.calendarItemExternalIdentifier))
+                        }
+                        ForEach(dayTodos) { todo in
+                            TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { editing = .todo(todo) })
+                        }
+                        ForEach(dayChores) { chore in
+                            ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editing = .chore(chore) })
+                        }
                     }
-                    ForEach(todayEvents, id: \.self) { event in
-                        TodayEventRow(event: event, assignee: assignees.assignee(for: event.calendarItemExternalIdentifier))
-                    }
-                    ForEach(todayTodos) { todo in
-                        TodoRow(todo: todo, toggle: { todos.toggle(todo, by: session.me?.id) }, edit: { editing = .todo(todo) })
-                    }
-                    ForEach(todayChores) { chore in
-                        ChoreRow(chore: chore, markDone: { chores.markDone(chore, by: session.me?.id) }, edit: { editing = .chore(chore) })
-                    }
+                    .simultaneousGesture(daySwipe)
                 } header: {
-                    Text(todayTitle)
+                    DayHeader(day: day, offset: $dayOffset)
                 }
                 Section("Nyligen i inköp") {
                     if feed.isEmpty {
@@ -71,25 +81,16 @@ struct HomeView: View {
         return session.me.map { "\(hello), \($0.name)" } ?? hello
     }
 
-    /// "Onsdag 7 oktober"
-    private var todayTitle: String {
-        let date = Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "sv_SE")))
-        return date.prefix(1).uppercased() + date.dropFirst()
-    }
-
-    /// Händelser som pågår idag, också sådana som började tidigare.
-    private var todayEvents: [EKEvent] {
-        calendar.upcoming.first { Calendar.current.isDateInToday($0.day) }?.events ?? []
-    }
-
-    /// Uppgifter med sista dag idag, och försenade.
-    private var todayTodos: [Todo] {
-        let today = LocalDay.string(from: .now)
-        return todos.open.filter { $0.dueDate.map { $0 <= today } ?? false }
-    }
-
-    private var todayChores: [Chore] {
-        chores.sorted.filter { (ChoreSchedule.daysLeft($0) ?? 1) <= 0 }
+    /// Ett svep åt vänster visar nästa dag, åt höger dagen före, som i webbappen.
+    private var daySwipe: some Gesture {
+        DragGesture(minimumDistance: 30).onEnded { drag in
+            let width = drag.translation.width
+            guard abs(width) > 55, abs(width) > abs(drag.translation.height) else { return }
+            let next = dayOffset + (width < 0 ? 1 : -1)
+            if HomeDay.offsets.contains(next) {
+                withAnimation { dayOffset = next }
+            }
+        }
     }
 
     private func loadFeed() async {
@@ -105,6 +106,58 @@ struct HomeView: View {
         } catch {
             // Utan nät visas det som redan hämtats.
         }
+    }
+}
+
+/// Det som hör till en dag på Hem, med samma regler som webbappen.
+enum HomeDay {
+    /// En vecka bakåt och sex framåt, som webbappens dagsbläddring.
+    static let offsets = -7...42
+
+    /// Uppgifter med sista dag den dagen, och idag också försenade. En period syns på sin sista dag.
+    static func todos(_ open: [Todo], on day: String, today: String) -> [Todo] {
+        open.filter { todo in
+            guard let due = todo.dueDate else { return false }
+            return due == day || (day == today && due < today)
+        }
+    }
+}
+
+/// Pilar, dagens rubrik ("Idag", "Imorgon", "mån 15 jul") och "Till idag" när man bläddrat bort.
+private struct DayHeader: View {
+    let day: String
+    @Binding var offset: Int
+
+    var body: some View {
+        HStack {
+            arrow("chevron.left", label: "Föregående dag", step: -1)
+            Spacer()
+            VStack(spacing: 2) {
+                Text(LocalDay.label(day))
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
+                if offset != 0 {
+                    Button("Till idag") { withAnimation { offset = 0 } }
+                        .font(.caption)
+                }
+            }
+            Spacer()
+            arrow("chevron.right", label: "Nästa dag", step: 1)
+        }
+        .textCase(nil)
+        .buttonStyle(.borderless)
+    }
+
+    private func arrow(_ systemName: String, label: String, step: Int) -> some View {
+        Button {
+            withAnimation { offset += step }
+        } label: {
+            Image(systemName: systemName)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .disabled(!HomeDay.offsets.contains(offset + step))
+        .accessibilityLabel(label)
     }
 }
 
