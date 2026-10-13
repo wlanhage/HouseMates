@@ -2,7 +2,9 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
     let calendar: SharedCalendar
+    @State private var changesPassword = false
 
     var body: some View {
         NavigationStack {
@@ -29,7 +31,7 @@ struct SettingsView: View {
                 }
                 NotificationSection()
                 Section("Konto") {
-                    Button("Byt lösenord") { session.needsNewPassword = true }
+                    Button("Byt lösenord") { changesPassword = true }
                     Button("Logga ut", role: .destructive) { Task { await session.signOut() } }
                 }
                 AboutSection()
@@ -38,7 +40,13 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Inställningar")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Klar") { dismiss() }
+                }
+            }
             .refreshable { await session.reload() }
+            .sheet(isPresented: $changesPassword) { NewPasswordView() }
         }
     }
 
@@ -47,5 +55,14 @@ struct SettingsView: View {
             return "Du är ensam i hushållet, så hushållet med listor och middagar raderas. Sedan kan du skapa ett nytt hushåll eller gå med i ett annat."
         }
         return "Listorna och middagarna blir kvar för \(partner.name). Sedan kan du skapa ett nytt hushåll eller gå med i ett annat. Kalendern ni delar i Apple Kalender påverkas inte; sluta dela den i Kalender-appen om du vill."
+    }
+}
+
+/// Kugghjulet uppe till höger på flikarna, som i webbappen.
+struct SettingsButton: View {
+    @Environment(AppSession.self) private var session
+
+    var body: some View {
+        Button("Inställningar", systemImage: "gearshape") { session.showsSettings = true }
     }
 }

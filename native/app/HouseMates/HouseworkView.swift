@@ -40,14 +40,7 @@ struct HouseworkView: View {
             }
             .navigationTitle("Att göra")
             .onChange(of: session.partner?.id) { filter = .everyone }
-            .toolbar {
-                Button {
-                    editing = part == .todos ? .todo(nil) : .chore(nil)
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel(part == .todos ? "Ny uppgift" : "Ny städsyssla")
-            }
+            .toolbar { SettingsButton() }
             .refreshable {
                 await todos.sync()
                 await chores.sync()
@@ -75,21 +68,22 @@ struct HouseworkView: View {
         )
     }
 
-    /// Det som redigeras i arket; nil betyder en ny uppgift eller syssla.
+    /// Det som redigeras i arket. Nya uppgifter och sysslor läggs till med plusset i flikraden.
     enum Editing: Identifiable {
-        case todo(Todo?)
-        case chore(Chore?)
+        case todo(Todo)
+        case chore(Chore)
 
-        var id: String {
+        var id: UUID {
             switch self {
-            case let .todo(todo): "uppgift-\(todo?.id.uuidString ?? "ny")"
-            case let .chore(chore): "syssla-\(chore?.id.uuidString ?? "ny")"
+            case let .todo(todo): todo.id
+            case let .chore(chore): chore.id
             }
         }
     }
 }
 
-/// Alla, Du, partnern eller Gemensamt, som i webbappen. Gäller öppna uppgifter och städsysslor.
+/// Alla, Du eller partnern. Gemensamma uppgifter syns under Alla, som också är förvalt. Gäller öppna
+/// uppgifter och städsysslor.
 private struct FilterPills: View {
     @Environment(AppSession.self) private var session
     @Binding var filter: AssigneeFilter
@@ -116,14 +110,13 @@ private struct FilterPills: View {
     }
 
     private var filters: [AssigneeFilter] {
-        [.everyone] + [session.me, session.partner].compactMap { $0 }.map { .person($0.id) } + [.shared]
+        [.everyone] + [session.me, session.partner].compactMap { $0 }.map { .person($0.id) }
     }
 
     private func name(for filter: AssigneeFilter) -> String {
         switch filter {
         case .everyone: "Alla"
         case let .person(id): id == session.me?.id ? "Du" : session.name(for: id)
-        case .shared: "Gemensamt"
         }
     }
 
@@ -131,7 +124,6 @@ private struct FilterPills: View {
         switch filter {
         case .everyone: .accentColor
         case let .person(id): session.color(for: id)
-        case .shared: .shared
         }
     }
 }
@@ -158,7 +150,7 @@ private struct TodoSections: View {
     let edit: (Todo) -> Void
 
     var body: some View {
-        let open = todos.open.filter { filter.includes(session.person($0.assignee)?.id) }
+        let open = todos.open.filter { filter.includes($0.assignee) }
         let finished = todos.finished
         Section {
             if open.isEmpty {
@@ -350,7 +342,7 @@ private struct ChoreSections: View {
     let edit: (Chore) -> Void
 
     var body: some View {
-        let sorted = chores.sorted.filter { filter.includes(session.person($0.assignee)?.id) }
+        let sorted = chores.sorted.filter { filter.includes($0.assignee) }
         Section {
             if chores.records.isEmpty {
                 Text("Inga städsysslor än. Lägg till det ni brukar göra, till exempel dammsuga varje vecka.")

@@ -41,7 +41,8 @@ struct ShoppingItem: Codable, Identifiable, Equatable {
 enum AppTab: String {
     case home = "hem"
     case shopping = "inkop"
+    /// Plusset i mitten av flikraden. Ingen egen vy: det öppnar "Lägg till", som i webbappen.
+    case create = "ny"
     case todos = "todo"
     case calendar = "kalender"
-    case settings = "installningar"
 }

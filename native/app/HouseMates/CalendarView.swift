@@ -8,6 +8,8 @@ struct CalendarView: View {
     let calendar: SharedCalendar
     let assignees: EventAssigneeList
     let chores: ChoreList
+    /// Satt av plusset i flikraden ("Ny händelse").
+    @Binding var createsEvent: Bool
     @State private var editing: EditRequest?
     @State private var editingChore: Chore?
     @State private var isChoosing = false
@@ -28,12 +30,16 @@ struct CalendarView: View {
                             Image(systemName: "ellipsis.circle")
                         }
                         .accessibilityLabel("Fler val")
-                        Button {
-                            if let event = calendar.newEvent() { editing = EditRequest(event: event, isNew: true) }
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Ny händelse")
+                    }
+                    SettingsButton()
+                }
+                .onChange(of: createsEvent, initial: true) { _, creates in
+                    guard creates else { return }
+                    createsEvent = false
+                    // Utan kopplad kalender visar fliken hur man kommer igång i stället.
+                    if calendar.state == .linked, let event = calendar.newEvent() {
+                        isChoosing = false
+                        editing = EditRequest(event: event, isNew: true)
                     }
                 }
                 .sheet(item: $editing) { request in

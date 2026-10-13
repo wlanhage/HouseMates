@@ -71,25 +71,54 @@ struct MainTabs: View {
     @State private var assignees = EventAssigneeList()
     @State private var calendar = SharedCalendar()
     @State private var tab: AppTab = .home
+    @State private var choosesNew = false
+    @State private var creating: NewThing?
+    @State private var createsEvent = false
     private let push = Push.shared
 
+    /// Det plusset kan lägga till, utom händelser som skapas i Kalender-fliken.
+    enum NewThing: Identifiable {
+        case item, todo, chore
+        var id: Self { self }
+    }
+
     var body: some View {
-        TabView(selection: $tab) {
+        @Bindable var session = session
+        TabView(selection: tabSelection) {
             HomeView(todos: todos, chores: chores, shopping: shopping, calendar: calendar, assignees: assignees)
                 .tabItem { Label("Hem", systemImage: "house") }
                 .tag(AppTab.home)
             ShoppingView(list: shopping, favorites: favorites)
                 .tabItem { Label("Inköp", systemImage: "cart") }
                 .tag(AppTab.shopping)
+            Color.clear
+                .tabItem { Label("Lägg till", systemImage: "plus.circle.fill") }
+                .tag(AppTab.create)
             HouseworkView(todos: todos, chores: chores)
                 .tabItem { Label("Att göra", systemImage: "checklist") }
                 .tag(AppTab.todos)
-            CalendarView(calendar: calendar, assignees: assignees, chores: chores)
+            CalendarView(calendar: calendar, assignees: assignees, chores: chores, createsEvent: $createsEvent)
                 .tabItem { Label("Kalender", systemImage: "calendar") }
                 .tag(AppTab.calendar)
+        }
+        .confirmationDialog("Lägg till", isPresented: $choosesNew) {
+            Button("Ny händelse") {
+                tab = .calendar
+                createsEvent = true
+            }
+            Button("Ny vara") { creating = .item }
+            Button("Ny uppgift") { creating = .todo }
+            Button("Ny städsyssla") { creating = .chore }
+        }
+        .sheet(item: $creating) { thing in
+            switch thing {
+            case .item: NewItemSheet(list: shopping)
+            case .todo: TodoEditor(todos: todos, todo: nil)
+            case .chore: ChoreEditor(chores: chores, chore: nil)
+            }
+        }
+        .sheet(isPresented: $session.showsSettings) {
             SettingsView(calendar: calendar)
-                .tabItem { Label("Inställningar", systemImage: "gearshape") }
-                .tag(AppTab.settings)
         }
         .task(id: session.household?.id) {
             guard let householdID = session.household?.id else { return }
@@ -135,6 +164,7 @@ struct MainTabs: View {
             push.openedTab = nil
         }
         .onDisappear {
+            session.showsSettings = false
             Task {
                 await shopping.stop()
                 await todos.stop()
@@ -143,5 +173,16 @@ struct MainTabs: View {
                 await assignees.stop()
             }
         }
+    }
+
+    /// Plusset byter inte flik: det öppnar "Lägg till" och den valda fliken ligger kvar.
+    private var tabSelection: Binding<AppTab> {
+        Binding(get: { tab }, set: { chosen in
+            if chosen == .create {
+                choosesNew = true
+            } else {
+                tab = chosen
+            }
+        })
     }
 }

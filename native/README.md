@@ -47,6 +47,10 @@ Testerna:
 
 ## Hur det hänger ihop
 
+- **Navigering:** flikarna Hem, Inköp, Lägg till, Att göra och Kalender, som i webbappen med
+  plusset i mitten. Plusset byter inte flik utan öppnar Ny händelse, Ny vara, Ny uppgift eller Ny
+  städsyssla (en ny händelse skapas i Kalender-fliken). Inställningar öppnas som ett ark från
+  kugghjulet uppe till höger på varje flik.
 - **Inloggning:** e-post och lösenord (Supabase Auth). Namnet sparas i `profiles`.
   - Glömt lösenordet: mejlet innehåller en länk som öppnar appen (`housemates://nytt-losenord`),
     som frågar efter ett nytt lösenord. Länken fungerar bara på telefonen som bad om den,
@@ -85,9 +89,8 @@ Testerna:
   - En städsyssla har ett intervall. Nästa gång räknas från när den senast gjordes, samma regel
     som webbappen. Servern sätter vem som gjorde den och godtar inga datum i framtiden.
   - Klara uppgifter raderas efter 30 dagar (`cron.sql`).
-  - Filter överst: Alla, Du, partnern eller Gemensamt (`AssigneeFilter`). Det gäller öppna
-    uppgifter och städsysslor, inte Klart. En uppgift för någon som lämnat hushållet räknas som
-    gemensam, precis som dess etikett.
+  - Filter överst: Alla, Du eller partnern (`AssigneeFilter`). Gemensamma uppgifter syns under
+    Alla. Det gäller öppna uppgifter och städsysslor, inte Klart.
 - **Våra middagar:** `favorites`, öppnas från Inköp. Ingredienserna sparas som råa rader
   ("500 g köttfärs") och delas i vara och mängd (`Ingredient`, samma regler som webbappens
   `ingredients.ts`) först när de läggs på listan, som "Köttfärs · 500 g" (`shopping_items.qty`).

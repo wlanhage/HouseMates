@@ -150,7 +150,6 @@ final class AssigneeFilterTests: XCTestCase {
         XCTAssertEqual(assignees.filter(AssigneeFilter.everyone.includes), assignees)
         XCTAssertEqual(assignees.filter(AssigneeFilter.person(me).includes), [me])
         XCTAssertEqual(assignees.filter(AssigneeFilter.person(partner).includes), [partner])
-        XCTAssertEqual(assignees.filter(AssigneeFilter.shared.includes), [nil])
     }
 }
 

@@ -13,8 +13,10 @@ final class AppSession {
     private(set) var partner: Profile?
     private(set) var household: Household?
     private(set) var loadError: String?
-    /// Visar "Nytt lösenord" efter en återställningslänk, eller när man väljer Byt lösenord.
+    /// Visar "Nytt lösenord" efter en återställningslänk.
     var needsNewPassword = false
+    /// Inställningar öppnas som ett ark från kugghjulet på flikarna (`SettingsButton`).
+    var showsSettings = false
     var linkError: String?
 
     private let client = Backend.client

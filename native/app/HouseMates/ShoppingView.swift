@@ -78,6 +78,7 @@ struct ShoppingView: View {
             .toolbar {
                 Button("Middagar", systemImage: "fork.knife") { showsFavorites = true }
                     .labelStyle(.titleAndIcon)
+                SettingsButton()
             }
             .sheet(isPresented: $showsFavorites) {
                 FavoritesView(favorites: favorites, shopping: list)
@@ -127,6 +128,58 @@ struct ShoppingView: View {
 
     private func remove(at offsets: IndexSet, in items: [ShoppingItem]) {
         list.remove(offsets.map { items[$0] })
+    }
+}
+
+/// "Ny vara" från plusset i flikraden: vara och antal, som i webbappen.
+struct NewItemSheet: View {
+    @Environment(AppSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+    let list: ShoppingList
+    @State private var name = ""
+    @State private var qty = ""
+    @State private var isAlreadyOnList = false
+    @FocusState private var nameIsFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Vara", text: $name)
+                        .focused($nameIsFocused)
+                        .onSubmit(add)
+                    TextField("Antal (valfritt)", text: $qty)
+                        .onSubmit(add)
+                } footer: {
+                    if isAlreadyOnList {
+                        Text("Står redan på listan.")
+                    }
+                }
+            }
+            .navigationTitle("Ny vara")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Avbryt") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Lägg till", action: add)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear { nameIsFocused = true }
+            .onChange(of: name) { isAlreadyOnList = false }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func add() {
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        if list.add(name, qty: qty, by: session.me?.id) {
+            dismiss()
+        } else {
+            isAlreadyOnList = true
+        }
     }
 }
 
