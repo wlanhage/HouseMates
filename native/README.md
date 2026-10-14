@@ -264,14 +264,19 @@ Testerna:
      `[EMAIL]` i den engelska `app/HouseMates/privacy-policy.md`.
    - Publicera samma text på en webbadress. Den adressen och en support-adress behövs i App
      Store Connect.
-4. **App Store Connect:** texter, granskningsanteckningar och integritetssvar finns i
-   `appstore/README.md`.
-   - Skapa två demokonton i samma hushåll åt granskarna.
-   - Ta skärmbilder för 6,9 tum.
-5. **Riktig app-ikon.** Den nuvarande är tillfällig: ett vitt hus på grönt.
-6. **Versionsnummer:** räkna upp `CURRENT_PROJECT_VERSION` i `project.yml` inför varje
-   uppladdning. App Store Connect nekar samma byggnummer två gånger.
-7. **Senare:** flytta in er befintliga data från webbappen.
+4. **TestFlight, internt först.** Prova på två riktiga telefoner det som simulatorn inte kan:
+   push från produktions-APNs, kalenderdelning mellan två Apple-ID, delningstillägget från
+   Safari (App Group) och länkarna i mejlen.
+5. **App Store Connect:** texter på svenska och engelska, granskningsanteckningar och
+   integritetssvar finns i `appstore/README.md`.
+   - Skapa appen tidigt, så att namnet är reserverat, och ange trader-status för EU.
+   - Skapa två demokonton i samma hushåll åt granskarna, med exempeldata.
+   - Ta skärmbilder för 6,9 tum, på svenska och engelska.
+6. **Riktig app-ikon.** Den nuvarande är tillfällig: ett vitt hus på grönt.
+7. **Versionsnummer:** sätt `MARKETING_VERSION` till 1.0 inför första versionen i App Store, och
+   räkna upp `CURRENT_PROJECT_VERSION` i `project.yml` inför varje uppladdning. App Store
+   Connect nekar samma byggnummer två gånger.
+8. **Senare:** flytta in er befintliga data från webbappen, och notiser och mejl på engelska.
 
 # Spike: kan två personer få en delad kalender smidigt?
 
